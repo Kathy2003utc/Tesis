@@ -1,0 +1,368 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Artistico</title>
+    <meta
+      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
+      name="viewport"
+    />
+    <!--PASO 1 jQuery-->
+    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <!--PASO 2 jQuery validacion-->
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.js"></script>
+    
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link
+      rel="icon"
+      href="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/favicon.ico'}"
+      type="image/x-icon"
+    />
+
+    <!--Importando sweetalert2-->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <!-- DataTables 1.13.x -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- Botones para exportar -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    <!-- Librerías necesarias para exportar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <!-- ImpoRTANDO FILE INPUT-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/js/fileinput.min.js" integrity="sha512-0wQvB58Ha5coWmcgtg4f11CTSSxfrfLClUp9Vy0qhzYzCZDSnoB4Vhu5JXJFs7rU24LE6JsH+6hpP7vQ22lk5w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/css/fileinput.min.css" integrity="sha512-yDVMONIXJPPAoULZ92Ygngsn8ZUGB4ejm6fCc6q9ZvdH8blFAOgg75XZSEaAJ5m4E/yPI1BAi5fF2axMHVuZ5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        
+    <!--Idioma español para agregar la imagen-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.0/js/locales/es.min.js"></script>
+    
+    <!--IMportacion de boostrap-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js" integrity="sha512-ykZ1QQr0Jy/4ZkvKuqWn4iF3lqPZyij9iRv6sGqLRdTPkY69YX6+7wvVGmsdBbiIfN/8OdsI7HABjvEok6ZopQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!--Importando Css de Boostrap-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" integrity="sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!--Importando iconos de fint awasome-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Fonts and icons -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/webfont/webfont.min.js' %}"></script>
+    <script>
+      WebFont.load({
+        google: { families: ["Public Sans:300,400,500,600,700"] },
+        custom: {
+          families: [
+            "Font Awesome 5 Solid",
+            "Font Awesome 5 Regular",
+            "Font Awesome 5 Brands",
+            "simple-line-icons",
+          ],
+          urls: ["{% static 'plantilla/kaiadmin/assets/css/fonts.min.css' %}"],
+        },
+        active: function () {
+          sessionStorage.fonts = true;
+        },
+      });
+    </script>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/plugins.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/kaiadmin.min.css' %}" />
+
+    <!-- CSS Just for demo purpose, don't include it in your project -->
+    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/demo.css' %}" />
+  </head>
+  <body>
+    <div class="wrapper">
+      <!-- Sidebar -->
+      <div class="sidebar" data-background-color="dark">
+        <div class="sidebar-logo">
+          <!-- Logo Header -->
+          <div class="logo-header" data-background-color="dark">
+            <a href="" class="logo">
+              <img
+                src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
+                alt="navbar brand"
+                class="navbar-brand"
+                height="20"
+              />
+            </a>
+            <div class="nav-toggle">
+              <button class="btn btn-toggle toggle-sidebar">
+                <i class="gg-menu-right"></i>
+              </button>
+              <button class="btn btn-toggle sidenav-toggler">
+                <i class="gg-menu-left"></i>
+              </button>
+            </div>
+            <button class="topbar-toggler more">
+              <i class="gg-more-vertical-alt"></i>
+            </button>
+          </div>
+          <!-- End Logo Header -->
+        </div>
+          
+        <div class="sidebar-wrapper scrollbar scrollbar-inner">
+        <div class="sidebar-content">
+            <ul class="nav nav-secondary">
+            <li class="nav-section">
+                <span class="sidebar-mini-icon">
+                <i class="fa fa-ellipsis-h"></i>
+                </span>
+                <h4 class="text-section">Contratación de artistas</h4>
+            </li>
+
+            <li class="nav-item">
+                <a href="{% url 'dashboard_cliente' %}">
+                <i class="fas fa-home"></i>
+                <p>Inicio</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{% url 'listar_eventos' %}">
+                <i class="fas fa-calendar-alt"></i>
+                <p>Lista de eventos</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{% url 'listar_contratos' %}">
+                <i class="fas fa-file-signature"></i>
+                <p>Lista de contratos</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/lista_artistas/">
+                <i class="fas fa-palette"></i>
+                <p>Lista de artistas</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/lista_clientes/">
+                <i class="fas fa-users"></i>
+                <p>Lista de clientes</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{% url 'listar_pagos' %}">
+                <i class="fas fa-money-check-alt"></i>
+                <p>Lista de pagos</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/lista_resenas/">
+                <i class="fas fa-star"></i>
+                <p>Reseñas</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/lista_mensajes/">
+                <i class="fas fa-envelope"></i>
+                <p>Mensajes</p>
+                </a>
+            </li>
+            </ul>
+        </div>
+        </div>
+
+      </div>
+      <!-- End Sidebar -->
+
+      <div class="main-panel">
+        <div class="main-header">
+          <div class="main-header-logo">
+            <!-- Logo Header -->
+            <div class="logo-header" data-background-color="dark">
+              <a href="index.html" class="logo">
+                <img
+                  src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
+                  alt="navbar brand"
+                  class="navbar-brand"
+                  height="20"
+                />
+              </a>
+              <div class="nav-toggle">
+                <button class="btn btn-toggle toggle-sidebar">
+                  <i class="gg-menu-right"></i>
+                </button>
+                <button class="btn btn-toggle sidenav-toggler">
+                  <i class="gg-menu-left"></i>
+                </button>
+              </div>
+              <button class="topbar-toggler more">
+                <i class="gg-more-vertical-alt"></i>
+              </button>
+            </div>
+            <!-- End Logo Header -->
+          </div>
+          <!-- Navbar Header -->
+          <nav
+            class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom"
+          >
+            <div class="container-fluid">
+              <nav
+                class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex"
+              >
+                  <a class="navbar-brand" href="#">Sistema - Cliente</a>
+              </nav>
+
+              <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
+
+                <div class="container-fluid">
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCliente" aria-controls="navbarCliente" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarCliente">
+
+                <div class="d-flex align-items-center">
+                <a href="{% url 'ver_perfil' %}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-person-circle me-1"></i> Ver mi perfil
+                </a>
+                <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+                </a>
+
+                </div>
+            </div>
+            </div>
+              </ul>
+            </div>
+          </nav>
+          <!-- End Navbar -->
+        </div>
+
+    {% block contenido %}
+    {% endblock %}
+
+
+        <footer>
+
+          <div class="row" style="padding: 20px; color:darkblue; background-color:white;">
+            <div class="col-md-4 ">
+              <h3 class="text-center">Desarrollado por:</h3>
+              <p class="text-center">Katherin Pico</p>
+              <p class="text-center">Boris Pardo</p>
+            </div>
+
+            <div class="col-md-4 ">
+              <h3 class="text-center">Email:</h3>
+              <p class="text-center">kathy.jim06.cc@gmail.com</p>
+            </div>
+            <div class="col-md-4 ">
+              <h3 class="text-center">Fecha:</h3>
+              <p class="text-center">Latacunga, 09 de junio del 2025</p>
+            </div>
+          </div>
+        </footer>
+    <!--   Core JS Files   -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/core/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'plantilla/kaiadmin/assets/js/core/bootstrap.min.js' %}"></script>
+    <script src="{% static 'plantilla/kaiadmin/assets/js/core/popper.min.js' %}"></script>
+
+    <!-- jQuery Scrollbar -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js' %}"></script>
+
+    <!-- Chart JS -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart.js/chart.min.js' %}"></script>
+
+    <!-- jQuery Sparkline -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery.sparkline/jquery.sparkline.min.js' %}"></script>
+
+    <!-- Chart Circle -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart-circle/circles.min.js' %}"></script>
+
+    <!-- Datatables -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/datatables/datatables.min.js' %}"></script>
+
+    <!-- jQuery Vector Maps -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/jsvectormap.min.js' %}"></script>
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/world.js' %}"></script>
+
+    <!-- Sweet Alert -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/sweetalert/sweetalert.min.js' %}"></script>
+
+    <!-- Kaiadmin JS -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/kaiadmin.min.js' %}"></script>
+
+    <!-- Kaiadmin DEMO methods, don't include it in your project! -->
+    <script src="{% static 'plantilla/kaiadmin/assets/js/setting-demo.js' %}"></script>
+    <script src="{% static 'plantilla/kaiadmin/assets/js/demo.js' %}"></script>
+    <script>
+      $("#lineChart").sparkline([102, 109, 120, 99, 110, 105, 115], {
+        type: "line",
+        height: "70",
+        width: "100%",
+        lineWidth: "2",
+        lineColor: "#177dff",
+        fillColor: "rgba(23, 125, 255, 0.14)",
+      });
+
+      $("#lineChart2").sparkline([99, 125, 122, 105, 110, 124, 115], {
+        type: "line",
+        height: "70",
+        width: "100%",
+        lineWidth: "2",
+        lineColor: "#f3545d",
+        fillColor: "rgba(243, 84, 93, .14)",
+      });
+
+      $("#lineChart3").sparkline([105, 103, 123, 100, 95, 105, 115], {
+        type: "line",
+        height: "70",
+        width: "100%",
+        lineWidth: "2",
+        lineColor: "#ffa534",
+        fillColor: "rgba(255, 165, 52, .14)",
+      });
+    </script>
+
+    {% if messages %}
+      {% for mensaje in messages %}
+        <script>
+            swal({
+              title: "CONFIRMACIÓN",
+              text: "{{ mensaje }}",
+              icon: "success",
+            });
+        </script>
+      {% endfor %}
+    {% endif %}
+
+    <style>
+      .error{
+      color:red;
+      font-weight: bold;
+      }
+
+      .form-control.error{
+      border: 1px solid red;
+      }
+    </style>
+
+  </body>
+</html>

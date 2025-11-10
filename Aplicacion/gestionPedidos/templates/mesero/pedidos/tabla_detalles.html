@@ -1,0 +1,35 @@
+<div class="table-responsive shadow rounded-4 mt-3">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-primary text-center">
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Subtotal</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for det in pedido.detalles.all %}
+            <tr>
+                <td>{{ det.producto.nombre }}</td>
+                <td class="text-center">{{ det.cantidad }}</td>
+                <td class="text-center">${{ det.subtotal }}</td>
+                <td class="text-center">
+                    <button class="btn btn-warning btn-sm me-1" onclick="editarDetalleAjax('{{ det.id }}')">
+                        Editar
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                    Aún no hay productos agregados.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

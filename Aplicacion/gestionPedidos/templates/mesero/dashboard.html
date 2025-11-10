@@ -1,0 +1,62 @@
+{% extends 'mesero/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br><br><br>
+<style>
+    body {
+        background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+    }
+</style>
+
+<div class="container my-5 text-center">
+    <h1 class="display-5 fw-bold text-primary">👨‍🍳 Panel del Mesero</h1>
+    <p class="lead text-secondary mb-5">Gestiona pedidos, asigna mesas y atiende a tus clientes.</p>
+
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        <!-- Registrar Pedido -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-basket2 fs-1 text-primary"></i>
+                    <h5 class="card-title mt-3">Registrar Pedido</h5>
+                    <p class="card-text text-muted">Toma nuevos pedidos y asígnalos a una mesa.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ver Pedidos -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-eye-fill fs-1 text-primary"></i>
+                    <h5 class="card-title mt-3">Ver Pedidos</h5>
+                    <p class="card-text text-muted">Consulta los pedidos pendientes o entregados.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de Mesas -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-table fs-1 text-primary"></i>
+                    <h5 class="card-title mt-3">Estado de Mesas</h5>
+                    <p class="card-text text-muted">Observa qué mesas están ocupadas o disponibles.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cerrar Sesión -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
+                    <h5 class="card-title mt-3">Cerrar Sesión</h5>
+                    <p class="card-text text-muted">Salir de manera segura del sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

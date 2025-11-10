@@ -1,0 +1,171 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 800px;">
+    <h2 class="text-center text-primary mb-4">Editar Pedido #{{ pedido.id }}</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulario para editar el pedido -->
+    <form method="post" id="frm_editar_pedido">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Mesero:</label>
+                <select name="mesero" class="form-select" required>
+                    {% for m in meseros %}
+                        <option value="{{ m.id }}" {% if pedido.mesero.id == m.id %}selected{% endif %}>
+                            {{ m.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Mesa:</label>
+                <select name="mesa" class="form-select">
+                    <option value="">Sin mesa (domicilio)</option>
+                    {% for mesa in mesas %}
+                        <option value="{{ mesa.id }}" {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
+                            Mesa {{ mesa.numero }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Estado:</label>
+                <select name="estado" class="form-select">
+                    <option value="en preparacion" {% if pedido.estado == 'en preparacion' %}selected{% endif %}>
+                        En preparación
+                    </option>
+                    <option value="listo" {% if pedido.estado == 'listo' %}selected{% endif %}>Listo</option>
+                    <option value="entregado" {% if pedido.estado == 'entregado' %}selected{% endif %}>Entregado</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-grid mt-3">
+            <button type="button" class="btn btn-primary" onclick="guardarPedido()">
+                Guardar cambios del pedido
+            </button>
+        </div>
+    </form>
+
+    <!-- Tabla de detalles -->
+    <h4 class="mt-4">Detalles del pedido:</h4>
+    <div id="tabla_detalles">
+        {% include 'mesero/pedidos/tabla_detalles.html' %}
+    </div>
+
+    <!-- Agregar productos -->
+    <h4 class="mt-4">Agregar productos:</h4>
+    <div class="row">
+        {% for producto in productos %}
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm rounded-4">
+                {% if producto.imagen %}
+                <img src="{{ producto.imagen.url }}" class="card-img-top" style="height:150px; object-fit:cover;">
+                {% else %}
+                <img src="{% static 'img/sin_imagen.png' %}" class="card-img-top" style="height:150px; object-fit:cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ producto.nombre }}</h5>
+                    <p class="text-muted small">{{ producto.descripcion|truncatechars:60 }}</p>
+                    <p class="fw-bold">${{ producto.precio }}</p>
+                    <div class="input-group mb-2">
+                        <input type="number" min="1" value="1" id="cantidad_{{ producto.id }}" class="form-control">
+                        <button class="btn btn-success" onclick="agregarProducto('{{ producto.id }}')">
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// Guardar cambios del pedido
+function guardarPedido() {
+    const form = document.getElementById('frm_editar_pedido');
+    const formData = new FormData(form);
+
+    fetch("{% url 'editar_pedido' pedido.id %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+        body: formData
+    })
+    .then(res => {
+        if(res.ok){
+            alert("Pedido actualizado correctamente.");
+            location.reload(); // opcional: recarga para reflejar cambios de estado
+        }
+    });
+}
+
+// Agregar producto al pedido
+function agregarProducto(id) {
+    let cantidad = document.getElementById(`cantidad_${id}`).value;
+
+    fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ producto_id: id, cantidad: cantidad })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.mensaje);
+        document.getElementById('tabla_detalles').innerHTML = data.tabla;
+    });
+}
+
+// Editar detalle
+function editarDetalleAjax(detalle_id) {
+    let cantidad = prompt("Ingrese la nueva cantidad:");
+
+    if (cantidad) {
+        fetch(`/pedidos/detalle/editar_ajax/${detalle_id}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ cantidad: cantidad })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.mensaje);
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+        });
+    }
+}
+
+// Eliminar detalle
+function eliminarDetalleAjax(detalle_id) {
+    if (confirm("¿Eliminar este producto del pedido?")) {
+        fetch(`/pedidos/detalle/eliminar_ajax/${detalle_id}/`, {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.mensaje);
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+        });
+    }
+}
+</script>
+
+<br><br><br>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br><br><br>
+<!-- Fondo degradado -->
+<style>
+    body {
+        background: linear-gradient(to right, #f0f4c3, #e6ee9c);
+    }
+    .card-custom {
+        border-radius: 1rem;
+        box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+    }
+</style>
+
+<div class="container my-5">
+
+    <!-- Encabezado de bienvenida -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-success">💰 Bienvenido/a, {{ user.nombre|default:"Cajero" }}!</h1>
+        <p class="lead text-secondary">Gestiona los pagos de los pedidos y genera comprobantes de forma rápida y segura.</p>
+    </div>
+
+    <!-- Tarjetas con funcionalidades -->
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+
+        <!-- Pedidos por cobrar -->
+        <div class="col">
+            <div class="card card-custom h-100 text-center p-3">
+                <i class="bi bi-receipt fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Pedidos por Cobrar</h5>
+                <p class="card-text text-muted">
+                    Visualiza todos los pedidos listos para cobrar y verifica su total.
+                </p>
+                <a href="{% url 'pedidos_cobrar' %}" class="btn btn-success mt-2">Ver Pedidos</a>
+            </div>
+        </div>
+
+        <!-- Generar Comprobante -->
+        <div class="col">
+            <div class="card card-custom h-100 text-center p-3">
+                <i class="bi bi-file-earmark-text fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Generar Comprobante</h5>
+                <p class="card-text text-muted">
+                    Crea boletas, facturas o tickets para los pagos realizados.
+                </p>
+                <a href="{% url 'generar_comprobante' %}" class="btn btn-success mt-2">Generar</a>
+            </div>
+        </div>
+
+        <!-- Historial de Pagos -->
+        <div class="col">
+            <div class="card card-custom h-100 text-center p-3">
+                <i class="bi bi-clock-history fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Historial de Pagos</h5>
+                <p class="card-text text-muted">
+                    Revisa todos los pagos realizados y los comprobantes generados.
+                </p>
+                <a href="{% url 'historial_pagos' %}" class="btn btn-success mt-2">Ver Historial</a>
+            </div>
+        </div>
+
+        <!-- Cerrar Sesión -->
+        <div class="col">
+            <div class="card card-custom h-100 text-center p-3">
+                <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
+                <h5 class="card-title mt-3">Cerrar Sesión</h5>
+                <p class="card-text text-muted">Salir de forma segura del sistema.</p>
+                <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger mt-2">Salir</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

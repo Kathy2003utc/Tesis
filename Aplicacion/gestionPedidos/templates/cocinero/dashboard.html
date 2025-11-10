@@ -1,0 +1,62 @@
+{% extends 'cocinero/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br><br><br>
+<style>
+    body {
+        background: linear-gradient(to right, #fff3e0, #e8f5e9);
+    }
+</style>
+
+<div class="container my-5 text-center">
+    <h1 class="display-5 fw-bold text-warning">🍲 Panel del Cocinero</h1>
+    <p class="lead text-secondary mb-5">Revisa y prepara los pedidos en curso.</p>
+
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        <!-- Pedidos Pendientes -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-hourglass-split fs-1 text-warning"></i>
+                    <h5 class="card-title mt-3">Pedidos Pendientes</h5>
+                    <p class="card-text text-muted">Visualiza los pedidos que requieren preparación.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Listos -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                    <h5 class="card-title mt-3">Pedidos Listos</h5>
+                    <p class="card-text text-muted">Marca los pedidos finalizados y listos para servir.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-clock-history fs-1 text-warning"></i>
+                    <h5 class="card-title mt-3">Historial de Preparaciones</h5>
+                    <p class="card-text text-muted">Consulta los platos ya elaborados.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cerrar Sesión -->
+        <div class="col">
+            <div class="card h-100 shadow border-0">
+                <div class="card-body">
+                    <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
+                    <h5 class="card-title mt-3">Cerrar Sesión</h5>
+                    <p class="card-text text-muted">Salir de manera segura del sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

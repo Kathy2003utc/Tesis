@@ -1,0 +1,92 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 700px;">
+    <h2 class="text-center text-primary mb-4">Editar Trabajador</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form id="frm_trabajador" method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre:</label>
+            <input type="text" name="nombre" class="form-control" value="{{ trabajador.nombre }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="apellido" class="form-label">Apellido:</label>
+            <input type="text" name="apellido" class="form-control" value="{{ trabajador.apellido }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="correo" class="form-label">Correo:</label>
+            <input type="email" name="correo" class="form-control" value="{{ trabajador.correo }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="telefono" class="form-label">Teléfono:</label>
+            <input type="text" name="telefono" class="form-control" value="{{ trabajador.telefono }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="direccion" class="form-label">Dirección:</label>
+            <textarea name="direccion" class="form-control" rows="2">{{ trabajador.direccion }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="rol" class="form-label">Rol:</label>
+            <select name="rol" class="form-select" required>
+                <option value="" disabled>Seleccione un rol</option>
+                <option value="mesero" {% if trabajador.rol == "mesero" %}selected{% endif %}>Mesero</option>
+                <option value="cocinero" {% if trabajador.rol == "cocinero" %}selected{% endif %}>Cocinero</option>
+                <option value="cajero" {% if trabajador.rol == "cajero" %}selected{% endif %}>Cajero</option>
+            </select>
+        </div>
+
+        <hr>
+        <p class="text-muted">Si deseas cambiar la contraseña, ingresa una nueva. De lo contrario, deja estos campos vacíos.</p>
+
+        <div class="mb-3">
+            <label for="password" class="form-label">Nueva Contraseña:</label>
+            <input type="password" name="password" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label for="password2" class="form-label">Confirmar Contraseña:</label>
+            <input type="password" name="password2" class="form-control">
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-warning">Actualizar Trabajador</button>
+        </div>
+    </form>
+</div>
+
+<script>
+$("#frm_trabajador").validate({
+    rules: {
+        nombre: { required: true, minlength: 2, maxlength: 100 },
+        apellido: { required: true, minlength: 2, maxlength: 100 },
+        correo: { required: true, email: true },
+        rol: { required: true },
+        password: { minlength: 6 },
+        password2: { equalTo: "[name='password']" }
+    },
+    messages: {
+        nombre: { required: "Campo obligatorio", minlength: "Mínimo 2 caracteres", maxlength: "Máximo 100 caracteres" },
+        apellido: { required: "Campo obligatorio", minlength: "Mínimo 2 caracteres", maxlength: "Máximo 100 caracteres" },
+        correo: { required: "Campo obligatorio", email: "Correo no válido" },
+        rol: { required: "Seleccione un rol" },
+        password: { minlength: "Mínimo 6 caracteres" },
+        password2: { equalTo: "Las contraseñas deben coincidir" }
+    }
+});
+</script>
+<br><br><br>
+{% endblock %}

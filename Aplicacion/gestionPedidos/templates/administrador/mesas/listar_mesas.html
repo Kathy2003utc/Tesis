@@ -1,0 +1,72 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Listado de Mesas</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="text-end mb-3">
+        <a href="{% url 'registrar_mesa' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Registrar Nueva Mesa
+        </a>
+    </div>
+
+    <div class="table-responsive shadow-lg rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-primary text-center">
+                <tr>
+                    <th>N°</th>
+                    <th>Capacidad</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mesa in mesas %}
+                <tr>
+                    <td class="text-center">{{ mesa.numero }}</td>
+                    <td class="text-center">{{ mesa.capacidad }}</td>
+                    <td class="text-center">
+                        {% if mesa.estado == "libre" %}
+                            <span class="badge bg-success">Libre</span>
+                        {% else %}
+                            <span class="badge bg-danger">Ocupada</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'editar_mesa' mesa.id %}" class="btn btn-warning btn-sm me-1">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        <form action="{% url 'eliminar_mesa' mesa.id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('¿Deseas eliminar esta mesa?')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No hay mesas registradas.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<br><br><br>
+{% endblock %}

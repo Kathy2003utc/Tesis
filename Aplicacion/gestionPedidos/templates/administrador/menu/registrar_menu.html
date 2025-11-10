@@ -1,0 +1,68 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 600px;">
+    <h2 class="text-center text-primary mb-4">Registrar Nuevo Producto</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form id="frm_producto" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Nombre:</label>
+            <input type="text" name="nombre" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Descripción:</label>
+            <textarea name="descripcion" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Precio ($):</label>
+            <input type="number" name="precio" step="0.01" min="0.1" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Tipo:</label>
+            <select name="tipo" class="form-select" required>
+                <option value="plato">Plato</option>
+                <option value="bebida">Bebida</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Imagen:</label>
+            <input type="file" name="imagen" class="form-control" accept="image/*">
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-success">Registrar Producto</button>
+        </div>
+    </form>
+</div>
+
+<script>
+$("#frm_producto").validate({
+    rules: {
+        nombre: { required: true },
+        precio: { required: true, number: true, min: 0.1 },
+        tipo: { required: true }
+    },
+    messages: {
+        nombre: { required: "Campo obligatorio" },
+        precio: { required: "Campo obligatorio", number: "Debe ser un número", min: "Debe ser mayor a 0" },
+        tipo: { required: "Seleccione un tipo" }
+    }
+});
+</script>
+
+<br><br><br>
+{% endblock %}

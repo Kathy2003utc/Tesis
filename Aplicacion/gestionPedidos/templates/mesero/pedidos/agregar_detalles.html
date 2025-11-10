@@ -1,0 +1,125 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Agregar Productos al Pedido #{{ pedido.id }}</h2>
+
+    <div class="row">
+        {% for producto in productos %}
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm rounded-4">
+                {% if producto.imagen %}
+                <img src="{{ producto.imagen.url }}" class="card-img-top" style="height:150px; object-fit:cover;">
+                {% else %}
+                <img src="{% static 'img/sin_imagen.png' %}" class="card-img-top" style="height:150px; object-fit:cover;">
+                {% endif %}
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ producto.nombre }}</h5>
+                    <p class="text-muted small">{{ producto.descripcion|truncatechars:60 }}</p>
+                    <p class="fw-bold">${{ producto.precio }}</p>
+
+                    <div class="input-group mb-2">
+                        <input type="number" min="1" value="1" 
+                               id="cantidad_{{ producto.id }}" 
+                               class="form-control">
+                        <button class="btn btn-success"
+                                onclick="agregarProducto('{{ producto.id }}')">
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h4 class="mt-5 text-center">Detalles del Pedido:</h4>
+    <div id="tabla_detalles">
+        {% include 'mesero/pedidos/tabla_detalles.html' %}
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'ver_pedido' pedido.id %}" class="btn btn-primary">
+            Finalizar & Ver pedido
+        </a>
+    </div>
+</div>
+
+<script>
+function agregarProducto(id) {
+    let cantidad = document.getElementById(`cantidad_${id}`).value;
+
+    fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            producto_id: id,
+            cantidad: cantidad
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success){
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+            alert(data.mensaje);
+        } else {
+            alert(data.mensaje);
+        }
+    });
+}
+
+function editarDetalleAjax(detalle_id) {
+    let nuevo_producto = prompt("Ingrese el nuevo ID del producto:");
+    let nueva_cantidad = prompt("Ingrese la nueva cantidad:");
+
+    fetch(`/administrador/pedidos/editar_detalle_ajax/${detalle_id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            producto_id: nuevo_producto,
+            cantidad: nueva_cantidad
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success){
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+            alert(data.mensaje);
+        } else {
+            alert(data.mensaje);
+        }
+    });
+}
+
+function eliminarDetalleAjax(detalle_id) {
+    if(!confirm("¿Desea eliminar este producto del pedido?")) return;
+
+    fetch(`/administrador/pedidos/eliminar_detalle_ajax/${detalle_id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success){
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+            alert(data.mensaje);
+        } else {
+            alert(data.mensaje);
+        }
+    });
+}
+</script>
+
+<br><br><br>
+{% endblock %}

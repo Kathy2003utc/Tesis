@@ -1,0 +1,79 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 600px;">
+    <h2 class="text-center text-primary mb-4">Editar Producto</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form id="frm_editar_producto" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Nombre:</label>
+            <input type="text" name="nombre" class="form-control" value="{{ producto.nombre }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Descripción:</label>
+            <textarea name="descripcion" class="form-control" rows="3">{{ producto.descripcion }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Precio ($):</label>
+            <input type="number" name="precio" step="0.01" min="0.1" class="form-control"
+                   value="{{ producto.precio }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Tipo:</label>
+            <select name="tipo" class="form-select" required>
+                <option value="plato" {% if producto.tipo == "plato" %}selected{% endif %}>Plato</option>
+                <option value="bebida" {% if producto.tipo == "bebida" %}selected{% endif %}>Bebida</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Imagen actual:</label><br>
+            {% if producto.imagen %}
+                <img src="{{ producto.imagen.url }}" width="100" class="img-thumbnail mb-2">
+            {% else %}
+                <span class="text-muted">Sin imagen</span>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Cambiar imagen:</label>
+            <input type="file" name="imagen" class="form-control" accept="image/*">
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary">Actualizar Producto</button>
+            <a href="{% url 'listar_menu' %}" class="btn btn-secondary mt-2">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+$("#frm_editar_producto").validate({
+    rules: {
+        nombre: { required: true },
+        precio: { required: true, number: true, min: 0.1 },
+        tipo: { required: true }
+    },
+    messages: {
+        nombre: { required: "Campo obligatorio" },
+        precio: { required: "Campo obligatorio", number: "Debe ser un número", min: "Debe ser mayor a 0" },
+        tipo: { required: "Seleccione un tipo" }
+    }
+});
+</script>
+
+<br><br><br>
+{% endblock %}

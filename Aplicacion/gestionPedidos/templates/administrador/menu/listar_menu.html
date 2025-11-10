@@ -1,0 +1,82 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Listado de Productos / Menú</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="text-end mb-3">
+        <a href="{% url 'registrar_menu' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Registrar Nuevo Producto
+        </a>
+    </div>
+
+    <div class="table-responsive shadow-lg rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-primary text-center">
+                <tr>
+                    <th>Imagen</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>Tipo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in productos %}
+                <tr>
+                    <td class="text-center">
+                        {% if p.imagen %}
+                        <img src="{{ p.imagen.url }}" class="img-thumbnail" width="80">
+                        {% else %}
+                        <span class="text-muted">Sin imagen</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.nombre }}</td>
+                    <td>{{ p.descripcion }}</td>
+                    <td class="text-center">$ {{ p.precio }}</td>
+                    <td class="text-center">
+                        {% if p.tipo == 'plato' %}
+                        <span class="badge bg-primary">Plato</span>
+                        {% else %}
+                        <span class="badge bg-info">Bebida</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'editar_menu' p.id %}" class="btn btn-warning btn-sm me-1">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+
+                        <form action="{% url 'eliminar_menu' p.id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('¿Deseas eliminar este producto?')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No hay productos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<br><br><br>
+{% endblock %}

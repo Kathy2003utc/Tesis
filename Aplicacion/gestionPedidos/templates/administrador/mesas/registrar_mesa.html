@@ -1,0 +1,58 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 600px;">
+    <h2 class="text-center text-primary mb-4">Registrar Nueva Mesa</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form id="frm_mesa" method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="numero" class="form-label">Número de Mesa:</label>
+            <input type="number" name="numero" class="form-control" min="1" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="capacidad" class="form-label">Capacidad:</label>
+            <input type="number" name="capacidad" class="form-control" min="1" value="4" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="estado" class="form-label">Estado:</label>
+            <select name="estado" class="form-select" required>
+                <option value="libre" selected>Libre</option>
+                <option value="ocupada">Ocupada</option>
+            </select>
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-success">Registrar Mesa</button>
+        </div>
+    </form>
+</div>
+
+<!-- jQuery Validate -->
+<script>
+$("#frm_mesa").validate({
+    rules: {
+        numero: { required: true, number: true, min: 1 },
+        capacidad: { required: true, number: true, min: 1 },
+        estado: { required: true }
+    },
+    messages: {
+        numero: { required: "Campo obligatorio", number: "Debe ser un número", min: "Mínimo 1" },
+        capacidad: { required: "Campo obligatorio", number: "Debe ser un número", min: "Mínimo 1" },
+        estado: { required: "Seleccione un estado" }
+    }
+});
+</script>
+<br><br><br>
+{% endblock %}

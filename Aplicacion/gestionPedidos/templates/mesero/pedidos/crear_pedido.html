@@ -1,0 +1,69 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 650px;">
+    <h2 class="text-center text-primary mb-4">Crear Pedido</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="frm_pedido" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Mesero:</label>
+            <select name="mesero" class="form-select" required>
+                <option value="">Seleccione...</option>
+                {% for m in meseros %}
+                    <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
+                {% endfor %}
+            </select>
+
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Mesa:</label>
+            <select name="mesa" class="form-select">
+                <option value="">Sin mesa (domicilio)</option>
+                {% for mesa in mesas %}
+                    <option value="{{ mesa.id }}">Mesa {{ mesa.numero }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Tipo de pedido:</label>
+            <select name="tipo_pedido" class="form-select" required>
+                <option value="restaurante">Restaurante</option>
+                <option value="domicilio">Domicilio</option>
+            </select>
+        </div>
+
+        <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-success">
+                Continuar → agregar productos
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+$("#frm_pedido").validate({
+    rules: {
+        mesero: { required: true },
+        tipo_pedido: { required: true }
+    },
+    messages: {
+        mesero: { required: "Seleccione mesero" },
+        tipo_pedido: { required: "Seleccione tipo" }
+    }
+});
+</script>
+
+<br><br><br>
+{% endblock %}

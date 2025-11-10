@@ -1,0 +1,92 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5">
+    <h1 class="text-center text-primary">Listado de Trabajadores</h1>
+    <hr>
+
+    <div class="mb-3 text-end">
+        <a href="{% url 'crear_trabajador' %}" class="btn btn-success">Nuevo Trabajador</a>
+    </div>
+
+    <table class="table table-bordered table-striped table-hover" id="tbl_trabajadores">
+        <thead class="table-primary">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trabajador in trabajadores %}
+            <tr>
+                <td>{{ trabajador.id }}</td>
+                <td>{{ trabajador.nombre }}</td>
+                <td>{{ trabajador.apellido }}</td>
+                <td>{{ trabajador.correo }}</td>
+                <td>{{ trabajador.telefono|default:"—" }}</td>
+                <td>{{ trabajador.direccion|default:"—" }}</td>
+                <td>
+                    {% if trabajador.rol == 'mesero' %}
+                        <span class="badge bg-primary">Mesero</span>
+                    {% elif trabajador.rol == 'cocinero' %}
+                        <span class="badge bg-warning text-dark">Cocinero</span>
+                    {% elif trabajador.rol == 'cajero' %}
+                        <span class="badge bg-success">Cajero</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'editar_trabajador' trabajador.id %}" class="btn btn-outline-warning btn-sm" title="Editar">
+                        <i class="fa fa-pen"></i>
+                    </a>
+                    <br><br>
+                    <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirmarEliminacion(event);">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function confirmarEliminacion(e) {
+    e.preventDefault();
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            e.target.closest("form").submit();
+        }
+    });
+}
+
+$('#tbl_trabajadores').DataTable({
+    dom: 'Bfrtip',
+    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+    language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+    }
+});
+</script>
+
+<br><br><br>
+{% endblock %}
