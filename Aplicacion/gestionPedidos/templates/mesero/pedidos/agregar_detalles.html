@@ -36,19 +36,63 @@
         {% endfor %}
     </div>
 
-    <h4 class="mt-5 text-center">Detalles del Pedido:</h4>
+    <h4 class="mt-5 text-center">Detalles del Pedido</h4>
     <div id="tabla_detalles">
-        {% include 'mesero/pedidos/tabla_detalles.html' %}
+        <div class="table-responsive shadow rounded-4 mt-3">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-primary text-center">
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for det in pedido.detalles.all %}
+                    <tr>
+                        <td>{{ det.producto.nombre }}</td>
+                        <td class="text-center">{{ det.cantidad }}</td>
+                        <td class="text-center">${{ det.subtotal }}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm me-1" onclick="editarDetalleAjax('{{ det.id }}', '{{ det.cantidad }}')">
+                                Editar
+                            </button>
+
+                            <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            Aún no hay productos agregados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+
 
     <div class="text-center mt-4">
-        <a href="{% url 'ver_pedido' pedido.id %}" class="btn btn-primary">
-            Finalizar & Ver pedido
+        <a href="{% url 'ver_pedido' pedido.id %}" 
+        class="btn btn-primary" 
+        id="btn_finalizar">
+        Finalizar & Ver pedido
         </a>
     </div>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+// ------------------------------
+// Agregar producto
+// ------------------------------
 function agregarProducto(id) {
     let cantidad = document.getElementById(`cantidad_${id}`).value;
 
@@ -67,59 +111,170 @@ function agregarProducto(id) {
     .then(data => {
         if(data.success){
             document.getElementById('tabla_detalles').innerHTML = data.tabla;
-            alert(data.mensaje);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Producto agregado',
+                text: data.mensaje,
+                timer: 1000,
+                showConfirmButton: false
+            });
+
         } else {
-            alert(data.mensaje);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.mensaje
+            });
         }
     });
 }
 
-function editarDetalleAjax(detalle_id) {
-    let nuevo_producto = prompt("Ingrese el nuevo ID del producto:");
-    let nueva_cantidad = prompt("Ingrese la nueva cantidad:");
-
-    fetch(`/administrador/pedidos/editar_detalle_ajax/${detalle_id}/`, {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json"
+// ------------------------------
+// Editar detalle
+// ------------------------------
+function editarDetalleAjax(detalle_id, cantidad_actual) {
+    Swal.fire({
+        title: "Editar cantidad",
+        input: "number",
+        inputLabel: "Nueva cantidad",
+        inputValue: cantidad_actual,
+        inputAttributes: {
+            min: 1
         },
-        body: JSON.stringify({
-            producto_id: nuevo_producto,
-            cantidad: nueva_cantidad
+        showCancelButton: true,
+        confirmButtonText: "Actualizar",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        const nuevaCantidad = result.value;
+
+        fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ cantidad: nuevaCantidad })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.success){
-            document.getElementById('tabla_detalles').innerHTML = data.tabla;
-            alert(data.mensaje);
-        } else {
-            alert(data.mensaje);
-        }
+        .then(response => response.json())
+        .then(data => {
+            if(data.success){
+                document.getElementById('tabla_detalles').innerHTML = data.tabla;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Cantidad actualizada',
+                    text: data.mensaje,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.mensaje
+                });
+            }
+        });
     });
 }
 
+
+// ------------------------------
+// Eliminar detalle
+// ------------------------------
 function eliminarDetalleAjax(detalle_id) {
-    if(!confirm("¿Desea eliminar este producto del pedido?")) return;
+    Swal.fire({
+        title: "¿Eliminar producto?",
+        text: "Esta acción no se puede deshacer",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+    }).then((result) => {
+        if (!result.isConfirmed) return;
 
-    fetch(`/administrador/pedidos/eliminar_detalle_ajax/${detalle_id}/`, {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.success){
-            document.getElementById('tabla_detalles').innerHTML = data.tabla;
-            alert(data.mensaje);
-        } else {
-            alert(data.mensaje);
-        }
+        fetch("{% url 'eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success){
+                document.getElementById('tabla_detalles').innerHTML = data.tabla;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Eliminado',
+                    text: data.mensaje,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.mensaje
+                });
+            }
+        });
     });
 }
+
+// ------------------------------
+// Validar que el pedido tenga productos antes de finalizar
+// ------------------------------
+function validarProductos() {
+    const filas = document.querySelectorAll("#tabla_detalles tbody tr");
+
+    if (filas.length === 1 && filas[0].textContent.includes("Aún no hay productos")) {
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin productos',
+            text: 'Debe agregar al menos un producto antes de finalizar.',
+        });
+
+        return false;
+    }
+
+    return true;
+}
+
+// Bloquear el botón si no hay productos
+document.getElementById("btn_finalizar").addEventListener("click", function(event){
+    if (!validarProductos()) {
+        event.preventDefault();
+        return;
+    }
+
+    event.preventDefault();
+
+    Swal.fire({
+        icon: "success",
+        title: "Pedido registrado correctamente",
+        text: "Redirigiendo...",
+        timer: 1500,
+        showConfirmButton: false
+    });
+
+    setTimeout(() => {
+        window.location.href = this.href; 
+    }, 1500);
+});
+
 </script>
+
+
+
 
 <br><br><br>
 {% endblock %}

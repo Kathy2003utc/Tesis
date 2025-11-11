@@ -53,17 +53,46 @@
 </div>
 
 <script>
-$("#frm_pedido").validate({
-    rules: {
-        mesero: { required: true },
-        tipo_pedido: { required: true }
-    },
-    messages: {
-        mesero: { required: "Seleccione mesero" },
-        tipo_pedido: { required: "Seleccione tipo" }
+document.addEventListener("DOMContentLoaded", function () {
+    const tipoPedido = document.querySelector("select[name='tipo_pedido']");
+    const mesa = document.querySelector("select[name='mesa']");
+
+    function actualizarMesa() {
+        if (tipoPedido.value === "domicilio") {
+            mesa.value = "";        // Selecciona "Sin mesa"
+            mesa.disabled = true;   // Deshabilita el select
+        } else {
+            mesa.disabled = false;  // Activa el select
+        }
     }
+
+    // Ejecutar al cargar la página
+    actualizarMesa();
+
+    // Ejecutar cuando el usuario cambia el tipo
+    tipoPedido.addEventListener("change", actualizarMesa);
+
+    // Validación con jQuery Validate
+    $("#frm_pedido").validate({
+        rules: {
+            mesero: { required: true },
+            tipo_pedido: { required: true },
+            mesa: {
+                required: function () {
+                    return tipoPedido.value === "restaurante";
+                }
+            }
+        },
+        messages: {
+            mesero: { required: "Seleccione mesero" },
+            tipo_pedido: { required: "Seleccione tipo" },
+            mesa: { required: "Seleccione una mesa para restaurante" }
+        }
+    });
 });
 </script>
+
+
 
 <br><br><br>
 {% endblock %}

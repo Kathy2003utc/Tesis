@@ -403,7 +403,7 @@ def eliminar_menu(request, producto_id):
 
 # Listar pedidos
 def listar_pedidos(request):
-    pedidos = Pedido.objects.all().order_by('-id')
+    pedidos = Pedido.objects.all().order_by('id')
     return render(request, 'mesero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
 
 # Crear pedido
@@ -418,8 +418,6 @@ def crear_pedido(request):
             mesa_id=mesa_id if mesa_id else None,
             tipo_pedido=tipo_pedido
         )
-
-        messages.success(request, f"Pedido #{pedido.id} creado correctamente.")
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
     meseros = Usuario.objects.filter(rol='mesero')
@@ -429,35 +427,53 @@ def crear_pedido(request):
 # Ver pedido
 def ver_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    # Validación: no permitir ver pedido sin productos
+    if not pedido.detalles.exists():
+        messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
+        return redirect('agregar_detalles', pedido_id=pedido.id)
+
     return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
 
 # Editar pedido
 def editar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
+
     if request.method == 'POST':
         pedido.mesero_id = request.POST.get('mesero')
         pedido.mesa_id = request.POST.get('mesa') if request.POST.get('mesa') else None
         pedido.estado = request.POST.get('estado')
         pedido.save()
-        messages.success(request, f"Pedido #{pedido.id} actualizado.")
-        return redirect('listar_pedidos')
+
+        return JsonResponse({
+            "success": True,
+            "mensaje": f"Pedido #{pedido.id} actualizado correctamente."
+        })
 
     meseros = Usuario.objects.filter(rol='mesero')
     mesas = Mesa.objects.all()
+    productos = Producto.objects.all()
+
     return render(request, 'mesero/pedidos/editar_pedido.html', {
         'pedido': pedido,
         'meseros': meseros,
-        'mesas': mesas
+        'mesas': mesas,
+        'productos': productos
     })
+
+
 
 # Eliminar pedido
 def eliminar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
+
     if request.method == 'POST':
+        id_eliminado = pedido.id
         pedido.delete()
-        messages.success(request, f"Pedido #{pedido.id} eliminado.")
+        messages.success(request, f"Pedido #{id_eliminado} eliminado.")
         return redirect('listar_pedidos')
-    return render(request, 'mesero/pedidos/confirmar_eliminar.html', {'pedido': pedido})
+
+    return redirect('listar_pedidos')  # No hace falta mostrar nada
 
 # ----------------------------
 # Detalles con AJAX

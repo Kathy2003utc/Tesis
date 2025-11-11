@@ -344,10 +344,12 @@
     {% if messages %}
       {% for mensaje in messages %}
         <script>
-            swal({
+            Swal.fire({
               title: "CONFIRMACIÓN",
               text: "{{ mensaje }}",
               icon: "success",
+              showConfirmButton: false,
+              timer: 1000
             });
         </script>
       {% endfor %}

@@ -37,7 +37,7 @@
                 {% for pedido in pedidos %}
                 <tr>
                     <td class="text-center">{{ pedido.id }}</td>
-                    <td class="text-center">{{ pedido.mesero.username }}</td>
+                    <td class="text-center">{{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</td>
                     <td class="text-center">{{ pedido.mesa.numero }}</td>
                     <td class="text-center">
                         {% if pedido.estado == 'en preparacion' %}
@@ -56,14 +56,16 @@
                         <a href="{% url 'editar_pedido' pedido.id %}" class="btn btn-warning btn-sm me-1">
                             <i class="fas fa-edit"></i> Editar
                         </a>
-                        <form action="{% url 'eliminar_pedido' pedido.id %}" 
-                              method="post" style="display:inline;">
+                        <form id="form-eliminar-{{ pedido.id }}" 
+                            action="{% url 'eliminar_pedido' pedido.id %}" 
+                            method="post" style="display:inline;">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-danger btn-sm"
-                                    onclick="return confirm('¿Deseas eliminar este pedido?')">
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="confirmarEliminacion('{{ pedido.id }}')">
                                 <i class="fas fa-trash"></i> Eliminar
                             </button>
                         </form>
+
                     </td>
                 </tr>
                 {% empty %}
@@ -77,6 +79,28 @@
         </table>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function confirmarEliminacion(id) {
+    Swal.fire({
+        title: "¿Estás seguro?",
+        text: "Esta acción no se puede deshacer.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById(`form-eliminar-${id}`).submit();
+        }
+    });
+}
+</script>
+
 
 <br><br><br>
 {% endblock %}

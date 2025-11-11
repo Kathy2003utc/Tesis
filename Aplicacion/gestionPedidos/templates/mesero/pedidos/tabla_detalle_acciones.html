@@ -6,7 +6,6 @@
                 <th>Valor unitario</th>
                 <th>Cantidad</th>
                 <th>Subtotal</th>
-                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -16,18 +15,10 @@
                 <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
                 <td class="text-center">{{ det.cantidad }}</td>
                 <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
-                <td class="text-center">
-                    <button class="btn btn-warning btn-sm me-1" onclick="editarDetalleAjax('{{ det.id }}', '{{ det.cantidad }}')">
-                        Editar
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
-                        Eliminar
-                    </button>
-                </td>
-            </tr>
+                
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center text-muted py-4">
+                <td colspan="4" class="text-center text-muted py-4">
                     Aún no hay productos agregados.
                 </td>
             </tr>
