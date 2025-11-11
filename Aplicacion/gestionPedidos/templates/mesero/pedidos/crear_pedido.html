@@ -44,9 +44,22 @@
             </select>
         </div>
 
+        <div id="domicilioFields" class="collapse">
+            <div class="mb-3 mt-3">
+                <label class="form-label">Dirección de entrega:</label>
+                <input type="text" name="direccion_entrega" class="form-control">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Contacto del cliente:</label>
+                <input type="text" name="contacto_cliente" class="form-control">
+            </div>
+        </div>
+
+
         <div class="d-grid mt-4">
             <button type="submit" class="btn btn-success">
-                Continuar → agregar productos
+                Agregar productos
             </button>
         </div>
     </form>
@@ -56,23 +69,39 @@
 document.addEventListener("DOMContentLoaded", function () {
     const tipoPedido = document.querySelector("select[name='tipo_pedido']");
     const mesa = document.querySelector("select[name='mesa']");
+    const domicilioFields = new bootstrap.Collapse(document.getElementById('domicilioFields'), {
+        toggle: false
+    });
+    const direccion = document.querySelector("input[name='direccion_entrega']");
+    const contacto = document.querySelector("input[name='contacto_cliente']");
 
-    function actualizarMesa() {
+    function actualizarFormulario() {
         if (tipoPedido.value === "domicilio") {
-            mesa.value = "";        // Selecciona "Sin mesa"
-            mesa.disabled = true;   // Deshabilita el select
+            // Mesa deshabilitada
+            mesa.value = "";
+            mesa.disabled = true;
+
+            // Mostrar campos domicilio con animación
+            domicilioFields.show();
+
         } else {
-            mesa.disabled = false;  // Activa el select
+            // Mesa habilitada
+            mesa.disabled = false;
+
+            // Ocultar campos domicilio
+            domicilioFields.hide();
+            direccion.value = "";
+            contacto.value = "";
         }
     }
 
     // Ejecutar al cargar la página
-    actualizarMesa();
+    actualizarFormulario();
 
-    // Ejecutar cuando el usuario cambia el tipo
-    tipoPedido.addEventListener("change", actualizarMesa);
+    // Ejecutar cuando cambia el tipo de pedido
+    tipoPedido.addEventListener("change", actualizarFormulario);
 
-    // Validación con jQuery Validate
+    // Validación jQuery Validate
     $("#frm_pedido").validate({
         rules: {
             mesero: { required: true },
@@ -81,16 +110,30 @@ document.addEventListener("DOMContentLoaded", function () {
                 required: function () {
                     return tipoPedido.value === "restaurante";
                 }
+            },
+            direccion_entrega: {
+                required: function () {
+                    return tipoPedido.value === "domicilio";
+                }
+            },
+            contacto_cliente: {
+                required: function () {
+                    return tipoPedido.value === "domicilio";
+                }
             }
         },
         messages: {
             mesero: { required: "Seleccione mesero" },
             tipo_pedido: { required: "Seleccione tipo" },
-            mesa: { required: "Seleccione una mesa para restaurante" }
+            mesa: { required: "Seleccione una mesa para restaurante" },
+            direccion_entrega: { required: "Ingrese dirección de entrega" },
+            contacto_cliente: { required: "Ingrese contacto del cliente" }
         }
     });
 });
 </script>
+
+
 
 
 

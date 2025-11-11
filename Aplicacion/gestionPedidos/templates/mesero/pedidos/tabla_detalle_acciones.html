@@ -6,6 +6,8 @@
                 <th>Valor unitario</th>
                 <th>Cantidad</th>
                 <th>Subtotal</th>
+                <th>Recargo</th>
+                <th>Observación</th>
             </tr>
         </thead>
         <tbody>
@@ -15,6 +17,8 @@
                 <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
                 <td class="text-center">{{ det.cantidad }}</td>
                 <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
+                <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
+                <td class="text-center">{{ det.observacion }}</td>
                 
             {% empty %}
             <tr>

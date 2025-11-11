@@ -131,21 +131,24 @@ class Pedido(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def calcular_totales(self):
-        """Calcula subtotal y total basándose en los detalles"""
+        # Subtotal de productos
         subtotal_calc = self.detalles.aggregate(
             total=Sum(F('precio_unitario') * F('cantidad'))
         )['total'] or 0
 
+        # Recargo total de productos (por cantidad)
+        recargo_total = self.detalles.aggregate(
+            total_recargo=Sum(F('recargo') * F('cantidad'))
+        )['total_recargo'] or 0
+
         self.subtotal = subtotal_calc
 
-        # si es domicilio, se suma recargo
         if self.tipo_pedido == 'domicilio':
-            self.total = self.subtotal + self.recargo_domicilio
+            self.total = self.subtotal + recargo_total + self.recargo_domicilio
         else:
-            self.total = self.subtotal
+            self.total = self.subtotal + recargo_total
 
         self.save()
-
     def __str__(self):
         return f"Pedido {self.id}"
 
@@ -157,12 +160,13 @@ class DetallePedido(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='detalles')
     producto = models.ForeignKey('Producto', on_delete=models.CASCADE)
     cantidad = models.PositiveIntegerField()
-
-    # Nuevo: guardar el precio del producto en el momento del pedido
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-
-    # Nuevo: subtotal por ítem (cantidad * precio_unitario)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # NUEVO CAMPO
+    observacion = models.CharField(max_length=200, blank=True, null=True)
+    recargo = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # <-- nuevo campo
+
 
     def save(self, *args, **kwargs):
         # Asigna precio actual del producto si no se define
@@ -176,6 +180,10 @@ class DetallePedido(models.Model):
 
         # actualizar subtotal total del pedido
         self.pedido.calcular_totales()
+    
+    @property
+    def recargo_total(self):
+        return self.recargo * self.cantidad
 
     def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre}"

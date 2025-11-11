@@ -6,30 +6,51 @@
 <div class="container mt-5">
     <h2 class="text-center text-primary mb-4">Agregar Productos al Pedido #{{ pedido.id }}</h2>
 
-    <div class="row">
+    <div class="row g-3">
         {% for producto in productos %}
-        <div class="col-md-3 mb-4">
-            <div class="card shadow-sm rounded-4">
-                {% if producto.imagen %}
-                <img src="{{ producto.imagen.url }}" class="card-img-top" style="height:150px; object-fit:cover;">
-                {% else %}
-                <img src="{% static 'img/sin_imagen.png' %}" class="card-img-top" style="height:150px; object-fit:cover;">
-                {% endif %}
+        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100" style="padding-bottom: 0 !important;">
 
-                <div class="card-body">
-                    <h5 class="card-title">{{ producto.nombre }}</h5>
-                    <p class="text-muted small">{{ producto.descripcion|truncatechars:60 }}</p>
-                    <p class="fw-bold">${{ producto.precio }}</p>
+                <div class="ratio ratio-16x9">
+                    {% if producto.imagen %}
+                        <img src="{{ producto.imagen.url }}" class="object-fit-cover w-100 h-100 rounded-top-4">
+                    {% else %}
+                        <img src="{% static 'img/sin_imagen.png' %}" class="object-fit-cover w-100 h-100 rounded-top-4">
+                    {% endif %}
+                </div>
 
-                    <div class="input-group mb-2">
-                        <input type="number" min="1" value="1" 
-                               id="cantidad_{{ producto.id }}" 
-                               class="form-control">
-                        <button class="btn btn-success"
-                                onclick="agregarProducto('{{ producto.id }}')">
-                            <i class="fas fa-cart-plus"></i>
-                        </button>
+                <!-- SIN espacio abajo -->
+                <div class="p-2 d-flex flex-column" style="padding-bottom: 0 !important;">
+
+                    <h6 class="fw-bold text-center small mb-1">{{ producto.nombre }}</h6>
+
+                    <p class="text-muted small text-center mb-2" style="font-size: 0.75rem;">
+                        {{ producto.descripcion }}
+                    </p>
+
+                    <p class="fw-bold text-success text-center mb-2" style="font-size: 0.9rem;">
+                        ${{ producto.precio }}
+                    </p>
+
+                    <div class="d-flex flex-column mb-2" style="margin-bottom: 0 !important;">
+                        <input type="number"
+                            min="1"
+                            value="1"
+                            id="cantidad_{{ producto.id }}"
+                            class="form-control form-control-sm mb-2">
+
+                        <input type="text"
+                            placeholder="Observación"
+                            id="obs_{{ producto.id }}"
+                            class="form-control form-control-sm mb-2">
                     </div>
+
+                    <button class="btn btn-primary btn-sm w-100"
+                            style="margin-bottom: 0 !important;"
+                            onclick="agregarProducto('{{ producto.id }}')">
+                        Agregar
+                    </button>
+
                 </div>
             </div>
         </div>
@@ -44,34 +65,47 @@
                     <tr>
                         <th>Producto</th>
                         <th>Cantidad</th>
+                        <th>Valor unitario</th>
                         <th>Subtotal</th>
+                        <th>Recargo</th>
+                        <th>Observación</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for det in pedido.detalles.all %}
-                    <tr>
-                        <td>{{ det.producto.nombre }}</td>
-                        <td class="text-center">{{ det.cantidad }}</td>
-                        <td class="text-center">${{ det.subtotal }}</td>
-                        <td class="text-center">
-                            <button class="btn btn-warning btn-sm me-1" onclick="editarDetalleAjax('{{ det.id }}', '{{ det.cantidad }}')">
-                                Editar
-                            </button>
+                {% for det in pedido.detalles.all %}
+                <tr>
+                    <td>{{ det.producto.nombre }}</td>
+                    <td class="text-center">{{ det.cantidad }}</td>
+                    <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
+                    <td class="text-center">${{ det.subtotal }}</td>
+                    <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
+                    <td>{{ det.observacion }}</td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm me-1" 
+                                onclick="editarDetalleAjax(
+                                    '{{ det.id }}',
+                                    '{{ det.cantidad }}',
+                                    '{{ det.observacion|default_if_none:''|escapejs }}',
+                                    '{{ det.recargo|default:0 }}'
+                                )">
+                            Editar
+                        </button>
 
-                            <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
-                                Eliminar
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
-                            Aún no hay productos agregados.
-                        </td>
-                    </tr>
-                    {% endfor %}
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-6">
+                        Aún no hay productos agregados.
+                    </td>
+                </tr>
+                {% endfor %}
                 </tbody>
+
             </table>
         </div>
     </div>
@@ -94,61 +128,165 @@
 // Agregar producto
 // ------------------------------
 function agregarProducto(id) {
-    let cantidad = document.getElementById(`cantidad_${id}`).value;
+    let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
+    let observacion = document.getElementById(`obs_${id}`).value;
 
-    fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            producto_id: id,
-            cantidad: cantidad
+    // Verificar si el pedido es a domicilio
+    const tipoPedido = "{{ pedido.tipo_pedido }}"; // Lo pasamos desde la vista
+
+    if(tipoPedido === "domicilio") {
+        Swal.fire({
+            title: 'Recargo por envase/desechable',
+            input: 'number',
+            inputLabel: 'Ingrese el valor unitario del recargo',
+            inputValue: 0,
+            inputAttributes: {
+                min: 0,
+                step: 0.01
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Agregar producto',
+            cancelButtonText: 'Cancelar',
+            preConfirm: (valorRecargo) => {
+                if(valorRecargo === "" || isNaN(valorRecargo) || valorRecargo < 0) {
+                    Swal.showValidationMessage("Ingrese un valor válido para el recargo");
+                }
+                return parseFloat(valorRecargo);
+            }
+        }).then((result) => {
+            if(!result.isConfirmed) return;
+
+            const recargoUnitario = result.value;
+            const totalRecargo = recargoUnitario * cantidad;
+
+            fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    producto_id: id,
+                    cantidad: cantidad,
+                    observacion: observacion,
+                    recargo: recargoUnitario  // Pasamos el recargo total
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success){
+                    document.getElementById('tabla_detalles').innerHTML = data.tabla;
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Producto agregado',
+                        text: data.mensaje,
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+
+                    document.getElementById(`obs_${id}`).value = "";
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje
+                    });
+                }
+            });
+        });
+
+    } else {
+        // Pedido restaurante normal
+        fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                producto_id: id,
+                cantidad: cantidad,
+                observacion: observacion
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.success){
-            document.getElementById('tabla_detalles').innerHTML = data.tabla;
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Producto agregado',
-                text: data.mensaje,
-                timer: 1000,
-                showConfirmButton: false
-            });
-
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.mensaje
-            });
-        }
-    });
+        .then(response => response.json())
+        .then(data => {
+            if(data.success){
+                document.getElementById('tabla_detalles').innerHTML = data.tabla;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Producto agregado',
+                    text: data.mensaje,
+                    timer: 1000,
+                    showConfirmButton: false
+                });
+                document.getElementById(`obs_${id}`).value = "";
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.mensaje
+                });
+            }
+        });
+    }
 }
+
 
 // ------------------------------
 // Editar detalle
 // ------------------------------
-function editarDetalleAjax(detalle_id, cantidad_actual) {
+function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, recargo_actual=0) {
+    const tipoPedido = "{{ pedido.tipo_pedido }}";
+
+    let htmlSwal = `
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+            <label style="font-weight:500; font-size:0.9rem;">Cantidad</label>
+            <input id="swal_cantidad" type="number" min="1" 
+                   value="${cantidad_actual}" 
+                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
+
+            <label style="font-weight:500; font-size:0.9rem;">Observación</label>
+            <input id="swal_observacion" type="text" 
+                   value="${observacion_actual}" 
+                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
+    `;
+
+    if(tipoPedido === "domicilio") {
+        htmlSwal += `
+            <label style="font-weight:500; font-size:0.9rem;">Recargo por envase/desechable</label>
+            <input id="swal_recargo" type="number" min="0" step="0.01" 
+                   value="${recargo_actual}" 
+                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
+        `;
+    }
+
+    htmlSwal += `</div>`;
+
     Swal.fire({
-        title: "Editar cantidad",
-        input: "number",
-        inputLabel: "Nueva cantidad",
-        inputValue: cantidad_actual,
-        inputAttributes: {
-            min: 1
-        },
+        title: "Editar detalle",
+        html: htmlSwal,
+        focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: "Actualizar",
-        cancelButtonText: "Cancelar"
+        cancelButtonText: "Cancelar",
+        customClass: {
+            confirmButton: 'btn btn-primary btn-sm px-4 me-2',
+            cancelButton: 'btn btn-secondary btn-sm px-4 ms-2'
+        },
+        buttonsStyling: false,
+        preConfirm: () => {
+            const result = {
+                cantidad: parseInt(document.getElementById('swal_cantidad').value),
+                observacion: document.getElementById('swal_observacion').value
+            };
+            if(tipoPedido === "domicilio") {
+                result.recargo = parseFloat(document.getElementById('swal_recargo').value) || 0;
+            }
+            return result;
+        }
     }).then((result) => {
         if (!result.isConfirmed) return;
-
-        const nuevaCantidad = result.value;
 
         fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
             method: "POST",
@@ -156,21 +294,20 @@ function editarDetalleAjax(detalle_id, cantidad_actual) {
                 "X-CSRFToken": "{{ csrf_token }}",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ cantidad: nuevaCantidad })
+            body: JSON.stringify(result.value)
         })
         .then(response => response.json())
         .then(data => {
-            if(data.success){
+            if (data.success) {
                 document.getElementById('tabla_detalles').innerHTML = data.tabla;
 
                 Swal.fire({
                     icon: 'success',
-                    title: 'Cantidad actualizada',
+                    title: 'Detalle actualizado',
                     text: data.mensaje,
-                    timer: 1500,
+                    timer: 1400,
                     showConfirmButton: false
                 });
-
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -181,7 +318,6 @@ function editarDetalleAjax(detalle_id, cantidad_actual) {
         });
     });
 }
-
 
 // ------------------------------
 // Eliminar detalle

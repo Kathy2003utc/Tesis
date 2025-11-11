@@ -7,6 +7,8 @@ from .models import Usuario, Mesa, Pedido, DetallePedido, Producto
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
+from django.db.models import Sum, F
+
 
 
 # ----------------------------
@@ -491,20 +493,32 @@ def agregar_detalle_ajax(request, pedido_id):
         data = json.loads(request.body)
         producto_id = data.get('producto_id')
         cantidad = int(data.get('cantidad', 1))
+        observacion = data.get("observacion", '')
+        recargo = float(data.get("recargo", 0))  # Recargo por unidad del producto
 
+        # Crear o actualizar detalle
         detalle, creado = DetallePedido.objects.get_or_create(
             pedido_id=pedido_id,
             producto_id=producto_id,
-            defaults={'cantidad': cantidad}
+            defaults={'cantidad': cantidad, 'observacion': observacion, 'recargo': recargo}
         )
         if not creado:
             detalle.cantidad += cantidad
+            detalle.recargo = recargo  # ⚡ siempre actualizar recargo por unidad
             detalle.save()
 
+        # Actualizar totales del pedido
         pedido = get_object_or_404(Pedido, id=pedido_id)
+        pedido.calcular_totales()  # ⚡ suma subtotal + recargo_total + recargo_domicilio
+
+        # Renderizar tabla
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
 
-        return JsonResponse({'success': True, 'mensaje': f'Producto {detalle.producto.nombre} agregado.', 'tabla': tabla_html})
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Producto {detalle.producto.nombre} agregado.',
+            'tabla': tabla_html
+        })
 
     return JsonResponse({'success': False, 'mensaje': 'Error al agregar producto'})
 
@@ -515,12 +529,30 @@ def editar_detalle_ajax(request, detalle_id):
     if request.method == 'POST':
         import json
         data = json.loads(request.body)
-        cantidad = int(data.get('cantidad', detalle.cantidad))
-        detalle.cantidad = cantidad
-        detalle.save()
+        
+        # Datos del SweetAlert
+        cantidad = int(data.get("cantidad", detalle.cantidad))
+        observacion = data.get("observacion", detalle.observacion)
+        
+        # Solo actualizar recargo si el pedido es a domicilio
+        recargo = detalle.recargo
+        if pedido.tipo_pedido == 'domicilio':
+            recargo = float(data.get("recargo", detalle.recargo))
 
+        # Guardar cambios
+        detalle.cantidad = cantidad
+        detalle.observacion = observacion
+        detalle.recargo = recargo
+        detalle.save()  # ⚡ recalcula subtotal y totales del pedido
+
+        # Renderizar tabla actualizada
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
-        return JsonResponse({'success': True, 'mensaje': 'Cantidad actualizada correctamente.', 'tabla': tabla_html})
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Detalle actualizado correctamente.',
+            'tabla': tabla_html
+        })
 
     return JsonResponse({'success': False, 'mensaje': 'Error al actualizar detalle.'})
 
