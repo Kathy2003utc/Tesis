@@ -1,4 +1,4 @@
-{% extends 'cliente/plantilla.html' %}
+{% extends 'administrador/plantilla.html' %}
 {% load static %}
 
 {% block contenido %}
@@ -18,7 +18,7 @@
 
     <!-- Encabezado de bienvenida -->
     <div class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-success">💰 Bienvenido/a, {{ user.nombre|default:"Cajero" }}!</h1>
+        <h1 class="display-5 fw-bold text-success">Bienvenido/a, {{ user.nombre|default:"Cajero" }}!</h1>
         <p class="lead text-secondary">Gestiona los pagos de los pedidos y genera comprobantes de forma rápida y segura.</p>
     </div>
 
@@ -33,7 +33,7 @@
                 <p class="card-text text-muted">
                     Visualiza todos los pedidos listos para cobrar y verifica su total.
                 </p>
-                <a href="{% url 'pedidos_cobrar' %}" class="btn btn-success mt-2">Ver Pedidos</a>
+                <a href="" class="btn btn-success mt-2">Ver Pedidos</a>
             </div>
         </div>
 
@@ -45,7 +45,7 @@
                 <p class="card-text text-muted">
                     Crea boletas, facturas o tickets para los pagos realizados.
                 </p>
-                <a href="{% url 'generar_comprobante' %}" class="btn btn-success mt-2">Generar</a>
+                <a href="" class="btn btn-success mt-2">Generar</a>
             </div>
         </div>
 
@@ -57,7 +57,7 @@
                 <p class="card-text text-muted">
                     Revisa todos los pagos realizados y los comprobantes generados.
                 </p>
-                <a href="{% url 'historial_pagos' %}" class="btn btn-success mt-2">Ver Historial</a>
+                <a href="" class="btn btn-success mt-2">Ver Historial</a>
             </div>
         </div>
 
@@ -67,7 +67,7 @@
                 <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
                 <h5 class="card-title mt-3">Cerrar Sesión</h5>
                 <p class="card-text text-muted">Salir de forma segura del sistema.</p>
-                <a href="{% url 'cerrar_sesion' %}" class="btn btn-danger mt-2">Salir</a>
+                <a href="{% url 'logout' %}" class="btn btn-danger mt-2">Salir</a>
             </div>
         </div>
 

@@ -1,6 +1,8 @@
+import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from .decorators import rol_requerido
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
 from .models import Usuario, Mesa, Pedido, DetallePedido, Producto
@@ -8,8 +10,11 @@ from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Sum, F
-
-
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.views.decorators.csrf import csrf_protect
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 # ----------------------------
 # Login (pantalla)
@@ -17,26 +22,27 @@ from django.db.models import Sum, F
 def login_view(request):
     return render(request, "login/login.html")
 
-
 # ----------------------------
 # Iniciar sesión
 # ----------------------------
 def iniciar_sesion(request):
     if request.method == 'POST':
-        correo = request.POST.get('username')
+        correo = request.POST.get('correo')
         password = request.POST.get('password')
 
-        # Autenticar usando el modelo personalizado
-        usuario = authenticate(request, username=correo, password=password)
+        usuario = authenticate(request, correo=correo, password=password)
 
         if usuario is not None:
-            # Iniciar sesión
             auth_login(request, usuario)
 
             # Guardar datos en sesión
             request.session['usuario_id'] = usuario.id
             request.session['usuario_rol'] = usuario.rol
             request.session['usuario_nombre'] = f"{usuario.nombre} {usuario.apellido}"
+
+            # 👇 Si es su primer ingreso, debe cambiar su contraseña
+            if not usuario.cambio_password:
+                return redirect('cambiar_password_primera_vez')
 
             # Redirección según rol
             if usuario.rol == 'admin':
@@ -47,19 +53,12 @@ def iniciar_sesion(request):
                 return redirect('dashboard_cocinero')
             elif usuario.rol == 'cajero':
                 return redirect('dashboard_cajero')
-            elif usuario.rol == 'cliente':
-                return redirect('dashboard_cliente')
             else:
                 messages.error(request, "Rol desconocido.")
-                return render(request, 'login/login.html')
-
         else:
             messages.error(request, "Correo o contraseña incorrectos.")
-            return render(request, 'login/login.html')
 
     return render(request, 'login/login.html')
-
-
 
 # ----------------------------
 # Cerrar sesión
@@ -71,39 +70,24 @@ def cerrar_sesion(request):
     return redirect('login')
 
 # ----------------------------
-# Formulario de registro de cliente
+# Cambio de contraseña
 # ----------------------------
-def registro(request):
+@login_required(login_url='login')
+def cambiar_password_primera_vez(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        telefono = request.POST.get('telefono')
-        direccion = request.POST.get('direccion')
-        correo = request.POST.get('correo')
-        password = request.POST.get('password')
+        nueva = request.POST.get('nueva')
+        confirmar = request.POST.get('confirmar')
 
-        if Usuario.objects.filter(correo=correo).exists():
-            messages.error(request, "El correo ya está registrado.")
-            return render(request, 'registro.html')
+        if nueva and confirmar and nueva == confirmar:
+            request.user.set_password(nueva)
+            request.user.cambio_password = True
+            request.user.save()
+            messages.success(request, "Contraseña cambiada correctamente. Inicia sesión nuevamente.")
+            return redirect('login')
+        else:
+            messages.error(request, "Las contraseñas no coinciden.")
 
-        # Crear usuario con rol cliente
-        usuario = Usuario.objects.create(
-            nombre=nombre,
-            apellido=apellido,
-            telefono=telefono,
-            direccion=direccion,
-            correo=correo,
-            rol='cliente',
-            username=correo,  # username obligatorio en AbstractUser
-            password=make_password(password)  # cifrar contraseña
-        )
-
-        messages.success(request, "Registro exitoso. Ahora puedes iniciar sesión.")
-        return redirect('login')
-
-    return render(request, 'login/registro.html')
-
-
+    return render(request, 'login/cambiar_password_primera_vez.html')
 # ----------------------------
 # Dashboards protegidos por rol
 # ----------------------------
@@ -138,43 +122,159 @@ def dashboard_cajero(request):
         return redirect('login')
     return render(request, 'cajero/dashboard.html')
 
+# ----------------------------
+# Admin-Perfil
+# ----------------------------
 
 @login_required(login_url='login')
-def dashboard_cliente(request):
-    if request.user.rol != 'cliente':
-        messages.error(request, "No tienes permisos para acceder a esta página.")
-        return redirect('login')
-    return render(request, 'cliente/dashboard.html')
+@rol_requerido('admin')
+def perfil_admin(request):
+    usuario = request.user   # usuario logueado
+    return render(request, "administrador/perfil.html", {"usuario": usuario})
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def editar_perfil_admin(request):
+    usuario = request.user  # administrador logueado
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        correo = request.POST.get("correo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        direccion = request.POST.get("direccion", "").strip()
+        password = request.POST.get("password", "")
+        password2 = request.POST.get("password2", "")
+
+        # -----------------------------
+        # VALIDACIONES BACKEND
+        # -----------------------------
+
+        # Nombre y apellido: solo letras
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', apellido):
+            messages.error(request, "El apellido solo debe contener letras.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # Correo obligatorio + válido
+        if not correo:
+            messages.error(request, "El correo es obligatorio.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", correo):
+            messages.error(request, "El formato del correo no es válido.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # Validar correo no repetido (excepto el mismo usuario)
+        if Usuario.objects.exclude(id=usuario.id).filter(correo=correo).exists():
+            messages.error(request, "Ya existe un usuario con ese correo.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # Teléfono opcional, pero si existe debe tener 10 dígitos
+        if telefono:
+            if not telefono.isdigit():
+                messages.error(request, "El teléfono solo debe contener números.")
+                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+            if len(telefono) != 10:
+                messages.error(request, "El teléfono debe tener 10 dígitos.")
+                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # Contraseñas
+        if password or password2:
+            # Mínimo 6 caracteres
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener mínimo 6 caracteres.")
+                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+            if password != password2:
+                messages.error(request, "Las contraseñas no coinciden.")
+                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+            usuario.password = make_password(password)
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.correo = correo
+        usuario.username = correo 
+        usuario.telefono = telefono
+        usuario.direccion = direccion
+        usuario.save()
+
+        messages.success(request, "Perfil actualizado correctamente.")
+        return redirect("perfil_admin")
+
+    return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
 
 # ----------------------------
 # Admin-Gestion de trabajadores
 # ----------------------------
 
+@login_required(login_url='login')
+@rol_requerido('admin')
 def listar_trabajadores(request):
     # Filtrar todos los usuarios que no sean clientes ni admin
     trabajadores = Usuario.objects.exclude(rol__in=['cliente', 'admin'])
     return render(request, 'administrador/trabajadores/trabajadores.html', {'trabajadores': trabajadores})
 
+@login_required(login_url='login')
+@rol_requerido('admin')
 def crear_trabajador(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        correo = request.POST.get('correo')
-        telefono = request.POST.get('telefono')
-        direccion = request.POST.get('direccion')
-        rol = request.POST.get('rol')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        correo = request.POST.get('correo', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+        rol = request.POST.get('rol', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
 
-        if password != password2:
-            messages.error(request, "Las contraseñas no coinciden.")
+        # ========== VALIDACIONES BACKEND ==========
+
+        # Campos obligatorios
+        if not all([nombre, apellido, correo, telefono, direccion, rol, password, password2]):
+            messages.error(request, "Todos los campos son obligatorios.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
+        # Validar solo letras
+        solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
+        if not re.match(solo_letras, nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        if not re.match(solo_letras, apellido):
+            messages.error(request, "El apellido solo debe contener letras.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # Validar email
+        try:
+            validate_email(correo)
+        except ValidationError:
+            messages.error(request, "Ingrese un correo electrónico válido.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # Validar correo duplicado
         if Usuario.objects.filter(correo=correo).exists():
             messages.error(request, "Ya existe un usuario con este correo.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
-        # Crear usuario
+        # Validar teléfono (solo números, 10 dígitos)
+        if not telefono.isdigit() or len(telefono) != 10:
+            messages.error(request, "El teléfono debe tener exactamente 10 números.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # Validar contraseñas
+        if len(password) < 6:
+            messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        if password != password2:
+            messages.error(request, "Las contraseñas no coinciden.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+        
         trabajador = Usuario(
             nombre=nombre,
             apellido=apellido,
@@ -187,43 +287,85 @@ def crear_trabajador(request):
         trabajador.set_password(password)
         trabajador.save()
 
-        messages.success(request, f"Trabajador {trabajador.nombre} {trabajador.apellido} creado con éxito.")
+        messages.success(request, f"Trabajador {nombre} {apellido} creado con éxito.")
         return redirect('listar_trabajadores')
 
     return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
+@login_required(login_url='login')
+@rol_requerido('admin')
 def editar_trabajador(request, trabajador_id):
     trabajador = get_object_or_404(Usuario, id=trabajador_id)
 
     if request.method == 'POST':
-        trabajador.nombre = request.POST.get('nombre')
-        trabajador.apellido = request.POST.get('apellido')
-        trabajador.correo = request.POST.get('correo')
-        trabajador.telefono = request.POST.get('telefono')
-        trabajador.direccion = request.POST.get('direccion')
-        trabajador.rol = request.POST.get('rol')
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        correo = request.POST.get('correo', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+        rol = request.POST.get('rol', '').strip()
 
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
 
+        # ========== VALIDACIONES BACKEND ==========
+
+        # Validar solo letras
+        solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
+        if not re.match(solo_letras, nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        if not re.match(solo_letras, apellido):
+            messages.error(request, "El apellido solo debe contener letras.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # Validar email
+        try:
+            validate_email(correo)
+        except ValidationError:
+            messages.error(request, "Ingrese un correo electrónico válido.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # Validar que el correo no exista en otro usuario
+        if Usuario.objects.exclude(id=trabajador.id).filter(correo=correo).exists():
+            messages.error(request, "Ya existe un usuario con este correo.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # Validar teléfono
+        if not telefono.isdigit() or len(telefono) != 10:
+            messages.error(request, "El teléfono debe tener exactamente 10 números.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # Validar contraseñas si se ingresan
         if password or password2:
             if password != password2:
                 messages.error(request, "Las contraseñas no coinciden.")
                 return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
+                return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
             trabajador.set_password(password)
 
-
-        # Verificar que el correo no exista en otro usuario
-        if Usuario.objects.exclude(id=trabajador.id).filter(correo=trabajador.correo).exists():
-            messages.error(request, "Ya existe un usuario con este correo.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
-
+        # ========== GUARDAR CAMBIOS ==========
+        trabajador.nombre = nombre
+        trabajador.apellido = apellido
+        trabajador.correo = correo
+        trabajador.telefono = telefono
+        trabajador.direccion = direccion
+        trabajador.rol = rol
         trabajador.save()
+
         messages.success(request, f"Trabajador {trabajador.nombre} actualizado con éxito.")
         return redirect('listar_trabajadores')
 
     return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
 
+
+@login_required(login_url='login')
+@rol_requerido('admin')
 def eliminar_trabajador(request, trabajador_id):
     "Elimina un trabajador por su ID"
     if request.method == 'POST':
@@ -242,67 +384,123 @@ def eliminar_trabajador(request, trabajador_id):
 # ----------------------------
 # Admin - Gestión de Mesas
 # ----------------------------
-from .models import Mesa
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
 
 # Listar mesas
+@login_required(login_url='login')
+@rol_requerido('admin')
 def listar_mesas(request):
     mesas = Mesa.objects.all().order_by('numero')
     return render(request, 'administrador/mesas/listar_mesas.html', {'mesas': mesas})
 
-
-# Registrar mesa
+#crear una mesa
+@login_required(login_url='login')
+@rol_requerido('admin')
 def registrar_mesa(request):
+    # Obtener el último número de mesa
+    ultima_mesa = Mesa.objects.order_by('-numero').first()
+    siguiente_numero = ultima_mesa.numero + 1 if ultima_mesa else 1
+
     if request.method == 'POST':
         numero = request.POST.get('numero')
         capacidad = request.POST.get('capacidad')
-        estado = request.POST.get('estado')
 
-        # Validar que el número sea único
+        # Validar campos vacíos
+        if not numero or not capacidad:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return render(request, 'administrador/mesas/registrar_mesa.html', {
+                'siguiente_numero': siguiente_numero
+            })
+
+        # Validar que sean números enteros
+        if not numero.isdigit() or not capacidad.isdigit():
+            messages.error(request, "El número y la capacidad deben ser valores numéricos.")
+            return render(request, 'administrador/mesas/registrar_mesa.html', {
+                'siguiente_numero': siguiente_numero
+            })
+
+        # Convertir a int para validaciones
+        numero = int(numero)
+        capacidad = int(capacidad)
+
+        # Validar que sean positivos
+        if numero < 1 or capacidad < 1:
+            messages.error(request, "Número y capacidad deben ser mayores o iguales a 1.")
+            return render(request, 'administrador/mesas/registrar_mesa.html', {
+                'siguiente_numero': siguiente_numero
+            })
+
+        # Validar número único
         if Mesa.objects.filter(numero=numero).exists():
             messages.error(request, "Ya existe una mesa con ese número.")
-            return render(request, 'administrador/mesas/registrar_mesa.html')
+            return render(request, 'administrador/mesas/registrar_mesa.html', {
+                'siguiente_numero': siguiente_numero
+            })
 
         # Crear mesa
         Mesa.objects.create(
             numero=numero,
             capacidad=capacidad,
-            estado=estado
         )
         messages.success(request, f"Mesa {numero} registrada correctamente.")
         return redirect('listar_mesas')
 
-    return render(request, 'administrador/mesas/registrar_mesa.html')
-
+    return render(request, 'administrador/mesas/registrar_mesa.html', {
+        'siguiente_numero': siguiente_numero
+    })
 
 # Editar mesa
+@login_required(login_url='login')
+@rol_requerido('admin')
 def editar_mesa(request, mesa_id):
     mesa = get_object_or_404(Mesa, id=mesa_id)
 
     if request.method == 'POST':
         numero = request.POST.get('numero')
         capacidad = request.POST.get('capacidad')
-        estado = request.POST.get('estado')
 
-        # Validar número de mesa repetido
-        if Mesa.objects.exclude(id=mesa.id).filter(numero=numero).exists():
-            messages.error(request, "Ya existe otra mesa con ese número.")
-            return render(request, 'administrador/mesas/editar_mesa.html', {'mesa': mesa})
+        # Evitar que alteren el número
+        if str(mesa.numero) != str(numero):
+            messages.error(request, "No es posible modificar el número de mesa.")
+            return render(request, 'administrador/mesas/editar_mesa.html', {
+                'mesa': mesa
+            })
 
-        # Actualizar datos
-        mesa.numero = numero
+        # Validar campos vacíos
+        if not capacidad:
+            messages.error(request, "La capacidad es obligatoria.")
+            return render(request, 'administrador/mesas/editar_mesa.html', {
+                'mesa': mesa
+            })
+
+        # Validar numérico
+        if not capacidad.isdigit():
+            messages.error(request, "La capacidad debe ser un número válido.")
+            return render(request, 'administrador/mesas/editar_mesa.html', {
+                'mesa': mesa
+            })
+
+        capacidad = int(capacidad)
+
+        # Validar mínimo
+        if capacidad < 1:
+            messages.error(request, "La capacidad debe ser mínimo 1.")
+            return render(request, 'administrador/mesas/editar_mesa.html', {
+                'mesa': mesa
+            })
+
         mesa.capacidad = capacidad
-        mesa.estado = estado
         mesa.save()
 
-        messages.success(request, f"Mesa {numero} actualizada correctamente.")
+        messages.success(request, f"Mesa {mesa.numero} actualizada correctamente.")
         return redirect('listar_mesas')
 
-    return render(request, 'administrador/mesas/editar_mesa.html', {'mesa': mesa})
-
+    return render(request, 'administrador/mesas/editar_mesa.html', {
+        'mesa': mesa
+    })
 
 # Eliminar mesa
+@login_required(login_url='login')
+@rol_requerido('admin')
 def eliminar_mesa(request, mesa_id):
     mesa = get_object_or_404(Mesa, id=mesa_id)
 
@@ -320,24 +518,64 @@ def eliminar_mesa(request, mesa_id):
 # ----------------------------
 
 # Listar productos
+@login_required(login_url='login')
+@rol_requerido('admin')
 def listar_menu(request):
     productos = Producto.objects.all().order_by('nombre')
     return render(request, 'administrador/menu/listar_menu.html', {'productos': productos})
 
-
 # Registrar producto
+@login_required(login_url='login')
+@rol_requerido('admin')
 def registrar_menu(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        descripcion = request.POST.get('descripcion')
-        precio = request.POST.get('precio')
-        tipo = request.POST.get('tipo')
-        imagen = request.FILES.get('imagen')
+        nombre = request.POST.get('nombre', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        precio = request.POST.get('precio', '').strip()
+        tipo = request.POST.get('tipo', '').strip()
 
-        # Validar que el nombre no esté repetido
-        if Producto.objects.filter(nombre=nombre).exists():
+        # Validación backend: nombre solo letras
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$', nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, 'administrador/menu/registrar_menu.html', {
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar que no esté vacío
+        if not nombre or not precio or not tipo:
+            messages.error(request, "Todos los campos obligatorios deben completarse.")
+            return render(request, 'administrador/menu/registrar_menu.html', {
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar precio
+        try:
+            precio = float(precio)
+            if precio <= 0:
+                raise ValueError
+        except ValueError:
+            messages.error(request, "El precio debe ser un número válido mayor a 0.")
+            return render(request, 'administrador/menu/registrar_menu.html', {
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar nombre repetido
+        if Producto.objects.filter(nombre__iexact=nombre).exists():
             messages.error(request, "Ya existe un producto con ese nombre.")
-            return render(request, 'administrador/menu/registrar_menu.html')
+            return render(request, 'administrador/menu/registrar_menu.html', {
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
 
         # Crear el producto
         Producto.objects.create(
@@ -345,88 +583,146 @@ def registrar_menu(request):
             descripcion=descripcion,
             precio=precio,
             tipo=tipo,
-            imagen=imagen
         )
 
-        messages.success(request, f"Producto '{nombre}' registrado correctamente.")
+        messages.success(request, f"Producto {nombre} registrado correctamente.")
         return redirect('listar_menu')
 
     return render(request, 'administrador/menu/registrar_menu.html')
 
-
 # Editar producto
+@login_required(login_url='login')
+@rol_requerido('admin')
 def editar_menu(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id)
 
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        descripcion = request.POST.get('descripcion')
-        precio = request.POST.get('precio')
-        tipo = request.POST.get('tipo')
+        nombre = request.POST.get('nombre', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        precio = request.POST.get('precio', '').strip()
+        tipo = request.POST.get('tipo', '').strip()
 
-        # Validar nombre repetido
-        if Producto.objects.exclude(id=producto.id).filter(nombre=nombre).exists():
+        # -------- VALIDACIONES BACKEND --------
+
+        # Validar campos obligatorios
+        if not nombre or not precio or not tipo:
+            messages.error(request, "Todos los campos obligatorios deben completarse.")
+            return render(request, 'administrador/menu/editar_menu.html', {
+                'producto': producto,
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar que el nombre contenga solo letras
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$', nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, 'administrador/menu/editar_menu.html', {
+                'producto': producto,
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar precio numérico > 0
+        try:
+            precio_float = float(precio)
+            if precio_float <= 0:
+                raise ValueError
+        except ValueError:
+            messages.error(request, "El precio debe ser un número válido mayor a 0.")
+            return render(request, 'administrador/menu/editar_menu.html', {
+                'producto': producto,
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # Validar nombre repetido excepto el item actual
+        if Producto.objects.exclude(id=producto.id).filter(nombre__iexact=nombre).exists():
             messages.error(request, "Ya existe otro producto con ese nombre.")
-            return render(request, 'administrador/menu/editar_menu.html', {'producto': producto})
+            return render(request, 'administrador/menu/editar_menu.html', {
+                'producto': producto,
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
 
-        # Actualizar info
         producto.nombre = nombre
         producto.descripcion = descripcion
         producto.precio = precio
         producto.tipo = tipo
-
-        # Validar si se subió una nueva imagen
-        if 'imagen' in request.FILES:
-            producto.imagen = request.FILES['imagen']
-
         producto.save()
 
-        messages.success(request, f"Producto '{nombre}' actualizado correctamente.")
+        messages.success(request, f"Producto {nombre} actualizado correctamente.")
         return redirect('listar_menu')
 
     return render(request, 'administrador/menu/editar_menu.html', {'producto': producto})
 
-
 # Eliminar producto
+@login_required(login_url='login')
+@rol_requerido('admin')
 def eliminar_menu(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id)
 
     if request.method == 'POST':
         nombre = producto.nombre
         producto.delete()
-        messages.success(request, f"Producto '{nombre}' eliminado correctamente.")
+        messages.success(request, f"Producto {nombre} eliminado correctamente.")
         return redirect('listar_menu')
 
     return render(request, 'administrador/menu/confirmar_eliminar.html', {'producto': producto})
 
 # ----------------------------
-# Pedidos
+# Mesero-Pedidos
 # ----------------------------
 
 # Listar pedidos
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def listar_pedidos(request):
-    pedidos = Pedido.objects.all().order_by('id')
+    pedidos = Pedido.objects.filter(mesero=request.user).order_by('id')
     return render(request, 'mesero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
 
 # Crear pedido
+@login_required(login_url='login')
 def crear_pedido(request):
     if request.method == 'POST':
-        mesero_id = request.POST.get('mesero')
-        mesa_id = request.POST.get('mesa')
         tipo_pedido = request.POST.get('tipo_pedido')
+
+        # 🔒 Validaciones según el rol
+        if tipo_pedido == 'restaurante' and request.user.rol != 'mesero':
+            messages.error(request, "Solo los meseros pueden crear pedidos en restaurante.")
+            return redirect('crear_pedido')
+
+        if tipo_pedido == 'domicilio' and request.user.rol != 'cajero':
+            messages.error(request, "Solo los cajeros pueden crear pedidos a domicilio.")
+            return redirect('crear_pedido')
+
+        # Si pasa las validaciones, se crea normalmente
+        mesero_id = request.user.id
+        mesa_id = request.POST.get('mesa')
 
         pedido = Pedido.objects.create(
             mesero_id=mesero_id,
             mesa_id=mesa_id if mesa_id else None,
-            tipo_pedido=tipo_pedido
+            tipo_pedido=tipo_pedido,
+            estado='En preparacion'
         )
+
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
-    meseros = Usuario.objects.filter(rol='mesero')
     mesas = Mesa.objects.all()
-    return render(request, 'mesero/pedidos/crear_pedido.html', {'meseros': meseros, 'mesas': mesas})
+    return render(request, 'mesero/pedidos/crear_pedido.html', {'mesas': mesas})
+
 
 # Ver pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def ver_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
 
@@ -435,16 +731,47 @@ def ver_pedido(request, pedido_id):
         messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
+    # 🔹 Enviar pedido a cocina solo si está en creación
+    if pedido.estado == 'en_creacion':
+        pedido.estado = 'En preparacion'
+        pedido.save()
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",  # grupo para los cocineros
+            {
+                "type": "nuevo_pedido",
+                "pedido": {
+                    "id": pedido.id,
+                    "mesa": pedido.mesa.numero if pedido.mesa else None,
+                    "mesero": pedido.mesero.nombre,
+                    "productos": [
+                        {
+                            "nombre": d.producto.nombre,
+                            "cantidad": d.cantidad,
+                            "observacion": d.observacion
+                        }
+                        for d in pedido.detalles.all()
+                    ]
+                }
+            }
+        )
+
     return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
 
 # Editar pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def editar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
 
     if request.method == 'POST':
         pedido.mesero_id = request.POST.get('mesero')
         pedido.mesa_id = request.POST.get('mesa') if request.POST.get('mesa') else None
-        pedido.estado = request.POST.get('estado')
+        # Solo el cocinero puede cambiar el estado del pedido
+        if request.user.rol == 'cocinero':
+            pedido.estado = request.POST.get('estado')
+
         pedido.save()
 
         return JsonResponse({
@@ -463,11 +790,15 @@ def editar_pedido(request, pedido_id):
         'productos': productos
     })
 
-
-
 # Eliminar pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def eliminar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    if pedido.estado == 'listo':
+        messages.error(request, f"El pedido #{pedido.id} ya está listo y no puede eliminarse.")
+        return redirect('listar_pedidos')
 
     if request.method == 'POST':
         id_eliminado = pedido.id
@@ -475,18 +806,22 @@ def eliminar_pedido(request, pedido_id):
         messages.success(request, f"Pedido #{id_eliminado} eliminado.")
         return redirect('listar_pedidos')
 
-    return redirect('listar_pedidos')  # No hace falta mostrar nada
+    return redirect('listar_pedidos')
 
 # ----------------------------
 # Detalles con AJAX
 # ----------------------------
 
 # Agregar detalles con AJAX
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def agregar_detalles(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     productos = Producto.objects.all()
     return render(request, 'mesero/pedidos/agregar_detalles.html', {'pedido': pedido, 'productos': productos})
 
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def agregar_detalle_ajax(request, pedido_id):
     if request.method == 'POST':
         import json
@@ -494,7 +829,7 @@ def agregar_detalle_ajax(request, pedido_id):
         producto_id = data.get('producto_id')
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
-        recargo = float(data.get("recargo", 0))  # Recargo por unidad del producto
+        recargo = float(data.get("recargo", 0))
 
         # Crear o actualizar detalle
         detalle, creado = DetallePedido.objects.get_or_create(
@@ -502,16 +837,18 @@ def agregar_detalle_ajax(request, pedido_id):
             producto_id=producto_id,
             defaults={'cantidad': cantidad, 'observacion': observacion, 'recargo': recargo}
         )
+
         if not creado:
             detalle.cantidad += cantidad
-            detalle.recargo = recargo  # ⚡ siempre actualizar recargo por unidad
+            detalle.observacion = observacion  # actualizar observación
+            detalle.recargo = recargo
             detalle.save()
 
         # Actualizar totales del pedido
         pedido = get_object_or_404(Pedido, id=pedido_id)
-        pedido.calcular_totales()  # ⚡ suma subtotal + recargo_total + recargo_domicilio
+        pedido.calcular_totales()
 
-        # Renderizar tabla
+        # Renderizar tabla actualizada
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
 
         return JsonResponse({
@@ -522,6 +859,8 @@ def agregar_detalle_ajax(request, pedido_id):
 
     return JsonResponse({'success': False, 'mensaje': 'Error al agregar producto'})
 
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def editar_detalle_ajax(request, detalle_id):
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
@@ -556,6 +895,8 @@ def editar_detalle_ajax(request, detalle_id):
 
     return JsonResponse({'success': False, 'mensaje': 'Error al actualizar detalle.'})
 
+@login_required(login_url='login')
+@rol_requerido('mesero')
 def eliminar_detalle_ajax(request, detalle_id):
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
@@ -566,3 +907,63 @@ def eliminar_detalle_ajax(request, detalle_id):
         return JsonResponse({'success': True, 'mensaje': 'Producto eliminado correctamente.', 'tabla': tabla_html})
 
     return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
+
+
+# ----------------------------
+# Cocinero marca pedido como listo
+# ----------------------------
+
+def vista_cocina(request):
+    # Traer solo los pedidos que están en preparación
+    pedidos = Pedido.objects.filter(estado='en_preparacion').order_by('id')
+    return render(request, 'cocinero/pedido.html', {'pedidos': pedidos})
+
+
+
+@csrf_protect
+def marcar_pedido_listo(request, pedido_id):
+    if request.method == "POST":
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        pedido.estado = "listo"
+        pedido.save()
+
+        # Notificación al mesero por WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"notificaciones_{pedido.mesero.id}",
+            {
+                "type": "enviar_notificacion",
+                "mensaje": f"El pedido #{pedido.id} está listo.",
+                "pedido": pedido.id,
+            }
+        )
+
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False, "mensaje": "Método no permitido"}, status=400)
+
+def notificaciones_mesero(request):
+    return render(request, "mesero/notificacion/notificaciones.html")
+
+
+def enviar_pedido_cocina(pedido):
+    """Enviar el pedido al grupo de cocineros solo cuando esté finalizado."""
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",  # grupo para todos los cocineros
+        {
+            "type": "nuevo_pedido",
+            "pedido": {
+                "id": pedido.id,
+                "mesa": pedido.mesa.numero if pedido.mesa else None,
+                "mesero": pedido.mesero.nombre,
+                "productos": [
+                    {
+                        "nombre": d.producto.nombre,
+                        "cantidad": d.cantidad,
+                        "observacion": d.observacion
+                    }
+                    for d in pedido.detalles.all()
+                ]
+            }
+        }
+    )

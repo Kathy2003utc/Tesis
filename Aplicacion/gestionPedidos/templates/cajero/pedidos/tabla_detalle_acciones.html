@@ -1,0 +1,32 @@
+<div class="table-responsive shadow rounded-4 mt-3">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-primary text-center">
+            <tr>
+                <th>Producto</th>
+                <th>Valor unitario</th>
+                <th>Cantidad</th>
+                <th>Subtotal</th>
+                <th>Recargo</th>
+                <th>Observación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for det in pedido.detalles.all %}
+            <tr>
+                <td>{{ det.producto.nombre }}</td>
+                <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
+                <td class="text-center">{{ det.cantidad }}</td>
+                <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
+                <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
+                <td class="text-center">{{ det.observacion }}</td>
+                
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                    Aún no hay productos agregados.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

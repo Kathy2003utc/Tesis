@@ -1,62 +1,175 @@
-{% extends 'mesero/plantilla.html' %}
+{% extends 'administrador/plantilla.html' %}
 {% load static %}
 
 {% block contenido %}
 <br><br><br>
+
 <style>
-    body {
-        background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden !important;
+        background: linear-gradient(
+            135deg,
+            var(--crema-suave),
+            var(--cafe-suave) 45%,
+            var(--blanco-calido)
+        );
+        color: var(--texto-oscuro);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .main-content-wrapper {
+        padding-left: 10px !important; 
+        padding-right: 10px !important;
+    }
+
+    .container {
+        max-width: 1200px;
+        padding-inline: 40px;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+        text-align: center;
+    }
+
+    .card {
+        border-radius: 1rem;
+        background: var(--blanco-calido);
+        border: 1px solid var(--gris-claro-calido);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        height: 100%;
+    }
+
+    .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+        border-color: var(--cafe-medio);
+        background: var(--crema-suave);
+    }
+
+    .icono {
+        font-size: 2.8rem;
+        color: var(--cafe-profundo);
+        transition: 0.3s;
+    }
+
+    .card:hover .icono {
+        color: var(--verde-oliva);
+        transform: scale(1.1);
+    }
+
+    h1.display-5 {
+        text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
     }
 </style>
 
-<div class="container my-5 text-center">
-    <h1 class="display-5 fw-bold text-primary">👨‍🍳 Panel del Mesero</h1>
-    <p class="lead text-secondary mb-5">Gestiona pedidos, asigna mesas y atiende a tus clientes.</p>
+<div class="main-content-wrapper">
+    <div class="container my-5">
 
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-        <!-- Registrar Pedido -->
-        <div class="col">
-            <div class="card h-100 shadow border-0">
-                <div class="card-body">
-                    <i class="bi bi-basket2 fs-1 text-primary"></i>
-                    <h5 class="card-title mt-3">Registrar Pedido</h5>
-                    <p class="card-text text-muted">Toma nuevos pedidos y asígnalos a una mesa.</p>
-                </div>
-            </div>
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-success">Panel del Mesero</h1>
+            <p class="lead text-muted">Gestiona pedidos, asigna mesas y atiende a tus clientes.</p>
         </div>
 
-        <!-- Ver Pedidos -->
-        <div class="col">
-            <div class="card h-100 shadow border-0">
-                <div class="card-body">
-                    <i class="bi bi-eye-fill fs-1 text-primary"></i>
-                    <h5 class="card-title mt-3">Ver Pedidos</h5>
-                    <p class="card-text text-muted">Consulta los pedidos pendientes o entregados.</p>
-                </div>
-            </div>
-        </div>
+        <div class="row g-4 justify-content-center">
 
-        <!-- Estado de Mesas -->
-        <div class="col">
-            <div class="card h-100 shadow border-0">
-                <div class="card-body">
-                    <i class="bi bi-table fs-1 text-primary"></i>
-                    <h5 class="card-title mt-3">Estado de Mesas</h5>
-                    <p class="card-text text-muted">Observa qué mesas están ocupadas o disponibles.</p>
+            <!-- Ver Pedidos -->
+            <div class="col-md-6">
+                <div class="card text-center shadow-lg border-0">
+                    <div class="card-body">
+                        <i class="bi bi-eye-fill icono"></i>
+                        <h5 class="card-title mt-3 fw-bold">Ver Pedidos</h5>
+                        <p class="text-muted">Consulta los pedidos pendientes o entregados.</p>
+                        <a href="{% url 'listar_pedidos' %}" class="btn btn-outline-success">Ver Pedidos</a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Cerrar Sesión -->
-        <div class="col">
-            <div class="card h-100 shadow border-0">
-                <div class="card-body">
-                    <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
-                    <h5 class="card-title mt-3">Cerrar Sesión</h5>
-                    <p class="card-text text-muted">Salir de manera segura del sistema.</p>
+            <!-- Registrar Pedido -->
+            <div class="col-md-6">
+                <div class="card text-center shadow-lg border-0">
+                    <div class="card-body">
+                        <i class="bi bi-basket2 icono"></i>
+                        <h5 class="card-title mt-3 fw-bold">Registrar Pedido</h5>
+                        <p class="text-muted">Toma nuevos pedidos y asígnalos a una mesa.</p>
+                        <a href="{% url 'crear_pedido' %}" class="btn btn-outline-success">Registrar</a>
+                    </div>
                 </div>
             </div>
+
+            <!-- Notificaciones -->
+            <div class="col-md-6">
+                <div class="card text-center shadow-lg border-0">
+                    <div class="card-body">
+                        <i class="bi bi-bell-fill icono"></i>
+                        <h5 class="card-title mt-3 fw-bold">Notificaciones</h5>
+                        <p class="text-muted">Recibe alertas de cocina sobre el estado de los pedidos.</p>
+                        <a href="#" class="btn btn-outline-success">Ver Notificaciones</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensajes -->
+            <div class="col-md-6">
+                <div class="card text-center shadow-lg border-0">
+                    <div class="card-body">
+                        <i class="bi bi-chat-dots-fill icono"></i>
+                        <h5 class="card-title mt-3 fw-bold">Mensajes</h5>
+                        <p class="text-muted">Mensajes desde cocina sobre disponibilidad del menú.</p>
+                        <a href="#" class="btn btn-outline-success">Ver Mensajes</a>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
 {% endblock %}

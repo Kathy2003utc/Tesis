@@ -11,7 +11,6 @@ ROL_CHOICES = (
     ('mesero', 'Mesero'),
     ('cocinero', 'Cocinero'),
     ('cajero', 'Cajero'),
-    ('cliente', 'Cliente'),
 )
 
 class Usuario(AbstractUser):
@@ -21,6 +20,7 @@ class Usuario(AbstractUser):
     direccion = models.TextField(blank=True, null=True)
     correo = models.EmailField(unique=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES)
+    cambio_password = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
         Group,
@@ -43,22 +43,15 @@ class Usuario(AbstractUser):
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.rol})"
 
-
 # ----------------------------
 # Mesa
 # ----------------------------
 class Mesa(models.Model):
     numero = models.PositiveIntegerField(unique=True)
     capacidad = models.PositiveIntegerField(default=4)
-    estado = models.CharField(
-        max_length=20,
-        choices=[('libre', 'Libre'), ('ocupada', 'Ocupada')],
-        default='libre'
-    )
 
     def __str__(self):
         return f"Mesa {self.numero} ({self.estado})"
-
 
 # ----------------------------
 # Producto / Menú
@@ -76,11 +69,9 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     tipo = models.CharField(max_length=20, choices=TIPOS)
-    imagen = models.ImageField(upload_to='productos/', blank=True, null=True)
 
     def __str__(self):
         return self.nombre
-
 
 
 # ----------------------------
@@ -88,9 +79,9 @@ class Producto(models.Model):
 # ----------------------------
 class Pedido(models.Model):
     ESTADOS = [
+        ('en_creacion', 'En creación'), 
         ('en preparacion', 'En preparación'),
         ('listo', 'Listo'),
-        ('entregado', 'Entregado'),
     ]
 
     TIPOS = [
@@ -114,6 +105,15 @@ class Pedido(models.Model):
         limit_choices_to={'rol': 'mesero'}
     )
 
+    cajero = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos_cajero',
+        limit_choices_to={'rol': 'cajero'}
+    )
+
+
     mesa = models.ForeignKey(
         'Mesa',
         on_delete=models.SET_NULL,
@@ -121,7 +121,7 @@ class Pedido(models.Model):
         related_name='pedidos'
     )
 
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='en preparacion')
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='en_creacion')
     tipo_pedido = models.CharField(max_length=20, choices=TIPOS)
     direccion_entrega = models.CharField(max_length=255, blank=True, null=True)
     contacto_cliente = models.CharField(max_length=50, blank=True, null=True)
@@ -151,7 +151,6 @@ class Pedido(models.Model):
         self.save()
     def __str__(self):
         return f"Pedido {self.id}"
-
 
 # ----------------------------
 # Detalle de pedido
@@ -213,7 +212,6 @@ class Pago(models.Model):
     def __str__(self):
         return f"Pago Pedido {self.pedido.id} - {self.total}"
 
-
 # ----------------------------
 # Comprobante
 # ----------------------------
@@ -233,7 +231,6 @@ class Comprobante(models.Model):
 
     def __str__(self):
         return f"{self.tipo_comprobante} {self.numero_comprobante}"
-
 
 # ----------------------------
 # Notificación

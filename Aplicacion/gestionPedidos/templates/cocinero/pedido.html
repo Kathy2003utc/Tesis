@@ -1,0 +1,187 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br><br><br>
+<div class="container mt-4">
+    <h2 class="text-center text-primary mb-4">
+        🍽️ Pedidos en preparación (Cocina)
+    </h2>
+
+    <!-- Contenedor de pedidos -->
+    <div id="pedidos-cocina" class="row g-4">
+        {% for pedido in pedidos %}
+        <div class="col-md-4">
+            <div class="pedido-card card p-3 shadow-sm">
+                <h4>Pedido #{{ pedido.id }} — Mesa {{ pedido.mesa.numero|default:"Domicilio" }}</h4>
+                <p>Mesero: <strong>{{ pedido.mesero.nombre }}</strong></p>
+                <ul>
+                    {% for detalle in pedido.detalles.all %}
+                    <li>
+                        <strong>{{ detalle.cantidad }}x</strong> {{ detalle.producto.nombre }}
+                        <br>
+                        <small>{{ detalle.observacion|default:"Sin observación" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button class="btn btn-success btn-marcar-listo" data-pedido-id="{{ pedido.id }}">
+                    Listo
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .pedido-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease-in-out;
+        border-left: 5px solid #007bff;
+    }
+
+    .pedido-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+    }
+
+    .pedido-card h4 {
+        color: #007bff;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .pedido-card p {
+        margin: 0;
+        font-size: 15px;
+        color: #444;
+    }
+
+    .pedido-card ul {
+        list-style-type: none;
+        padding-left: 0;
+        margin-top: 10px;
+    }
+
+    .pedido-card li {
+        padding: 6px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 15px;
+    }
+
+    .pedido-card li:last-child {
+        border-bottom: none;
+    }
+
+    .pedido-card small {
+        color: #666;
+        font-style: italic;
+    }
+</style>
+
+<script>
+    const pedidosContainer = document.getElementById('pedidos-cocina');
+
+    // Obtener CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Conexión WebSocket
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const socket = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
+
+    socket.onopen = function() {
+        console.log("Conectado al canal de pedidos.");
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.tipo === "nuevo_pedido") {
+            const pedido = data.pedido;
+            const productos = pedido.productos.map(p => `
+                <li>
+                    <strong>${p.cantidad}x</strong> ${p.nombre}
+                    <br>
+                    <small>${p.observacion || "Sin observación"}</small>
+                </li>
+            `).join("");
+
+            const div = document.createElement("div");
+            div.className = "col-md-4";
+            div.innerHTML = `
+                <div class="pedido-card card p-3 shadow-sm">
+                    <h4>Pedido #${pedido.id} — Mesa ${pedido.mesa || "Domicilio"}</h4>
+                    <p>Mesero: <strong>${pedido.mesero}</strong></p>
+                    <ul>${productos}</ul>
+                    <button class="btn btn-success btn-marcar-listo" data-pedido-id="${pedido.id}">
+                        Listo
+                    </button>
+                </div>
+            `;
+            pedidosContainer.prepend(div);
+        }
+    };
+
+    socket.onclose = function() {
+        console.warn("Conexión cerrada con el canal de pedidos.");
+    };
+
+    // Función para marcar pedido como listo
+    document.addEventListener('click', function(e) {
+        if(e.target && e.target.classList.contains('btn-marcar-listo')) {
+            const btn = e.target;
+            const pedidoId = btn.dataset.pedidoId;
+
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+
+            fetch(`/pedido/${pedidoId}/listo/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire({
+                        title: `Pedido #${pedidoId} listo`,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    btn.textContent = "Listo";
+                } else {
+                    btn.textContent = "Error";
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btn.textContent = "Error";
+                btn.disabled = false;
+            });
+        }
+    });
+</script>
+
+{% endblock %}

@@ -13,7 +13,7 @@ class PedidosConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
 
-        # reenviar a todos los cocineros conectados
+        # Reenviar mensaje a todos los cocineros conectados
         await self.channel_layer.group_send(
             self.group_name,
             {
@@ -24,6 +24,7 @@ class PedidosConsumer(AsyncWebsocketConsumer):
 
     async def nuevo_pedido(self, event):
         await self.send(text_data=json.dumps({
+            "tipo": "nuevo_pedido",  # 🔹 útil para distinguir mensajes
             "pedido": event["pedido"]
         }))
 

@@ -2,17 +2,21 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Login
     path('login/', views.login_view, name='login'),
     path('iniciar_sesion/', views.iniciar_sesion, name='iniciar_sesion'),
     path('logout/', views.cerrar_sesion, name='logout'),
-    path('registro/', views.registro, name='registro'),
+    path('cambiar_password/', views.cambiar_password_primera_vez, name='cambiar_password_primera_vez'),
 
     # Dashboards por rol
     path('administrador/dashboard/', views.dashboard_admin, name='dashboard_admin'),
     path('mesero/dashboard/', views.dashboard_mesero, name='dashboard_mesero'),
     path('cocinero/dashboard/', views.dashboard_cocinero, name='dashboard_cocinero'),
     path('cajero/dashboard/', views.dashboard_cajero, name='dashboard_cajero'),
-    path('cliente/dashboard/', views.dashboard_cliente, name='dashboard_cliente'),
+    
+    #Admin-perfil
+    path('perfil/', views.perfil_admin, name='perfil_admin'),
+    path('perfil/administrador/editar/', views.editar_perfil_admin, name='editar_perfil_admin'),
 
     # Admin-gestion de trabajadores
     path('trabajadores/', views.listar_trabajadores, name='listar_trabajadores'),
@@ -44,5 +48,13 @@ urlpatterns = [
     path('pedidos/detalle/agregar/ajax/<int:pedido_id>/', views.agregar_detalle_ajax, name='agregar_detalle_ajax'),
     path('pedidos/detalle/editar/ajax/<int:detalle_id>/', views.editar_detalle_ajax, name='editar_detalle_ajax'),
     path('pedidos/detalle/eliminar/ajax/<int:detalle_id>/', views.eliminar_detalle_ajax, name='eliminar_detalle_ajax'),
+
+    #Cocinero pedido
+    path('cocinero/pedidos/', views.vista_cocina, name='vista_cocina'),
+    path('pedido/<int:pedido_id>/listo/', views.marcar_pedido_listo, name='marcar_pedido_listo'),
+
+    #notificaion al mesero de listo
+    path("notificaciones/", views.notificaciones_mesero, name="notificaciones_mesero"),
+
 
 ]

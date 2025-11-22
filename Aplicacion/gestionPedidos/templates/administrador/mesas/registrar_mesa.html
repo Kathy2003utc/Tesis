@@ -3,56 +3,171 @@
 {% block contenido %}
 <br><br><br>
 
-<div class="container mt-5" style="max-width: 600px;">
-    <h2 class="text-center text-primary mb-4">Registrar Nueva Mesa</h2>
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-avellana: #C8A784;
+    --crema-suave: #FAF4EC;
+}
+
+/* Fondo elegante */
+html, body {
+    background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 45%, var(--blanco-calido));
+    overflow-x: hidden;
+}
+
+/* Contenedor */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Animación */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-oscuro);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Inputs */
+.form-control {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    transition: 0.3s;
+}
+
+.form-control:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62, 122, 63, 0.35);
+}
+
+/* Botón guardar */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    width: 100%;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+/* Botón cancelar */
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    text-align: center;
+    display: block;
+    margin-top: 10px;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+</style>
+
+<div class="form-container">
 
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        <script>
+            Swal.fire({
+                icon: "{{ message.tags }}",
+                title: "{{ message.tags|title }}",
+                text: "{{ message|escapejs }}",
+                confirmButtonColor: "#3E7A3F",
+                background: "#FFF7F0",
+            });
+        </script>
         {% endfor %}
     {% endif %}
 
-    <form id="frm_mesa" method="post" novalidate>
-        {% csrf_token %}
+    <div class="card-form">
+        <form id="frm_mesa" method="post" novalidate>
+            {% csrf_token %}
 
-        <div class="mb-3">
-            <label for="numero" class="form-label">Número de Mesa:</label>
-            <input type="number" name="numero" class="form-control" min="1" required>
-        </div>
+            <h2 class="titulo-form">Registrar Nueva Mesa</h2>
 
-        <div class="mb-3">
-            <label for="capacidad" class="form-label">Capacidad:</label>
-            <input type="number" name="capacidad" class="form-control" min="1" value="4" required>
-        </div>
+            <div class="mb-3">
+                <label class="form-label">Número de Mesa:</label>
+                <input type="number" name="numero" class="form-control"
+                    value="{{ siguiente_numero }}" readonly>
+            </div>
 
-        <div class="mb-3">
-            <label for="estado" class="form-label">Estado:</label>
-            <select name="estado" class="form-select" required>
-                <option value="libre" selected>Libre</option>
-                <option value="ocupada">Ocupada</option>
-            </select>
-        </div>
 
-        <div class="d-grid mt-4">
-            <button type="submit" class="btn btn-success">Registrar Mesa</button>
-        </div>
-    </form>
+            <div class="mb-3">
+                <label class="form-label">Capacidad:</label>
+                <input type="number" name="capacidad" class="form-control" min="1" value="4" required>
+            </div>
+
+            <button type="submit" class="btn-guardar">Registrar Mesa</button>
+
+            <a href="{% url 'listar_mesas' %}" class="btn-cancelar">Cancelar</a>
+
+        </form>
+    </div>
 </div>
 
-<!-- jQuery Validate -->
 <script>
 $("#frm_mesa").validate({
     rules: {
         numero: { required: true, number: true, min: 1 },
         capacidad: { required: true, number: true, min: 1 },
-        estado: { required: true }
     },
     messages: {
         numero: { required: "Campo obligatorio", number: "Debe ser un número", min: "Mínimo 1" },
         capacidad: { required: "Campo obligatorio", number: "Debe ser un número", min: "Mínimo 1" },
-        estado: { required: "Seleccione un estado" }
     }
 });
 </script>
+
 <br><br><br>
 {% endblock %}

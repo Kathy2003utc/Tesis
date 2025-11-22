@@ -5,6 +5,9 @@
     <title>Iniciar sesión - Restaurante</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -15,45 +18,180 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
 
     <style>
+        :root {
+        /* Colores base del logo */
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        /* Verdes del logo */
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        /* Neutros principales */
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        /* Alertas */
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+
+        /* Tonos café elegantes */
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        /* Verdes complementarios */
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        /* Neutros cálidos */
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        /* Azules compatibles */
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        /* Acentos cálidos */
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        /* Estados */
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
         body {
-            background: linear-gradient(to right, #4e73df, #224abe);
+            background: linear-gradient(
+                135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido)
+        );
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', sans-serif;
         }
+
         .login-card {
             border: none;
-            border-radius: 1rem;
-            box-shadow: 0px 0px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            background: var(--blanco-calido);
+            box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.35);
         }
+
         .bg-login-image {
-            background: url('https://source.unsplash.com/featured/?restaurant,food') no-repeat center center;
+            background: url('https://source.unsplash.com/featured/?coffee,cafe') no-repeat center;
             background-size: cover;
         }
+
+        .restaurant-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--cafe-oscuro);
+        }
+
+        /* Inputs */
+        .form-control {
+            border-radius: .6rem;
+            border: 2px solid var(--cafe-claro);
+            background-color: #fff;
+            font-size: 1rem;
+            transition: .2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--verde);
+            box-shadow: 0 0 6px rgba(62, 122, 63, 0.4);
+        }
+
+        .input-group-text {
+            background-color: var(--cafe-suave);
+            border-color: var(--cafe-claro);
+            color: var(--cafe-oscuro);
+        }
+
+        /* Validaciones */
         label.error {
-            color: #ff4d4d;
-            font-size: 0.9rem;
+            color: var(--rojo-alerta);
+            font-size: 0.85rem;
             margin-top: 0.25rem;
             display: block;
         }
+
         input.error {
-            border-color: #ff4d4d;
-            background-color: #ffe6e6;
+            border-color: var(--rojo-alerta) !important;
+            background-color: #FCE4E4 !important;
+        }
+
+        /* Botón principal */
+        .btn-primary {
+            background-color: var(--verde) !important;
+            border-color: var(--verde) !important;
+            border-radius: .6rem;
+            padding: 0.7rem;
+            font-weight: bold;
+            transition: .2s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--verde-claro) !important;
+            border-color: var(--verde-claro) !important;
+        }
+
+        /* Botón mostrar contraseña */
+        #togglePassword {
+            border-radius: 0 .6rem .6rem 0;
+            background-color: var(--cafe-suave);
+            border-color: var(--cafe-claro);
+        }
+
+        #togglePassword:hover {
+            background-color: var(--cafe-claro);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .restaurant-title {
+                font-size: 1.6rem;
+            }
         }
     </style>
+
 </head>
 <body>
 
-<div class="container py-5">
+<div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-10 col-lg-8">
+        <div class="col-sm-12 col-md-10 col-lg-8 col-xl-6">
             <div class="card login-card">
                 <div class="row g-0">
+
                     <!-- Imagen lateral -->
                     <div class="col-md-6 d-none d-md-block bg-login-image"></div>
 
                     <!-- Formulario -->
-                    <div class="col-md-6">
+                    <div class="col-md-6 bg-white">
                         <div class="card-body p-4">
+
                             <div class="text-center mb-4">
-                                <h2 class="text-primary fw-bold">Bienvenido al Restaurante</h2>
+                                <h2 class="restaurant-title">Bienvenido</h2>
                                 <p class="text-muted">Inicia sesión para continuar</p>
                             </div>
 
@@ -62,32 +200,44 @@
 
                                 {% if messages %}
                                     {% for message in messages %}
-                                        <div class="alert alert-{{ message.tags }}" role="alert">
+                                        <div class="alert alert-{{ message.tags }} py-2" role="alert">
                                             {{ message }}
                                         </div>
                                     {% endfor %}
                                 {% endif %}
 
+                                <!-- Correo -->
                                 <div class="form-group mb-3">
-                                    <label for="correo">Correo electrónico:</label>
-                                    <input type="email" name="correo" class="form-control" placeholder="Ej. usuario@correo.com" required>
+                                    <label for="correo" class="fw-semibold">Correo electrónico</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fa-solid fa-envelope"></i>
+                                        </span>
+                                        <input type="email" name="correo" class="form-control" placeholder="usuario@correo.com" required>
+                                    </div>
                                 </div>
 
+                                <!-- Contraseña -->
                                 <div class="form-group mb-4">
-                                    <label for="password">Contraseña:</label>
-                                    <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
+                                    <label for="password" class="fw-semibold">Contraseña</label>
+                                    <div class="input-group position-relative">
+                                        <span class="input-group-text">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </span>
+                                        <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña" required>
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">Iniciar sesión</button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa-solid fa-right-to-bracket"></i>  Iniciar sesión
+                                    </button>
                                 </div>
                             </form>
 
-                            <hr class="my-4">
-
-                            <div class="text-center mt-2">
-                                <a href="{% url 'registro' %}" class="text-decoration-none small">¿No tienes una cuenta? Regístrate aquí</a>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -96,10 +246,9 @@
      </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Validación con jQuery Validate -->
+<!-- Validación -->
 <script>
     $("#frm_login").validate({
         rules: {
@@ -109,8 +258,6 @@
             },
             "password": {
                 required: true,
-                minlength: 6,
-                maxlength: 30
             }
         },
         messages: {
@@ -119,10 +266,24 @@
                 email: "Debe ingresar un correo válido"
             },
             "password": {
-                required: "La contraseña es obligatoria",
-                minlength: "Debe tener al menos 6 caracteres",
-                maxlength: "Máximo 30 caracteres permitidos"
+                required: "Obligatoria"
             }
+        }
+    });
+</script>
+
+<!-- Mostrar / ocultar contraseña -->
+<script>
+    $("#togglePassword").on("click", function() {
+        const input = $("#password");
+        const icon = $(this).find("i");
+
+        if (input.attr("type") === "password") {
+            input.attr("type", "text");
+            icon.removeClass("fa-eye").addClass("fa-eye-slash");
+        } else {
+            input.attr("type", "password");
+            icon.removeClass("fa-eye-slash").addClass("fa-eye");
         }
     });
 </script>

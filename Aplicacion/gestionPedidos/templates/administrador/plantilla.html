@@ -88,6 +88,13 @@
 
     <!-- CSS Just for demo purpose, don't include it in your project -->
     <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/demo.css' %}" />
+
+    <style>
+      .main-panel > footer {
+          margin-top: auto;
+      }
+  </style>
+
   </head>
   <body>
     <div class="wrapper">
@@ -226,7 +233,7 @@
               <nav
                 class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex"
               >
-                  <a class="navbar-brand" href="#">Sistema - Cliente</a>
+                  <a class="navbar-brand" href="#">Sistema - Administrador</a>
               </nav>
 
               <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
@@ -240,7 +247,7 @@
             <div class="collapse navbar-collapse" id="navbarCliente">
 
                 <div class="d-flex align-items-center">
-                <a href="" class="btn btn-light btn-sm me-2">
+                <a href="{% url 'perfil_admin' %}" class="btn btn-light btn-sm me-2">
                     <i class="bi bi-person-circle me-1"></i> Ver mi perfil
                 </a>
                 <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
@@ -261,21 +268,11 @@
 
 
         <footer>
-
-          <div class="row" style="padding: 20px; color:darkblue; background-color:white;">
-            <div class="col-md-4 ">
-              <h3 class="text-center">Desarrollado por:</h3>
-              <p class="text-center">Katherin Pico</p>
-              <p class="text-center">Boris Pardo</p>
-            </div>
-
-            <div class="col-md-4 ">
-              <h3 class="text-center">Email:</h3>
-              <p class="text-center">kathy.jim06.cc@gmail.com</p>
-            </div>
-            <div class="col-md-4 ">
-              <h3 class="text-center">Fecha:</h3>
-              <p class="text-center">Latacunga, 09 de junio del 2025</p>
+          <div class="row" style="padding: 30px; color:#2B1A10; background-color:white;">
+            <div class="text-center">
+              <h4 class="text-center">Desarrollado por Katherin Pico</h4>
+              <h5 class="text-center">kathy.jim06.cc@gmail.com</h5>
+              <h5 class="text-center">0958615103</h5>
             </div>
           </div>
         </footer>
@@ -349,7 +346,7 @@
               text: "{{ mensaje }}",
               icon: "success",
               showConfirmButton: false,
-              timer: 1000
+              timer: 1500
             });
         </script>
       {% endfor %}
@@ -357,12 +354,12 @@
 
     <style>
       .error{
-      color:red;
+      color:#8C2F39;
       font-weight: bold;
       }
 
       .form-control.error{
-      border: 1px solid red;
+      border: 1px solid #C14949;
       }
     </style>
 

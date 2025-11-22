@@ -17,19 +17,18 @@
 
         <div class="mb-3">
             <label class="form-label">Mesero:</label>
-            <select name="mesero" class="form-select" required>
-                <option value="">Seleccione...</option>
-                {% for m in meseros %}
-                    <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
-                {% endfor %}
-            </select>
 
+            <input type="text" class="form-control" value="{{ user.nombre }} {{ user.apellido }}" disabled>
+
+            <!-- Enviar el ID oculto -->
+            <input type="hidden" name="mesero" value="{{ user.id }}">
         </div>
+
 
         <div class="mb-3">
             <label class="form-label">Mesa:</label>
             <select name="mesa" class="form-select">
-                <option value="">Sin mesa (domicilio)</option>
+                <option value="">Seleccione una mesa</option>
                 {% for mesa in mesas %}
                     <option value="{{ mesa.id }}">Mesa {{ mesa.numero }}</option>
                 {% endfor %}
@@ -39,9 +38,15 @@
         <div class="mb-3">
             <label class="form-label">Tipo de pedido:</label>
             <select name="tipo_pedido" class="form-select" required>
-                <option value="restaurante">Restaurante</option>
-                <option value="domicilio">Domicilio</option>
+                {% if user.rol == "mesero" %}
+                    <option value="restaurante">Restaurante</option>
+                {% endif %}
+
+                {% if user.rol == "cajero" %}
+                    <option value="domicilio">Domicilio</option>
+                {% endif %}
             </select>
+
         </div>
 
         <div id="domicilioFields" class="collapse">
@@ -64,6 +69,16 @@
         </div>
     </form>
 </div>
+
+{% if user.rol == "cajero" %}
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelector("select[name='mesa']").disabled = true;
+            document.querySelector("select[name='tipo_pedido']").value = "domicilio";
+        });
+    </script>
+{% endif %}
+
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {

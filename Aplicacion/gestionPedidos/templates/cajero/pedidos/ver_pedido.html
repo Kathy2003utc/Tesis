@@ -1,0 +1,38 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5" style="max-width: 800px;">
+    <h2 class="text-center text-primary mb-4">Pedido #{{ pedido.id }}</h2>
+
+
+   <a href="{% url 'listar_pedidos' %}" class="btn btn-primary mt-3">
+    <i class="fa fa-arrow-left me-2"></i> Regresar
+</a>
+
+
+
+    <div class="card p-4 shadow rounded-4 mt-4">
+        <p><strong>Mesero:</strong> {{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</p>
+        <p><strong>Mesa:</strong>
+            {% if pedido.mesa %}
+                {{ pedido.mesa.numero }}
+            {% else %}
+                Domicilio
+            {% endif %}
+        </p>
+
+        <p><strong>Estado:</strong> {{ pedido.estado }}</p>
+        <p><strong>Total:</strong> ${{ pedido.total }}</p>
+    </div>
+
+    <!-- Tabla de detalles -->
+    <h4 class="mt-4">Detalles del pedido:</h4>
+    <div id="tabla_detalles">
+        {% include 'mesero/pedidos/tabla_detalle_acciones.html' %}
+    </div>
+
+
+<br><br><br>
+{% endblock %}

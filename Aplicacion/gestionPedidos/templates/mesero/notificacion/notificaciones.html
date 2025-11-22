@@ -1,0 +1,70 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br><br><br>
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Notificaciones del Mesero</h2>
+
+    <div class="alert alert-info text-center">
+        Este panel mostrará alertas automáticas cuando un pedido esté <strong>listo para entrega</strong>.
+    </div>
+
+    <div id="lista-notificaciones" class="mt-4">
+        <!-- Aquí se agregarán las notificaciones en tiempo real -->
+    </div>
+</div>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Detectar protocolo seguro (wss) o no seguro (ws)
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+
+    // ID del usuario actual (mesero)
+    const user_id = "{{ request.user.id }}";
+
+    // Conectar al WebSocket de notificaciones personales
+    const socketNotif = new WebSocket(protocol + window.location.host + `/ws/notificaciones/${user_id}/`);
+
+    socketNotif.onopen = function () {
+        console.log("Conectado al canal de notificaciones del mesero.");
+    };
+
+    socketNotif.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+
+        // Mostrar alerta emergente
+        Swal.fire({
+            title: `Pedido #${data.pedido} listo`,
+            text: data.mensaje || "Dirígete a la cocina para entregar el pedido.",
+            icon: "success",
+            timer: 2500,
+            showConfirmButton: false
+        });
+
+        // También agregar visualmente a la lista
+        const div = document.createElement("div");
+        div.className = "alert alert-success mt-3";
+        div.innerHTML = `
+            <strong>Pedido #${data.pedido}:</strong> ${data.mensaje || "Listo para entrega."}
+        `;
+        document.getElementById("lista-notificaciones").prepend(div);
+    };
+
+    socketNotif.onclose = function () {
+        console.warn("Conexión cerrada con el canal de notificaciones.");
+    };
+</script>
+
+<style>
+    .alert {
+        border-radius: 15px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        font-size: 16px;
+    }
+</style>
+
+{% endblock %}

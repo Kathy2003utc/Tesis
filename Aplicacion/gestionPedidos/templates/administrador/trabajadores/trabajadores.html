@@ -1,63 +1,265 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br>
+<br><br><br><br>
 
-<div class="container mt-5">
-    <h1 class="text-center text-primary">Listado de Trabajadores</h1>
-    <hr>
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
-    <div class="mb-3 text-end">
-        <a href="{% url 'crear_trabajador' %}" class="btn btn-success">Nuevo Trabajador</a>
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+    /* Fondo general */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(
+                135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+    }
+
+    /* PADDING RESPONSIVO COMO EL EJEMPLO */
+    .main-content-wrapper {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px !important;
+            padding-right: 40px !important;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 80px !important;
+            padding-right: 80px !important;
+        }
+    }
+
+    /* Contenedor tipo tarjeta */
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--cafe-suave);
+    }
+
+    h1 {
+        color: var(--cafe-profundo);
+        font-weight: bold;
+        text-shadow: 1px 1px 2px #ffffff70;
+        letter-spacing: 1px;
+    }
+
+    /* Botón */
+    .btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    .btn-success:hover {
+        background-color: var(--verde) !important;
+    }
+
+    /* Scroll responsivo */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        margin-top: 15px;
+    }
+
+    /* Tabla */
+    table {
+        min-width: 900px; /* Para que haya scroll en pantallas chicas */
+        overflow: hidden;
+    }
+
+    .table-primary {
+        background-color: var(--cafe-claro) !important;
+        color: var(--texto-oscuro) !important;
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: var(--gris-suave) !important;
+    }
+
+    .btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    .btn-warning:hover {
+        background-color: var(--advertencia) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    .btn-danger:hover {
+        background-color: var(--rojo-claro) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+
+    .badge {
+        font-size: 14px;
+        padding: 6px 10px;
+        border-radius: 10px;
+    }
+
+    .badge.bg-primary {
+        background-color: var(--azul-pizarra) !important;
+    }
+    .badge.bg-warning {
+        background-color: var(--naranja-tierra) !important;
+    }
+    .badge.bg-success {
+        background-color: var(--exito) !important;
+    }
+
+    table.dataTable thead th {
+        background-color: var(--cafe-crema) !important; /* Color cálido tipo beige */
+        color: #2B1A10 !important;            /* Texto oscuro del tema */
+    }
+
+    /* Mantener bordes y hover coherentes */
+    table.dataTable thead th.sorting,
+    table.dataTable thead th.sorting_asc,
+    table.dataTable thead th.sorting_desc {
+        background-color: var(--cafe-crema) !important;
+    }
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-5">
+        <div class="content-card">
+
+            <h1 class="text-center">Listado de Trabajadores</h1>
+            <hr>
+
+            <div class="mb-3 text-end">
+                <a href="{% url 'crear_trabajador' %}" class="btn btn-success"> <i class="fas fa-plus"></i> Nuevo Trabajador</a>
+            </div>
+
+            <!-- SCROLL RESPONSIVO AQUÍ -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover" id="tbl_trabajadores">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Apellido</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Dirección</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trabajador in trabajadores %}
+                        <tr>
+                            <td>{{ trabajador.id }}</td>
+                            <td>{{ trabajador.nombre }}</td>
+                            <td>{{ trabajador.apellido }}</td>
+                            <td>{{ trabajador.correo }}</td>
+                            <td>{{ trabajador.telefono|default:"—" }}</td>
+                            <td>{{ trabajador.direccion|default:"—" }}</td>
+                            <td>
+                                {% if trabajador.rol == 'mesero' %}
+                                    <span class="badge bg-primary">Mesero</span>
+                                {% elif trabajador.rol == 'cocinero' %}
+                                    <span class="badge bg-warning">Cocinero</span>
+                                {% elif trabajador.rol == 'cajero' %}
+                                    <span class="badge bg-success">Cajero</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'editar_trabajador' trabajador.id %}" class="btn btn-warning btn-sm me-1" title="Editar">
+                                    <i class="fa fa-pen"></i> Editar
+                                </a>
+                                <br><br>
+                                <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirmarEliminacion(event);">
+                                        <i class="fa fa-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
     </div>
-
-    <table class="table table-bordered table-striped table-hover" id="tbl_trabajadores">
-        <thead class="table-primary">
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Correo</th>
-                <th>Teléfono</th>
-                <th>Dirección</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for trabajador in trabajadores %}
-            <tr>
-                <td>{{ trabajador.id }}</td>
-                <td>{{ trabajador.nombre }}</td>
-                <td>{{ trabajador.apellido }}</td>
-                <td>{{ trabajador.correo }}</td>
-                <td>{{ trabajador.telefono|default:"—" }}</td>
-                <td>{{ trabajador.direccion|default:"—" }}</td>
-                <td>
-                    {% if trabajador.rol == 'mesero' %}
-                        <span class="badge bg-primary">Mesero</span>
-                    {% elif trabajador.rol == 'cocinero' %}
-                        <span class="badge bg-warning text-dark">Cocinero</span>
-                    {% elif trabajador.rol == 'cajero' %}
-                        <span class="badge bg-success">Cajero</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'editar_trabajador' trabajador.id %}" class="btn btn-outline-warning btn-sm" title="Editar">
-                        <i class="fa fa-pen"></i>
-                    </a>
-                    <br><br>
-                    <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirmarEliminacion(event);">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </div>
 
 <script>
@@ -68,8 +270,8 @@ function confirmarEliminacion(e) {
         text: "Esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
+        confirmButtonColor: '#C14949',
+        cancelButtonColor: '#4F6D7A',
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
     }).then((result) => {

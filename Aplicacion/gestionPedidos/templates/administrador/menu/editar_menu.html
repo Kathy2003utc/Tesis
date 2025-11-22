@@ -3,73 +3,213 @@
 {% block contenido %}
 <br><br><br>
 
-<div class="container mt-5" style="max-width: 600px;">
-    <h2 class="text-center text-primary mb-4">Editar Producto</h2>
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
 
-    <form id="frm_editar_producto" method="post" enctype="multipart/form-data" novalidate>
-        {% csrf_token %}
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
 
-        <div class="mb-3">
-            <label class="form-label">Nombre:</label>
-            <input type="text" name="nombre" class="form-control" value="{{ producto.nombre }}" required>
-        </div>
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
 
-        <div class="mb-3">
-            <label class="form-label">Descripción:</label>
-            <textarea name="descripcion" class="form-control" rows="3">{{ producto.descripcion }}</textarea>
-        </div>
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
 
-        <div class="mb-3">
-            <label class="form-label">Precio ($):</label>
-            <input type="number" name="precio" step="0.01" min="0.1" class="form-control"
-                   value="{{ producto.precio }}" required>
-        </div>
+    --verde-profundo: #2E5F32;
+    --verde-oliva: #5E7A43;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
 
-        <div class="mb-3">
-            <label class="form-label">Tipo:</label>
-            <select name="tipo" class="form-select" required>
-                <option value="plato" {% if producto.tipo == "plato" %}selected{% endif %}>Plato</option>
-                <option value="bebida" {% if producto.tipo == "bebida" %}selected{% endif %}>Bebida</option>
-            </select>
-        </div>
+    --crema-suave: #FAF4EC;
+    --gris-claro-calido: #D8D3CC;
+    --gris-medio-calido: #B8B1A8;
+    --gris-oscuro-calido: #4A3F38;
 
-        <div class="mb-3">
-            <label class="form-label">Imagen actual:</label><br>
-            {% if producto.imagen %}
-                <img src="{{ producto.imagen.url }}" width="100" class="img-thumbnail mb-2">
-            {% else %}
-                <span class="text-muted">Sin imagen</span>
-            {% endif %}
-        </div>
+    --exito: #4F8A57;
+    --exito-suave: #D9F2D6;
+    --advertencia: #D9A441;
+    --advertencia-suave: #FFF5DA;
+}
 
-        <div class="mb-3">
-            <label class="form-label">Cambiar imagen:</label>
-            <input type="file" name="imagen" class="form-control" accept="image/*">
-        </div>
+/* Fondo elegante */
+html, body {
+    background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 45%, var(--blanco-calido));
+    overflow-x: hidden;
+}
 
-        <div class="d-grid mt-4">
-            <button type="submit" class="btn btn-primary">Actualizar Producto</button>
-            <a href="{% url 'listar_menu' %}" class="btn btn-secondary mt-2">Cancelar</a>
-        </div>
-    </form>
+/* Contenedor */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Inputs */
+.form-control, .form-select {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    color: var(--texto-oscuro);
+}
+
+/* Botón guardar */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    border: none;
+    transition: 0.3s;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-menta);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+/* Botón cancelar */
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+@media (max-width: 600px) {
+    .card-form {
+        padding: 20px;
+    }
+    .titulo-form {
+        font-size: 22px;
+    }
+}
+</style>
+
+<div class="form-container">
+    <div class="card-form">
+
+        <h2 class="titulo-form">Editar Producto</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form id="frm_editar_producto" method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            <!-- NOMBRE -->
+            <div class="mb-3">
+                <label class="form-label">Nombre:</label>
+                <input type="text" name="nombre" class="form-control"
+                       value="{{ producto.nombre }}" required>
+            </div>
+
+            <!-- DESCRIPCIÓN -->
+            <div class="mb-3">
+                <label class="form-label">Descripción:</label>
+                <textarea name="descripcion" class="form-control" rows="3">{{ producto.descripcion }}</textarea>
+            </div>
+
+            <!-- PRECIO -->
+            <div class="mb-3">
+                <label class="form-label">Precio ($):</label>
+                <input type="number" name="precio" inputmode="decimal"
+                    step="0.01" min="0.10" class="form-control"
+                    value="{{ producto.precio|stringformat:'.2f' }}" required>
+
+
+            </div>
+
+            <!-- TIPO -->
+            <div class="mb-3">
+                <label class="form-label">Tipo:</label>
+                <select name="tipo" class="form-select" required>
+                    <option value="desayuno" {% if producto.tipo == "desayuno" %}selected{% endif %}>Desayuno</option>
+                    <option value="almuerzo" {% if producto.tipo == "almuerzo" %}selected{% endif %}>Almuerzo</option>
+                    <option value="merienda" {% if producto.tipo == "merienda" %}selected{% endif %}>Merienda</option>
+                    <option value="especial" {% if producto.tipo == "especial" %}selected{% endif %}>Especial</option>
+                    <option value="bebida" {% if producto.tipo == "bebida" %}selected{% endif %}>Bebida</option>
+                </select>
+            </div>
+
+            <!-- BOTÓN GUARDAR -->
+            <button type="submit" class="btn btn-guardar w-100 mt-3">
+                Actualizar Producto
+            </button>
+
+            <!-- BOTÓN CANCELAR -->
+            <a href="{% url 'listar_menu' %}" class="btn btn-cancelar">
+                Cancelar
+            </a>
+
+        </form>
+
+    </div>
 </div>
 
 <script>
+// Método: solo letras
+jQuery.validator.addMethod("soloLetras", function(value, element) {
+    return this.optional(element) || /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$/.test(value);
+}, "Solo se permiten letras");
+
+// Validación editar
 $("#frm_editar_producto").validate({
     rules: {
-        nombre: { required: true },
+        nombre: { required: true, soloLetras: true },
         precio: { required: true, number: true, min: 0.1 },
         tipo: { required: true }
     },
     messages: {
-        nombre: { required: "Campo obligatorio" },
-        precio: { required: "Campo obligatorio", number: "Debe ser un número", min: "Debe ser mayor a 0" },
+        nombre: { required: "Campo obligatorio", soloLetras: "Solo letras" },
+        precio: { required: "Campo obligatorio", number: "Debe ser un número", min: "Mayor a 0" },
         tipo: { required: "Seleccione un tipo" }
     }
 });
