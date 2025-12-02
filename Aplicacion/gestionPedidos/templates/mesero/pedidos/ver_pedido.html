@@ -1,4 +1,4 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
 <br><br><br>
@@ -15,14 +15,7 @@
 
     <div class="card p-4 shadow rounded-4 mt-4">
         <p><strong>Mesero:</strong> {{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</p>
-        <p><strong>Mesa:</strong>
-            {% if pedido.mesa %}
-                {{ pedido.mesa.numero }}
-            {% else %}
-                Domicilio
-            {% endif %}
-        </p>
-
+        <p><strong>Mesa:</strong> {{ pedido.mesa.numero }} </p>
         <p><strong>Estado:</strong> {{ pedido.estado }}</p>
         <p><strong>Total:</strong> ${{ pedido.total }}</p>
     </div>

@@ -1,51 +1,82 @@
 <div id="tabla_detalles">
-        <div class="table-responsive shadow rounded-4 mt-3">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-primary text-center">
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Valor unitario</th>
-                        <th>Subtotal</th>
-                        <th>Recargo</th>
-                        <th>Observación</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for det in pedido.detalles.all %}
+    <div class="table-responsive shadow rounded-4 mt-3">
+        <table class="table table-bordered table-hover align-middle" style="border-radius:12px; overflow:hidden;">
+            <thead class="text-center" style="background: var(--cafe-medio); color: white;">
                 <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Valor unitario</th>
+                    <th>Subtotal</th>
+                    <th>Observación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for det in pedido.detalles.all %}
+                <tr style="transition:0.3s;">
                     <td>{{ det.producto.nombre }}</td>
                     <td class="text-center">{{ det.cantidad }}</td>
                     <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
                     <td class="text-center">${{ det.subtotal }}</td>
-                    <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
                     <td>{{ det.observacion }}</td>
                     <td class="text-center">
-                        <button class="btn btn-warning btn-sm me-1" 
-                                onclick="editarDetalleAjax(
-                                    '{{ det.id }}',
-                                    '{{ det.cantidad }}',
-                                    '{{ det.observacion|default_if_none:''|escapejs }}',
-                                    '{{ det.recargo|default:0|escapejs }}'
-                                )">
-                            Editar
+                        <button class="btn btn-warning btn-sm me-1"
+                            onclick="editarDetalleAjax(
+                                '{{ det.id }}',
+                                '{{ det.cantidad }}',
+                                '{{ det.observacion|default_if_none:''|escapejs }}'
+                            )">
+                            <i class="fas fa-edit"></i> Editar
                         </button>
 
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
-                            Eliminar
+                        <br><br>
+
+                        <button class="btn btn-danger btn-sm"
+                            onclick="eliminarDetalleAjax('{{ det.id }}')">
+                            <i class="fas fa-trash"></i> Eliminar
                         </button>
                     </td>
                 </tr>
-                {% empty %}
+            {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-6">
+                    <td colspan="6" class="text-center text-muted py-6">
                         Aún no hay productos agregados.
                     </td>
                 </tr>
-                {% endfor %}
-                </tbody>
-
-            </table>
-        </div>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
+
+<style>
+    #tabla_detalles tbody tr:hover {
+        background: rgba(0,0,0,0.04);
+    }
+
+    /* Botones de tabla */
+    #tabla_detalles .btn-warning {
+        background-color: var(--advertencia);
+        border-color: var(--advertencia);
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    #tabla_detalles .btn-warning:hover {
+        background-color: var(--advertencia);
+        color: var(--texto-oscuro);
+    }
+
+    #tabla_detalles .btn-danger {
+        background-color: var(--rojo-alerta);
+        border-color: var(--rojo-alerta);
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    #tabla_detalles .btn-danger:hover {
+        background-color: var(--rojo-claro);
+        color: var(--texto-oscuro);
+    }
+</style>

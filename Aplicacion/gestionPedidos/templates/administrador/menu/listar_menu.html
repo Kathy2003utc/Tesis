@@ -128,8 +128,9 @@
     .card-producto {
         transition: 0.3s;
         border-radius: 15px;
-        border: 1px solid var(--cafe-claro);
+        border: 1px solid var(--cafe-avellana);
         background: var(--blanco-calido);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
     }
 
     .card-producto:hover {
@@ -149,6 +150,33 @@
     .badge-especial { background-color: var(--azul-pizarra) !important; color: white; }
     .badge-bebida { background-color: var(--info) !important; color: white; }
 
+    .categoria-menu a {
+        text-decoration: none;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gris-medio-calido);
+        padding: 10px 15px;
+        border-radius: 10px;
+        transition: 0.3s;
+        font-size: 15px;
+    }
+
+    .categoria-menu a i {
+        font-size: 28px;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .categoria-menu a:hover {
+        color: var(--cafe-profundo);
+        transform: translateY(-3px);
+    }
+
+    .categoria-item.active {
+        color: var(--cafe-profundo) !important;
+        border-bottom: 3px solid var(--cafe-profundo);
+    }
+
 
 </style>
 
@@ -163,6 +191,35 @@
                 <a href="{% url 'registrar_menu' %}" class="btn btn-success">
                     <i class="fas fa-plus"></i> Registrar Nuevo Producto
                 </a>
+            </div>
+
+            <!-- FILTRO TIPO MENÚ -->
+            <div class="categoria-menu d-flex justify-content-center gap-4 mb-4">
+
+                <a href="?tipo=" class="categoria-item {% if not request.GET.tipo %}active{% endif %}">
+                    <i class="fas fa-utensils"></i><br>Todos
+                </a>
+
+                <a href="?tipo=desayuno" class="categoria-item {% if request.GET.tipo == 'desayuno' %}active{% endif %}">
+                    <i class="fas fa-coffee"></i><br>Desayuno
+                </a>
+
+                <a href="?tipo=almuerzo" class="categoria-item {% if request.GET.tipo == 'almuerzo' %}active{% endif %}">
+                    <i class="fas fa-drumstick-bite"></i><br>Almuerzo
+                </a>
+
+                <a href="?tipo=merienda" class="categoria-item {% if request.GET.tipo == 'merienda' %}active{% endif %}">
+                    <i class="fas fa-bread-slice"></i><br>Merienda
+                </a>
+
+                <a href="?tipo=especial" class="categoria-item {% if request.GET.tipo == 'especial' %}active{% endif %}">
+                    <i class="fas fa-star"></i><br>Especial
+                </a>
+
+                <a href="?tipo=bebida" class="categoria-item {% if request.GET.tipo == 'bebida' %}active{% endif %}">
+                    <i class="fas fa-glass-martini"></i><br>Bebidas
+                </a>
+
             </div>
 
             <!-- GRID DE TARJETAS -->
@@ -206,14 +263,14 @@
 
                             <a href="{% url 'editar_menu' p.id %}" 
                                class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i>
+                                <i class="fas fa-edit"></i> Editar
                             </a>
 
                             <form action="{% url 'eliminar_menu' p.id %}" method="post" class="form-eliminar">
                                 {% csrf_token %}
                                 <button type="submit" 
                                     class="btn btn-danger btn-sm btn-eliminar">
-                                    <i class="fas fa-trash"></i>
+                                    <i class="fas fa-trash"></i> Eliminar
                                 </button>
                             </form>
 

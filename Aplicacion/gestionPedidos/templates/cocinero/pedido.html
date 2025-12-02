@@ -2,10 +2,12 @@
 {% load static %}
 
 {% block contenido %}
+
+<meta name="csrf-token" content="{{ csrf_token }}">
 <br><br><br>
 <div class="container mt-4">
     <h2 class="text-center text-primary mb-4">
-        🍽️ Pedidos en preparación (Cocina)
+        Pedidos en preparación (Cocina)
     </h2>
 
     <!-- Contenedor de pedidos -->
@@ -32,6 +34,34 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- BOTÓN FLOTANTE -->
+<button id="btnAbrirMensaje" class="btn-flotante">
+    💬
+</button>
+
+<!-- FORMULARIO FLOTANTE -->
+<div id="formMensaje" class="form-flotante oculto">
+    <div class="form-contenido">
+        <h4 class="mb-3">Enviar mensaje al mesero</h4>
+
+        <label class="form-label">Seleccione mesero:</label>
+        <select id="meseroSelect" class="form-control mb-3">
+            {% for m in meseros %}
+                <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="form-label">Mensaje:</label>
+        <textarea id="mensajeTexto" class="form-control mb-3" rows="3"></textarea>
+
+        <div class="text-end">
+            <button class="btn btn-secondary" id="btnCerrarMensaje">Cancelar</button>
+            <button class="btn btn-primary" id="btnEnviarMensaje">Enviar</button>
+        </div>
+    </div>
+</div>
+
 
 <style>
     .pedido-card {
@@ -81,6 +111,66 @@
         color: #666;
         font-style: italic;
     }
+
+    .btn-flotante {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        background: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 65px;
+        height: 65px;
+        font-size: 28px;
+        box-shadow: 0 4px 10px rgba(0,0,0,.3);
+        cursor: pointer;
+        z-index: 999;
+    }
+
+    .form-flotante {
+        position: fixed;
+        bottom: 100px;
+        right: 30px;
+        width: 350px;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,.3);
+        z-index: 999;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .form-flotante.oculto {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+    }
+
+    .form-contenido h4 {
+        color: #0d6efd;
+        font-weight: bold;
+    }
+
+    .pedido-fade-out {
+        animation: desaparecer 0.5s ease forwards;
+    }
+
+    @keyframes desaparecer {
+        0% {
+            opacity: 1;
+            transform: translateY(0);
+            height: auto;
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-20px);
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+    }
+
 </style>
 
 <script>
@@ -101,7 +191,11 @@
         }
         return cookieValue;
     }
-    const csrftoken = getCookie('csrftoken');
+    function getCSRFToken() {
+        return document.querySelector('[name=csrf-token]').content;
+    }
+
+
 
     // Conexión WebSocket
     const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
@@ -113,8 +207,11 @@
 
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        if (data.tipo === "nuevo_pedido") {
+
+        //NUEVO PEDIDO
+        if (data.type === "nuevo_pedido") {
             const pedido = data.pedido;
+
             const productos = pedido.productos.map(p => `
                 <li>
                     <strong>${p.cantidad}x</strong> ${p.nombre}
@@ -137,7 +234,29 @@
             `;
             pedidosContainer.prepend(div);
         }
+
+        //ELIMINAR PEDIDO
+        if (data.type === "eliminar_pedido") {
+            let pedidoId = data.pedido_id;
+
+            // Buscar la tarjeta usando "Pedido #ID"
+            let card = [...document.querySelectorAll(".pedido-card")].find(card =>
+                card.querySelector("h4").textContent.includes(`#${pedidoId}`)
+            );
+
+            if (card) {
+                // Agregar animación
+                card.classList.add("pedido-fade-out");
+
+                // Esperar fin de animación y eliminar la tarjeta
+                setTimeout(() => {
+                    card.parentElement.remove();
+                }, 500); // debe coincidir con el tiempo del animation (.5s)
+            }
+        }
+
     };
+
 
     socket.onclose = function() {
         console.warn("Conexión cerrada con el canal de pedidos.");
@@ -156,10 +275,12 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
+                    'X-CSRFToken': getCSRFToken()
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({})
             })
+
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
@@ -182,6 +303,47 @@
             });
         }
     });
+
+    // ---- FORMULARIO FLOTANTE ----
+    const btnAbrirMensaje = document.getElementById("btnAbrirMensaje");
+    const formMensaje = document.getElementById("formMensaje");
+    const btnCerrarMensaje = document.getElementById("btnCerrarMensaje");
+    const btnEnviarMensaje = document.getElementById("btnEnviarMensaje");
+
+    btnAbrirMensaje.onclick = () => formMensaje.classList.remove("oculto");
+    btnCerrarMensaje.onclick = () => formMensaje.classList.add("oculto");
+
+    // ---- ENVIAR MENSAJE VIA AJAX ----
+    btnEnviarMensaje.onclick = () => {
+        const meseroId = document.getElementById("meseroSelect").value;
+        const mensaje = document.getElementById("mensajeTexto").value;
+
+        if (!mensaje.trim()) {
+            Swal.fire("Escribe un mensaje.", "", "warning");
+            return;
+        }
+
+        fetch("/cocina/enviar-mensaje/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCSRFToken()
+            },
+            body: JSON.stringify({
+                mesero_id: meseroId,
+                mensaje: mensaje
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                Swal.fire("Mensaje enviado", "", "success");
+                document.getElementById("mensajeTexto").value = "";
+                formMensaje.classList.add("oculto");
+            }
+        });
+    };
+
 </script>
 
 {% endblock %}

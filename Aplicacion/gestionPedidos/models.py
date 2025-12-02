@@ -49,6 +49,10 @@ class Usuario(AbstractUser):
 class Mesa(models.Model):
     numero = models.PositiveIntegerField(unique=True)
     capacidad = models.PositiveIntegerField(default=4)
+    estado = models.CharField(max_length=20, choices=[
+        ('libre', 'Libre'),
+        ('ocupada', 'Ocupada'),
+    ], default='libre')
 
     def __str__(self):
         return f"Mesa {self.numero} ({self.estado})"
@@ -82,6 +86,8 @@ class Pedido(models.Model):
         ('en_creacion', 'En creación'), 
         ('en preparacion', 'En preparación'),
         ('listo', 'Listo'),
+        ('entregado', 'Entregado'),
+        ('finalizado', 'Finalizado'),
     ]
 
     TIPOS = [
@@ -240,11 +246,34 @@ class Notificacion(models.Model):
         ('leido', 'Leído'),
         ('no leido', 'No leído')
     ]
-    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
+
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, null=True, blank=True)
     usuario_destino = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    tipo = models.CharField(max_length=50)  # 'pedido listo', 'nuevo pedido', 'pedido cobrado'
+    tipo = models.CharField(max_length=50)
+    mensaje = models.TextField(blank=True, null=True)   # <-- AQUI
     estado = models.CharField(max_length=20, choices=ESTADOS, default='no leido')
     fecha_hora = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Notificación a {self.usuario_destino.nombre} - {self.tipo}"
+
+# ----------------------------
+# Mensaje
+# ----------------------------
+class Mensaje(models.Model):
+    remitente = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="mensajes_enviados"
+    )
+    destinatario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="mensajes_recibidos"
+    )
+    contenido = models.TextField()
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"De {self.remitente.nombre} para {self.destinatario.nombre}"

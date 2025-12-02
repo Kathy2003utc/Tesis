@@ -1,4 +1,4 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
 <br><br><br>
@@ -27,10 +27,10 @@
                 </select>
             </div>
 
+            <!-- MESA SOLO RESTAURANTE -->
             <div class="col-md-4 mb-3">
                 <label class="form-label">Mesa:</label>
-                <select name="mesa" class="form-select">
-                    <option value="">Sin mesa (domicilio)</option>
+                <select name="mesa" class="form-select" required>
                     {% for mesa in mesas %}
                         <option value="{{ mesa.id }}" {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
                             Mesa {{ mesa.numero }}
@@ -57,16 +57,9 @@
     <div class="row g-3">
         {% for producto in productos %}
         <div class="col-lg-3 col-md-4 col-sm-6 col-12">
-            <div class="card border-0 shadow-sm rounded-4 h-100" style="padding-bottom: 0 !important;">
-                <div class="ratio ratio-16x9">
-                    {% if producto.imagen %}
-                        <img src="{{ producto.imagen.url }}" class="object-fit-cover w-100 h-100 rounded-top-4">
-                    {% else %}
-                        <img src="{% static 'img/sin_imagen.png' %}" class="object-fit-cover w-100 h-100 rounded-top-4">
-                    {% endif %}
-                </div>
+            <div class="card border-0 shadow-sm rounded-4 h-100">
 
-                <div class="p-2 d-flex flex-column" style="padding-bottom: 0 !important;">
+                <div class="p-2 d-flex flex-column">
 
                     <h6 class="fw-bold text-center small mb-1">{{ producto.nombre }}</h6>
 
@@ -78,7 +71,7 @@
                         ${{ producto.precio }}
                     </p>
 
-                    <div class="d-flex flex-column mb-2" style="margin-bottom: 0 !important;">
+                    <div class="d-flex flex-column mb-2">
                         <input type="number"
                             min="1"
                             value="1"
@@ -92,7 +85,6 @@
                     </div>
 
                     <button class="btn btn-primary btn-sm w-100"
-                            style="margin-bottom: 0 !important;"
                             onclick="agregarProducto('{{ producto.id }}')">
                         Agregar
                     </button>
@@ -120,85 +112,41 @@
 
 <script>
 // ----------------------------------------
-// Funciones agregar/editar/eliminar productos
+// Agregar producto (solo restaurante)
 // ----------------------------------------
-
-// Agregar producto
 function agregarProducto(id) {
     let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
     let observacion = document.getElementById(`obs_${id}`).value;
-    const tipoPedido = "{{ pedido.tipo_pedido }}";
 
-    if(tipoPedido === "domicilio") {
-        Swal.fire({
-            title: 'Recargo por envase/desechable',
-            input: 'number',
-            inputLabel: 'Ingrese el valor unitario del recargo',
-            inputValue: 0,
-            inputAttributes: { min: 0, step: 0.01 },
-            showCancelButton: true,
-            confirmButtonText: 'Agregar producto',
-            cancelButtonText: 'Cancelar',
-            preConfirm: valorRecargo => {
-                if(valorRecargo === "" || isNaN(valorRecargo) || valorRecargo < 0) {
-                    Swal.showValidationMessage("Ingrese un valor válido para el recargo");
-                }
-                return parseFloat(valorRecargo);
-            }
-        }).then(result => {
-            if(!result.isConfirmed) return;
-            fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ producto_id:id, cantidad, observacion, recargo: result.value })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success){
-                    document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                    Swal.fire({icon:'success', title:'Producto agregado', timer:1000, showConfirmButton:false});
-                    document.getElementById(`obs_${id}`).value = "";
-                } else {
-                    Swal.fire({icon:'error', title:'Error', text:data.mensaje});
-                }
-            });
-        });
-    } else {
-        fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
-            body: JSON.stringify({ producto_id:id, cantidad, observacion })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success){
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                Swal.fire({icon:'success', title:'Producto agregado', timer:1000, showConfirmButton:false});
-                document.getElementById(`obs_${id}`).value = "";
-            } else {
-                Swal.fire({icon:'error', title:'Error', text:data.mensaje});
-            }
-        });
-    }
+    fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
+        body: JSON.stringify({ producto_id:id, cantidad, observacion })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            document.getElementById('tabla_detalles').innerHTML = data.tabla;
+            Swal.fire({icon:'success', title:'Producto agregado', timer:1000, showConfirmButton:false});
+            document.getElementById(`obs_${id}`).value = "";
+        }
+    });
 }
 
-// Editar detalle
-function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, recargo_actual=0) {
-    const tipoPedido = "{{ pedido.tipo_pedido }}";
-    let html = `<div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                    <label>Cantidad</label>
-                    <input id="swal_cantidad" type="number" min="1" value="${cantidad_actual}" class="form-control">
-                    <label>Observación</label>
-                    <input id="swal_observacion" type="text" value="${observacion_actual || ''}" class="form-control">`;
 
-    if(tipoPedido === "domicilio") {
-        html += `<label>Recargo</label>
-                 <input id="swal_recargo" type="number" min="0" step="0.01" value="${recargo_actual}" class="form-control">`;
-    }
-    html += `</div>`;
+// ----------------------------------------
+// Editar detalle (sin recargo)
+// ----------------------------------------
+function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
+
+    let html = `
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+            <label>Cantidad</label>
+            <input id="swal_cantidad" type="number" min="1" value="${cantidad_actual}" class="form-control">
+            <label>Observación</label>
+            <input id="swal_observacion" type="text" value="${observacion_actual || ''}" class="form-control">
+        </div>
+    `;
 
     Swal.fire({
         title: "Editar detalle",
@@ -207,13 +155,14 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, reca
         confirmButtonText:"Actualizar",
         cancelButtonText:"Cancelar",
         preConfirm: () => {
-            const result = { cantidad: parseInt(document.getElementById('swal_cantidad').value),
-                             observacion: document.getElementById('swal_observacion').value };
-            if(tipoPedido==="domicilio") result.recargo = parseFloat(document.getElementById('swal_recargo').value)||0;
-            return result;
+            return {
+                cantidad: parseInt(document.getElementById('swal_cantidad').value),
+                observacion: document.getElementById('swal_observacion').value
+            };
         }
     }).then(result=>{
         if(!result.isConfirmed) return;
+
         fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
             method:"POST",
             headers:{"X-CSRFToken": "{{ csrf_token }}", "Content-Type":"application/json"},
@@ -224,35 +173,34 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, reca
             if(data.success){
                 document.getElementById('tabla_detalles').innerHTML = data.tabla;
                 Swal.fire({icon:'success', title:'Detalle actualizado', timer:1400, showConfirmButton:false});
-            } else {
-                Swal.fire({icon:'error', title:'Error', text:data.mensaje});
             }
         });
     });
 }
 
+
+// ----------------------------------------
 // Eliminar detalle
+// ----------------------------------------
 function eliminarDetalleAjax(detalle_id) {
     Swal.fire({
         title: "¿Eliminar producto?",
         icon:"warning",
         showCancelButton:true,
-        confirmButtonColor:"#d33",
-        cancelButtonColor:"#3085d6",
         confirmButtonText:"Sí, eliminar",
         cancelButtonText:"Cancelar"
     }).then(result=>{
         if(!result.isConfirmed) return;
+
         fetch("{% url 'eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
             method:"POST",
             headers:{"X-CSRFToken":"{{ csrf_token }}"}
-        }).then(res=>res.json())
-          .then(data=>{
+        })
+        .then(res=>res.json())
+        .then(data=>{
             if(data.success){
                 document.getElementById('tabla_detalles').innerHTML = data.tabla;
                 Swal.fire({icon:'success', title:'Eliminado', timer:1500, showConfirmButton:false});
-            } else {
-                Swal.fire({icon:'error', title:'Error', text:data.mensaje});
             }
         });
     });

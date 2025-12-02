@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from .decorators import rol_requerido
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
-from .models import Usuario, Mesa, Pedido, DetallePedido, Producto
+from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -15,6 +15,8 @@ from asgiref.sync import async_to_sync
 from django.views.decorators.csrf import csrf_protect
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.views.decorators.csrf import csrf_exempt
+
 
 # ----------------------------
 # Login (pantalla)
@@ -522,6 +524,9 @@ def eliminar_mesa(request, mesa_id):
 @rol_requerido('admin')
 def listar_menu(request):
     productos = Producto.objects.all().order_by('nombre')
+    tipo = request.GET.get("tipo")
+    if tipo:
+        productos = productos.filter(tipo=tipo)
     return render(request, 'administrador/menu/listar_menu.html', {'productos': productos})
 
 # Registrar producto
@@ -680,6 +685,425 @@ def eliminar_menu(request, producto_id):
 # ----------------------------
 # Mesero-Pedidos
 # ----------------------------
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def api_estados_pedidos(request):
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='restaurante',
+        mesero=request.user
+    ).values(
+        'id',
+        'estado',
+        'mesa_id',
+        'mesa__estado'
+    )
+    return JsonResponse(list(pedidos), safe=False)
+
+# Listar pedidos
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def listar_pedidos(request):
+    pedidos = Pedido.objects.filter(tipo_pedido='restaurante', mesero=request.user).order_by('-id')
+    return render(request, 'mesero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
+
+# Crear pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def crear_pedido(request):
+    if request.method == 'POST':
+        mesero_id = request.user.id
+        mesa_id = request.POST.get('mesa')
+
+        if not mesa_id:
+            messages.error(request, "Debe seleccionar una mesa.")
+            return redirect('crear_pedido')
+
+        # Crear el pedido
+        pedido = Pedido.objects.create(
+            mesero_id=mesero_id,
+            mesa_id=mesa_id,
+            tipo_pedido="restaurante",
+            estado="en_creacion"
+        )
+
+        #CAMBIAR MESA A OCUPADA
+        mesa = Mesa.objects.get(id=mesa_id)
+        mesa.estado = "ocupada"
+        mesa.save()
+
+        return redirect('agregar_detalles', pedido_id=pedido.id)
+
+    #SOLO MOSTRAR MESAS LIBRES
+    mesas = Mesa.objects.filter(estado="libre")
+
+    return render(request, 'mesero/pedidos/crear_pedido.html', {
+        'mesas': mesas,
+        'user': request.user
+    })
+
+
+# Ver pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def ver_pedido(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    # Validación: no permitir ver pedido sin productos
+    if not pedido.detalles.exists():
+        messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
+        return redirect('agregar_detalles', pedido_id=pedido.id)
+
+    # Enviar pedido a cocina si está en creación
+    if pedido.estado == 'en_creacion':
+        pedido.estado = 'en preparacion'
+        pedido.save()
+
+        # Notificar a cocineros
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",
+            {
+                "type": "nuevo_pedido",
+                "pedido": {
+                    "id": pedido.id,
+                    "mesa": pedido.mesa.numero if pedido.mesa else None,
+                    "mesero": pedido.mesero.nombre,
+                    "productos": [
+                        {
+                            "nombre": d.producto.nombre,
+                            "cantidad": d.cantidad,
+                            "observacion": d.observacion
+                        }
+                        for d in pedido.detalles.all()
+                    ]
+                }
+            }
+        )
+
+    return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
+
+# Editar pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def editar_pedido(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    if request.method == 'POST':
+        pedido.mesero_id = request.POST.get('mesero')
+        pedido.mesa_id = request.POST.get('mesa')
+
+        # Solo cocinero puede modificar estado
+        if request.user.rol == 'cocinero':
+            pedido.estado = request.POST.get('estado')
+
+        pedido.save()
+
+        return JsonResponse({
+            "success": True,
+            "mensaje": f"Pedido #{pedido.id} actualizado correctamente."
+        })
+
+    meseros = Usuario.objects.filter(rol='mesero')
+    mesas = Mesa.objects.all()
+    productos = Producto.objects.all()
+
+    return render(request, 'mesero/pedidos/editar_pedido.html', {
+        'pedido': pedido,
+        'meseros': meseros,
+        'mesas': mesas,
+        'productos': productos
+    })
+
+# Eliminar pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def eliminar_pedido(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    if pedido.estado != 'en preparacion':
+        return JsonResponse({"success": False, "message": "No se puede eliminar un pedido listo o finalizado."})
+
+    if request.method == 'POST':
+
+        #LIBERAR LA MESA
+        if pedido.mesa:
+            pedido.mesa.estado = "libre"
+            pedido.mesa.save()
+
+        #ELIMINAR PEDIDO
+        pedido_id = pedido.id
+        pedido.delete()
+
+        #ENVIAR A COCINA QUE SE ELIMINÓ
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",
+            {
+                "type": "eliminar_pedido",
+                "pedido_id": pedido_id
+            }
+        )
+
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
+
+#finalizar un pedido
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def finalizar_pedido(request, pedido_id):
+
+    if request.method != 'POST':
+        return JsonResponse({"success": False, "message": "Método no permitido."})
+
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    # CAMBIAR ESTADO DEL PEDIDO
+    pedido.estado = "finalizado"
+    pedido.save()
+
+    # LIBERAR MESA
+    if pedido.mesa:
+        pedido.mesa.estado = "libre"
+        pedido.mesa.save()
+
+    return JsonResponse({
+        "success": True,
+        "message": f"El pedido #{pedido.id} ha sido finalizado y la mesa está libre."
+    })
+
+
+# ----------------------------
+# Detalles con AJAX
+# ----------------------------
+
+# Agregar detalles con AJAX
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def agregar_detalles(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+    productos = Producto.objects.all()
+    return render(request, 'mesero/pedidos/agregar_detalles.html', {'pedido': pedido, 'productos': productos})
+
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def agregar_detalle_ajax(request, pedido_id):
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+
+        producto_id = data.get('producto_id')
+        cantidad = int(data.get('cantidad', 1))
+        observacion = data.get("observacion", '')
+
+        # Crear o actualizar detalle (SIN RECARGOS)
+        detalle, creado = DetallePedido.objects.get_or_create(
+            pedido_id=pedido_id,
+            producto_id=producto_id,
+            defaults={'cantidad': cantidad, 'observacion': observacion}
+        )
+
+        if not creado:
+            detalle.cantidad += cantidad
+            detalle.observacion = observacion
+            detalle.save()
+
+        # Actualizar totales
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        pedido.calcular_totales()
+
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+
+        return JsonResponse({'success': True, 'mensaje': 'Producto agregado.', 'tabla': tabla_html})
+
+    return JsonResponse({'success': False, 'mensaje': 'Error al agregar producto'})
+
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def editar_detalle_ajax(request, detalle_id):
+    detalle = get_object_or_404(DetallePedido, id=detalle_id)
+    pedido = detalle.pedido
+
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+
+        detalle.cantidad = int(data.get("cantidad", detalle.cantidad))
+        detalle.observacion = data.get("observacion", detalle.observacion)
+
+        # SIN RECARGO, NO VALIDACIÓN DE TIPO
+        detalle.save()
+
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+
+        return JsonResponse({'success': True, 'mensaje': 'Detalle actualizado correctamente.', 'tabla': tabla_html})
+
+    return JsonResponse({'success': False, 'mensaje': 'Error al actualizar detalle.'})
+
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def eliminar_detalle_ajax(request, detalle_id):
+    detalle = get_object_or_404(DetallePedido, id=detalle_id)
+    pedido = detalle.pedido
+
+    if request.method == 'POST':
+        detalle.delete()
+
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+
+        return JsonResponse({'success': True, 'mensaje': 'Producto eliminado correctamente.', 'tabla': tabla_html})
+
+    return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
+
+
+# ----------------------------
+# Cocinero marca pedido como listo
+# ----------------------------
+
+def vista_cocina(request):
+    pedidos = Pedido.objects.filter(
+        estado='en preparacion',
+        tipo_pedido='restaurante'
+    ).order_by('id')
+
+    meseros = Usuario.objects.filter(rol='mesero')
+
+    return render(request, 'cocinero/pedido.html', {
+        'pedidos': pedidos,
+        'meseros': meseros
+    })
+
+
+
+@csrf_protect
+def marcar_pedido_listo(request, pedido_id):
+    if request.method == "POST":
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        pedido.estado = "listo"
+        pedido.save()
+
+        # Guardar notificación en BD
+        Notificacion.objects.create(
+            usuario_destino=pedido.mesero,
+            tipo="pedido_listo",
+            mensaje=f"El pedido #{pedido.id} está listo.",
+            pedido=pedido
+        )
+
+        # Emitir WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"notificaciones_{pedido.mesero.id}",
+            {
+                "type": "enviar_notificacion",
+                "tipo": "pedido_listo",
+                "mensaje": f"El pedido #{pedido.id} está listo.",
+                "mesa": pedido.mesa.numero,
+                "pedido": pedido.id
+            }
+        )
+
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False}, status=400)
+
+def enviar_pedido_cocina(pedido):
+    """Enviar el pedido al grupo de cocineros solo cuando esté finalizado."""
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "nuevo_pedido",
+            "pedido": {
+                "id": pedido.id,
+                "mesa": pedido.mesa.numero if pedido.mesa else None,
+                "mesero": pedido.mesero.nombre,
+                "productos": [
+                    {
+                        "nombre": d.producto.nombre,
+                        "cantidad": d.cantidad,
+                        "observacion": d.observacion
+                    }
+                    for d in pedido.detalles.all()
+                ]
+            }
+        }
+    )
+
+@csrf_exempt
+def enviar_mensaje_mesero(request):
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+
+        mesero_id = data.get("mesero_id")
+        mensaje = data.get("mensaje")
+
+        mesero = get_object_or_404(Usuario, id=mesero_id)
+
+        Mensaje.objects.create(
+            remitente=request.user,
+            destinatario=mesero,
+            contenido=mensaje
+        )
+
+        Notificacion.objects.create(
+            usuario_destino=mesero,
+            tipo="mensaje",
+            mensaje=mensaje
+        )
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"notificaciones_{mesero_id}",
+            {
+                "type": "enviar_notificacion",
+                "tipo": "mensaje",
+                "mensaje": mensaje,
+            }
+        )
+
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False}, status=400)
+
+
+def notificaciones_mesero(request):
+    notificaciones = Notificacion.objects.filter(
+        usuario_destino=request.user
+    ).order_by('-fecha_hora')
+
+    return render(request, "mesero/notificacion/notificaciones.html", {
+        "notificaciones": notificaciones
+    })
+
+def obtener_notificaciones(request):
+    notifs = Notificacion.objects.filter(usuario_destino=request.user).order_by('-fecha_hora')
+    return JsonResponse([
+        {
+            "id": n.id,
+            "tipo": n.tipo,
+            "mensaje": n.mensaje,
+            "pedido": n.pedido_id if n.pedido else None,
+            "mesa": n.pedido.mesa.numero if n.pedido and n.pedido.mesa else None,
+            "fecha": n.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        }
+        for n in notifs
+    ], safe=False)
+
+@csrf_exempt
+def eliminar_notificacion(request, notif_id):
+    if request.method == "POST":
+        notif = get_object_or_404(Notificacion, id=notif_id)
+        notif.delete()
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False}, status=400)
+
+
+"""
+# ----------------------------
+# Cajero-Pedidos
+# ----------------------------
 
 # Listar pedidos
 @login_required(login_url='login')
@@ -694,7 +1118,7 @@ def crear_pedido(request):
     if request.method == 'POST':
         tipo_pedido = request.POST.get('tipo_pedido')
 
-        # 🔒 Validaciones según el rol
+        # Validaciones según el rol
         if tipo_pedido == 'restaurante' and request.user.rol != 'mesero':
             messages.error(request, "Solo los meseros pueden crear pedidos en restaurante.")
             return redirect('crear_pedido')
@@ -711,7 +1135,7 @@ def crear_pedido(request):
             mesero_id=mesero_id,
             mesa_id=mesa_id if mesa_id else None,
             tipo_pedido=tipo_pedido,
-            estado='En preparacion'
+            estado='en preparacion'
         )
 
         return redirect('agregar_detalles', pedido_id=pedido.id)
@@ -733,7 +1157,7 @@ def ver_pedido(request, pedido_id):
 
     # 🔹 Enviar pedido a cocina solo si está en creación
     if pedido.estado == 'en_creacion':
-        pedido.estado = 'En preparacion'
+        pedido.estado = 'en preparacion'
         pedido.save()
 
         channel_layer = get_channel_layer()
@@ -907,63 +1331,4 @@ def eliminar_detalle_ajax(request, detalle_id):
         return JsonResponse({'success': True, 'mensaje': 'Producto eliminado correctamente.', 'tabla': tabla_html})
 
     return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
-
-
-# ----------------------------
-# Cocinero marca pedido como listo
-# ----------------------------
-
-def vista_cocina(request):
-    # Traer solo los pedidos que están en preparación
-    pedidos = Pedido.objects.filter(estado='en_preparacion').order_by('id')
-    return render(request, 'cocinero/pedido.html', {'pedidos': pedidos})
-
-
-
-@csrf_protect
-def marcar_pedido_listo(request, pedido_id):
-    if request.method == "POST":
-        pedido = get_object_or_404(Pedido, id=pedido_id)
-        pedido.estado = "listo"
-        pedido.save()
-
-        # Notificación al mesero por WebSocket
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"notificaciones_{pedido.mesero.id}",
-            {
-                "type": "enviar_notificacion",
-                "mensaje": f"El pedido #{pedido.id} está listo.",
-                "pedido": pedido.id,
-            }
-        )
-
-        return JsonResponse({"success": True})
-    return JsonResponse({"success": False, "mensaje": "Método no permitido"}, status=400)
-
-def notificaciones_mesero(request):
-    return render(request, "mesero/notificacion/notificaciones.html")
-
-
-def enviar_pedido_cocina(pedido):
-    """Enviar el pedido al grupo de cocineros solo cuando esté finalizado."""
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        "pedidos_activos",  # grupo para todos los cocineros
-        {
-            "type": "nuevo_pedido",
-            "pedido": {
-                "id": pedido.id,
-                "mesa": pedido.mesa.numero if pedido.mesa else None,
-                "mesero": pedido.mesero.nombre,
-                "productos": [
-                    {
-                        "nombre": d.producto.nombre,
-                        "cantidad": d.cantidad,
-                        "observacion": d.observacion
-                    }
-                    for d in pedido.detalles.all()
-                ]
-            }
-        }
-    )
+"""

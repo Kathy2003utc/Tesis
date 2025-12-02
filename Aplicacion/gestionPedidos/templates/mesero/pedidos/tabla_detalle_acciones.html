@@ -1,28 +1,26 @@
 <div class="table-responsive shadow rounded-4 mt-3">
-    <table class="table table-bordered table-hover align-middle">
-        <thead class="table-primary text-center">
+    <table class="table table-bordered table-hover align-middle" style="border-radius:12px; overflow:hidden;">
+        <thead class="text-center" style="background: var(--cafe-medio); color: white;">
             <tr>
                 <th>Producto</th>
                 <th>Valor unitario</th>
                 <th>Cantidad</th>
                 <th>Subtotal</th>
-                <th>Recargo</th>
                 <th>Observación</th>
             </tr>
         </thead>
         <tbody>
             {% for det in pedido.detalles.all %}
-            <tr>
+            <tr style="transition:0.3s;">
                 <td>{{ det.producto.nombre }}</td>
                 <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
                 <td class="text-center">{{ det.cantidad }}</td>
                 <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
-                <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
                 <td class="text-center">{{ det.observacion }}</td>
-                
+            </tr>
             {% empty %}
             <tr>
-                <td colspan="4" class="text-center text-muted py-4">
+                <td colspan="5" class="text-center text-muted py-4">
                     Aún no hay productos agregados.
                 </td>
             </tr>
@@ -30,3 +28,28 @@
         </tbody>
     </table>
 </div>
+
+<style>
+    /* Hover en filas */
+    .table-hover tbody tr:hover {
+        background: rgba(0,0,0,0.04);
+    }
+
+    /* Tabla responsiva y bordes redondeados */
+    .table-responsive table {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* Encabezado */
+    .table-responsive thead {
+        background: var(--cafe-medio);
+        color: white;
+    }
+
+    /* Texto centrado en celdas si quieres */
+    .table-responsive td, 
+    .table-responsive th {
+        vertical-align: middle;
+    }
+</style>

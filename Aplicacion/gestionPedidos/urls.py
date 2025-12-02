@@ -37,12 +37,15 @@ urlpatterns = [
     path('menu/eliminar/<int:producto_id>/', views.eliminar_menu, name='eliminar_menu'),
 
     # Pedidos
+    path('mesero/api/pedidos/estados/', views.api_estados_pedidos, name='api_estados_pedidos'),
     path('pedidos/', views.listar_pedidos, name='listar_pedidos'),
     path('pedidos/crear/', views.crear_pedido, name='crear_pedido'),
     path('pedidos/agregar-detalles/<int:pedido_id>/', views.agregar_detalles, name='agregar_detalles'),
     path('pedidos/ver/<int:pedido_id>/', views.ver_pedido, name='ver_pedido'),
     path('pedidos/editar/<int:pedido_id>/', views.editar_pedido, name='editar_pedido'),
     path('pedidos/eliminar/<int:pedido_id>/', views.eliminar_pedido, name='eliminar_pedido'),
+    path('pedidos/finalizar/<int:pedido_id>/', views.finalizar_pedido, name='finalizar_pedido'),
+
 
     # DetallePedido AJAX
     path('pedidos/detalle/agregar/ajax/<int:pedido_id>/', views.agregar_detalle_ajax, name='agregar_detalle_ajax'),
@@ -52,9 +55,16 @@ urlpatterns = [
     #Cocinero pedido
     path('cocinero/pedidos/', views.vista_cocina, name='vista_cocina'),
     path('pedido/<int:pedido_id>/listo/', views.marcar_pedido_listo, name='marcar_pedido_listo'),
+    path("cocina/enviar-mensaje/", views.enviar_mensaje_mesero, name="enviar_mensaje_mesero"),
+
 
     #notificaion al mesero de listo
     path("notificaciones/", views.notificaciones_mesero, name="notificaciones_mesero"),
+    path("notificaciones/obtener/", views.obtener_notificaciones, name="obtener_notificaciones"),
+    path("notificaciones/eliminar/<int:notif_id>/", views.eliminar_notificacion, name="eliminar_notificacion"),
+
+
+
 
 
 ]

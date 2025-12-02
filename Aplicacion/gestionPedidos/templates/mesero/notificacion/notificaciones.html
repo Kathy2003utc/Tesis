@@ -2,69 +2,99 @@
 {% load static %}
 
 {% block contenido %}
+
 <br><br><br>
 
 <div class="container mt-5">
     <h2 class="text-center text-primary mb-4">Notificaciones del Mesero</h2>
 
-    <div class="alert alert-info text-center">
-        Este panel mostrará alertas automáticas cuando un pedido esté <strong>listo para entrega</strong>.
-    </div>
+    <!-- Sección PEDIDOS LISTOS -->
+    <h4 class="text-success mt-4">Pedidos listos</h4>
+    <div id="noti-pedidos" class="mt-3"></div>
 
-    <div id="lista-notificaciones" class="mt-4">
-        <!-- Aquí se agregarán las notificaciones en tiempo real -->
-    </div>
+    <!-- Sección MENSAJES -->
+    <h4 class="text-primary mt-5">Mensajes del cocinero</h4>
+    <div id="noti-mensajes" class="mt-3"></div>
 </div>
 
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+.alert {
+    border-radius: 15px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1);
+}
+</style>
 
 <script>
-    // Detectar protocolo seguro (wss) o no seguro (ws)
-    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+function cargarNotificaciones() {
+    fetch("/notificaciones/obtener/")
+    .then(r => r.json())
+    .then(lista => {
 
-    // ID del usuario actual (mesero)
-    const user_id = "{{ request.user.id }}";
+        const pedidos = document.getElementById("noti-pedidos");
+        const mensajes = document.getElementById("noti-mensajes");
 
-    // Conectar al WebSocket de notificaciones personales
-    const socketNotif = new WebSocket(protocol + window.location.host + `/ws/notificaciones/${user_id}/`);
+        pedidos.innerHTML = "";
+        mensajes.innerHTML = "";
 
-    socketNotif.onopen = function () {
-        console.log("Conectado al canal de notificaciones del mesero.");
-    };
+        lista.forEach(n => {
 
-    socketNotif.onmessage = function (e) {
-        const data = JSON.parse(e.data);
+            // PEDIDO LISTO
+            if (n.tipo === "pedido_listo") {
+                pedidos.innerHTML += `
+                    <div class="alert alert-success mt-3 d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Pedido #${n.pedido} — Mesa ${n.mesa || ''}</strong><br>
+                            ${n.mensaje}<br>
+                            <small>${n.fecha}</small>
+                        </div>
 
-        // Mostrar alerta emergente
-        Swal.fire({
-            title: `Pedido #${data.pedido} listo`,
-            text: data.mensaje || "Dirígete a la cocina para entregar el pedido.",
-            icon: "success",
-            timer: 2500,
-            showConfirmButton: false
+                        <button class="btn btn-sm btn-danger ms-3" onclick="eliminarNotificacion(${n.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+            }
+
+            // MENSAJE
+            if (n.tipo === "mensaje") {
+                mensajes.innerHTML += `
+                    <div class="alert alert-info mt-3 d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>Mensaje del cocinero:</strong><br>
+                            ${n.mensaje}<br>
+                            <small>${n.fecha}</small>
+                        </div>
+
+                        <button class="btn btn-sm btn-danger ms-3" onclick="eliminarNotificacion(${n.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+            }
         });
+    });
+}
 
-        // También agregar visualmente a la lista
-        const div = document.createElement("div");
-        div.className = "alert alert-success mt-3";
-        div.innerHTML = `
-            <strong>Pedido #${data.pedido}:</strong> ${data.mensaje || "Listo para entrega."}
-        `;
-        document.getElementById("lista-notificaciones").prepend(div);
-    };
+setInterval(cargarNotificaciones, 7000); // refrescar cada 7 segundos
+window.onload = cargarNotificaciones;
 
-    socketNotif.onclose = function () {
-        console.warn("Conexión cerrada con el canal de notificaciones.");
-    };
+function eliminarNotificacion(id) {
+    fetch(`/notificaciones/eliminar/${id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            cargarNotificaciones();
+        }
+    });
+}
+
 </script>
-
-<style>
-    .alert {
-        border-radius: 15px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-        font-size: 16px;
-    }
-</style>
 
 {% endblock %}
