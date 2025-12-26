@@ -97,4 +97,47 @@ function eliminarNotificacion(id) {
 
 </script>
 
+<script>
+    const USER_ID = "{{ request.user.id }}";
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+
+    const socketNotif = new WebSocket(
+        ws_scheme + '://' + window.location.host + '/ws/notificaciones/' + USER_ID + '/'
+    );
+
+    socketNotif.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        console.log("WS recibido:", data);
+
+        //PEDIDO LISTO — INSTANTÁNEO
+        if (data.tipo === "pedido_listo") {
+            Swal.fire({
+                icon: "success",
+                title: "Pedido listo",
+                html: `<b>Pedido #${data.pedido}</b><br>Mesa ${data.mesa ?? ''}`,
+            });
+
+            // Refresca lista sin esperar 7 segundos
+            cargarNotificaciones();
+            return;
+        }
+
+        //MENSAJE DEL COCINERO
+        if (data.tipo === "mensaje") {
+            Swal.fire({
+                icon: "info",
+                title: "Nuevo mensaje",
+                text: data.mensaje
+            });
+
+            cargarNotificaciones();
+            return;
+        }
+    };
+
+    socketNotif.onopen = () => console.log("WS mesero conectado:", USER_ID);
+</script>
+
+
 {% endblock %}

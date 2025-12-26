@@ -172,6 +172,31 @@
                 font-size: 1.6rem;
             }
         }
+
+        /* ================= LOGO LOGIN (LIMPIO Y ELEGANTE) ================= */
+
+        .logo-container{
+            padding: 1.5rem;
+        }
+
+        .logo-login{
+            width: 220px;
+            height: 220px;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+
+        /* Texto bajo el logo */
+        .logo-text{
+            margin-top: 1rem;
+            font-weight: 600;
+            color: var(--cafe-profundo);
+            letter-spacing: 0.5px;
+        }
+
+
+
     </style>
 
 </head>
@@ -183,8 +208,13 @@
             <div class="card login-card">
                 <div class="row g-0">
 
-                    <!-- Imagen lateral -->
-                    <div class="col-md-6 d-none d-md-block bg-login-image"></div>
+                    <!-- Logo lateral -->
+                    <div class="col-md-6 d-none d-md-flex align-items-center justify-content-center bg-login-image">
+                        <div class="logo-container text-center">
+                            <img src="{{ MEDIA_URL }}logo/logo.jpeg" alt="Logo Restaurante" class="logo-login">
+                            <h5 class="mt-3 fw-bold logo-text">Productos Carlos Gerardo</h5>
+                        </div>
+                    </div>
 
                     <!-- Formulario -->
                     <div class="col-md-6 bg-white">

@@ -1,7 +1,7 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
 /* --- Tus colores originales --- */
@@ -31,7 +31,12 @@
 
 /* Fondo */
 html, body {
-    background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 45%, var(--blanco-calido));
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
     overflow-x: hidden;
 }
 
@@ -256,5 +261,5 @@ $("#frm_admin").validate({
 </script>
 
 
-<br><br>
+<br>
 {% endblock %}

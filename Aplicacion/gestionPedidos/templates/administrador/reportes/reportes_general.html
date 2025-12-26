@@ -1,0 +1,202 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+/* ================= PALETA ================= */
+:root {
+    --cafe-oscuro:#b4764f;
+    --cafe-medio:#cd966c;
+    --cafe-claro:#D7B999;
+    --cafe-suave:#EEDDC6;
+
+    --verde:#3E7A3F;
+    --verde-profundo:#2E5F32;
+
+    --blanco-calido:#F8F5F2;
+    --gris-suave:#E2DED8;
+    --texto-oscuro:#2B1A10;
+
+    --cafe-profundo:#8A5A3C;
+    --cafe-avellana:#C8A784;
+    --crema-suave:#FAF4EC;
+
+    --info:#6A93B0;
+    --rojo-alerta:#C14949;
+}
+
+/* ================= FONDO ================= */
+html, body{
+    background:linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x:hidden;
+}
+
+/* ================= CONTENEDOR ================= */
+.main-content-wrapper{
+    padding:20px;
+}
+
+.content-card{
+    background:var(--crema-suave);
+    padding:40px 30px;
+    border-radius:15px;
+    border:1px solid var(--cafe-suave);
+    box-shadow:0 8px 18px rgba(0,0,0,.1);
+    max-width:1200px;
+    margin:auto;
+}
+
+/* ================= TITULOS ================= */
+h2{
+    color:var(--cafe-profundo);
+    font-weight:bold;
+    text-shadow:1px 1px 2px #fff;
+}
+
+/* ================= TARJETAS ================= */
+.reporte-card{
+    border-radius:16px;
+    background:var(--blanco-calido);
+    border:1px solid var(--gris-suave);
+    transition:.3s;
+    box-shadow:0 6px 14px rgba(0,0,0,.08);
+    height:100%;
+}
+
+.reporte-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 12px 26px rgba(0,0,0,.15);
+    background:var(--crema-suave);
+}
+
+.reporte-icon{
+    font-size:3rem;
+    color:var(--cafe-profundo);
+    margin-bottom:12px;
+    transition:.3s;
+}
+
+.reporte-card:hover .reporte-icon{
+    color:var(--verde);
+    transform:scale(1.1);
+}
+
+/* ================= BOTON ================= */
+.reporte-btn{
+    border:2px solid var(--verde-profundo);
+    color:var(--verde-profundo);
+    font-weight:600;
+    border-radius:10px;
+    padding:8px 22px;
+    transition:.3s;
+}
+
+.reporte-btn:hover{
+    background:var(--verde-profundo);
+    color:white;
+}
+</style>
+
+<div class="main-content-wrapper">
+    <div class="content-card">
+
+        <h2 class="text-center mb-2">Reportes Generales</h2>
+        <p class="text-center text-muted mb-5">
+            Accede a los distintos reportes del restaurante
+        </p>
+
+        <div class="row g-4 justify-content-center">
+
+            <!-- Reporte Pagos Restaurante -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-cash-coin reporte-icon"></i>
+                        <h5 class="fw-bold">Pagos Restaurante</h5>
+                        <p class="text-muted">
+                            Reporte de pagos realizados en el local
+                        </p>
+                        <a href="{% url 'reporte_pagos_restaurante' %}" class="btn reporte-btn">
+                            Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporte Pagos Domicilio -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-truck reporte-icon"></i>
+                        <h5 class="fw-bold">Pagos Domicilio</h5>
+                        <p class="text-muted">
+                            Reporte de cobros por pedidos a domicilio
+                        </p>
+                        <a href="{% url 'reporte_pagos_domicilio' %}" class="btn reporte-btn">
+                            Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporte Pedidos Restaurante -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-receipt-cutoff reporte-icon"></i>
+                        <h5 class="fw-bold">Pedidos Restaurante</h5>
+                        <p class="text-muted">
+                            Historial y estadísticas de pedidos en local
+                        </p>
+                        <a href="{% url 'reporte_pedidos_restaurante' %}" class="btn reporte-btn">
+                            Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporte Pedidos Domicilio -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-bag-check reporte-icon"></i>
+                        <h5 class="fw-bold">Pedidos Domicilio</h5>
+                        <p class="text-muted">
+                            Reporte de pedidos realizados a domicilio
+                        </p>
+                        <a href="{% url 'reporte_pedidos_domicilio' %}" class="btn reporte-btn">
+                            Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporte Unificado Pedidos + Cobros -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clipboard-data reporte-icon"></i>
+                        <h5 class="fw-bold">Reporte Unificado</h5>
+                        <p class="text-muted">
+                            Pedidos y cobros del restaurante y domicilio
+                        </p>
+                        <a href="{% url 'reporte_unificado' %}" class="btn reporte-btn">
+                            Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<br>
+{% endblock %}

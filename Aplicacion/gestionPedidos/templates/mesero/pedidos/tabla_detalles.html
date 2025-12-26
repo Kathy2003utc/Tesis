@@ -1,6 +1,7 @@
 <div id="tabla_detalles">
     <div class="table-responsive shadow rounded-4 mt-3">
         <table class="table table-bordered table-hover align-middle" style="border-radius:12px; overflow:hidden;">
+            
             <thead class="text-center" style="background: var(--cafe-medio); color: white;">
                 <tr>
                     <th>Producto</th>
@@ -11,72 +12,66 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
+
             <tbody>
             {% for det in pedido.detalles.all %}
                 <tr style="transition:0.3s;">
                     <td>{{ det.producto.nombre }}</td>
+
                     <td class="text-center">{{ det.cantidad }}</td>
-                    <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
-                    <td class="text-center">${{ det.subtotal }}</td>
-                    <td>{{ det.observacion }}</td>
+
                     <td class="text-center">
-                        <button class="btn btn-warning btn-sm me-1"
+                        ${{ det.precio_unitario|floatformat:2 }}
+                    </td>
+
+                    <td class="text-center">
+                        ${{ det.subtotal|floatformat:2 }}
+                    </td>
+
+                    <td>{{ det.observacion }}</td>
+
+                    <td class="text-center">
+
+                        <!-- BOTÓN EDITAR -->
+                        <button class="btn btn-warning btn-sm mb-2"
                             onclick="editarDetalleAjax(
                                 '{{ det.id }}',
                                 '{{ det.cantidad }}',
                                 '{{ det.observacion|default_if_none:''|escapejs }}'
                             )">
-                            <i class="fas fa-edit"></i> Editar
+                            <i class="fas fa-edit"></i>
                         </button>
 
-                        <br><br>
-
+                        <!-- BOTÓN ELIMINAR -->
                         <button class="btn btn-danger btn-sm"
                             onclick="eliminarDetalleAjax('{{ det.id }}')">
-                            <i class="fas fa-trash"></i> Eliminar
+                            <i class="fas fa-trash"></i>
                         </button>
+
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-6">
+                    <td colspan="6" class="text-center text-muted py-4">
                         Aún no hay productos agregados.
                     </td>
                 </tr>
             {% endfor %}
             </tbody>
+
+            {% if pedido.detalles.all %}
+            <tfoot>
+
+                <tr style="background:#e6e6e6; font-size:1.1rem; font-weight:bold;">
+                    <td colspan="3" class="text-end">TOTAL FINAL:</td>
+                    <td class="text-center">
+                        ${{ pedido.total|floatformat:2 }}
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+
         </table>
     </div>
 </div>
-
-<style>
-    #tabla_detalles tbody tr:hover {
-        background: rgba(0,0,0,0.04);
-    }
-
-    /* Botones de tabla */
-    #tabla_detalles .btn-warning {
-        background-color: var(--advertencia);
-        border-color: var(--advertencia);
-        color: white;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
-    }
-    #tabla_detalles .btn-warning:hover {
-        background-color: var(--advertencia);
-        color: var(--texto-oscuro);
-    }
-
-    #tabla_detalles .btn-danger {
-        background-color: var(--rojo-alerta);
-        border-color: var(--rojo-alerta);
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
-    }
-    #tabla_detalles .btn-danger:hover {
-        background-color: var(--rojo-claro);
-        color: var(--texto-oscuro);
-    }
-</style>

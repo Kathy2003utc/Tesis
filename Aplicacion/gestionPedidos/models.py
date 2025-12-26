@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
-from django.db.models import Sum, F
+from django.db.models import Sum, F, DecimalField
+from django.utils import timezone    
+from django.db.models import Max  
 
 
 # ----------------------------
@@ -83,11 +85,11 @@ class Producto(models.Model):
 # ----------------------------
 class Pedido(models.Model):
     ESTADOS = [
+        ('borrador', 'Borrador'),
         ('en_creacion', 'En creación'), 
         ('en preparacion', 'En preparación'),
         ('listo', 'Listo'),
-        ('entregado', 'Entregado'),
-        ('finalizado', 'Finalizado'),
+        ('finalizado', 'Finalizado'), 
     ]
 
     TIPOS = [
@@ -129,32 +131,64 @@ class Pedido(models.Model):
 
     estado = models.CharField(max_length=20, choices=ESTADOS, default='en_creacion')
     tipo_pedido = models.CharField(max_length=20, choices=TIPOS)
+    nombre_cliente = models.CharField(max_length=150, blank=True, null=True)
     direccion_entrega = models.CharField(max_length=255, blank=True, null=True)
     contacto_cliente = models.CharField(max_length=50, blank=True, null=True)
     fecha_hora = models.DateTimeField(auto_now_add=True)
-    recargo_domicilio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
+    codigo_pedido = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+
     def calcular_totales(self):
+
         # Subtotal de productos
         subtotal_calc = self.detalles.aggregate(
-            total=Sum(F('precio_unitario') * F('cantidad'))
+            total=Sum(
+                F('precio_unitario') * F('cantidad'),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
         )['total'] or 0
 
-        # Recargo total de productos (por cantidad)
+        # Recargo total (recargo unitario * cantidad)
         recargo_total = self.detalles.aggregate(
-            total_recargo=Sum(F('recargo') * F('cantidad'))
+            total_recargo=Sum(
+                F('recargo') * F('cantidad'),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
         )['total_recargo'] or 0
 
+        # Guardar subtotal
         self.subtotal = subtotal_calc
 
-        if self.tipo_pedido == 'domicilio':
-            self.total = self.subtotal + recargo_total + self.recargo_domicilio
-        else:
-            self.total = self.subtotal + recargo_total
+        # Total final del pedido
+        self.total = self.subtotal + recargo_total
 
         self.save()
+
+    def generar_codigo(self):
+        ultimo = Pedido.objects.filter(
+            codigo_pedido__startswith="DOM-"
+        ).aggregate(Max('codigo_pedido'))['codigo_pedido__max']
+
+        if ultimo:
+            numero = int(ultimo.replace("DOM-", "")) + 1
+        else:
+            numero = 1
+
+        return f"DOM-{numero:05d}"
+    
+    def save(self, *args, **kwargs):
+        if not self.codigo_pedido:
+            self.codigo_pedido = self.generar_codigo()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Pedido {self.id}"
 
@@ -189,6 +223,11 @@ class DetallePedido(models.Model):
     @property
     def recargo_total(self):
         return self.recargo * self.cantidad
+    
+
+    @property
+    def total_con_recargo(self):
+        return self.subtotal + self.recargo_total
 
     def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre}"
@@ -199,18 +238,18 @@ class DetallePedido(models.Model):
 class Pago(models.Model):
     METODOS = [
         ('efectivo', 'Efectivo'),
-        ('tarjeta', 'Tarjeta'),
-        ('app', 'App'),
         ('transferencia', 'Transferencia'),
     ]
     ESTADOS = [
         ('pendiente', 'Pendiente'),
         ('confirmado', 'Confirmado'),
-        ('fallido', 'Fallido')
     ]
+
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='pagos')
     total = models.DecimalField(max_digits=10, decimal_places=2)
     metodo_pago = models.CharField(max_length=20, choices=METODOS)
+    monto_recibido = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cambio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     referencia_transferencia = models.CharField(max_length=100, blank=True, null=True)
     estado_pago = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     fecha_hora = models.DateTimeField(auto_now_add=True)
@@ -222,21 +261,21 @@ class Pago(models.Model):
 # Comprobante
 # ----------------------------
 class Comprobante(models.Model):
-    TIPOS = [
-        ('boleta', 'Boleta'),
-        ('factura', 'Factura'),
-        ('ticket', 'Ticket')
-    ]
     pago = models.ForeignKey(Pago, on_delete=models.CASCADE)
     numero_comprobante = models.CharField(max_length=50, unique=True)
-    tipo_comprobante = models.CharField(max_length=20, choices=TIPOS)
     fecha_hora = models.DateTimeField(auto_now_add=True)
     nombre_cliente = models.CharField(max_length=100, blank=True, null=True)
     direccion_cliente = models.CharField(max_length=255, blank=True, null=True)
     correo_cliente = models.EmailField(blank=True, null=True)
 
+    archivo_pdf = models.FileField(
+        upload_to='comprobantes/',
+        blank=True,
+        null=True
+    )
+
     def __str__(self):
-        return f"{self.tipo_comprobante} {self.numero_comprobante}"
+        return f"Comprobante {self.numero_comprobante}"
 
 # ----------------------------
 # Notificación

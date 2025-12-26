@@ -1,51 +1,168 @@
-<div id="tabla_detalles">
-        <div class="table-responsive shadow rounded-4 mt-3">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-primary text-center">
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Valor unitario</th>
-                        <th>Subtotal</th>
-                        <th>Recargo</th>
-                        <th>Observación</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for det in pedido.detalles.all %}
-                <tr>
-                    <td>{{ det.producto.nombre }}</td>
-                    <td class="text-center">{{ det.cantidad }}</td>
-                    <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
-                    <td class="text-center">${{ det.subtotal }}</td>
-                    <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
-                    <td>{{ det.observacion }}</td>
-                    <td class="text-center">
-                        <button class="btn btn-warning btn-sm me-1" 
-                                onclick="editarDetalleAjax(
-                                    '{{ det.id }}',
-                                    '{{ det.cantidad }}',
-                                    '{{ det.observacion|default_if_none:''|escapejs }}',
-                                    '{{ det.recargo|default:0|escapejs }}'
-                                )">
-                            Editar
-                        </button>
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
-                            Eliminar
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-6">
-                        Aún no hay productos agregados.
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
 
-            </table>
-        </div>
-    </div>
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+    
+    /* ===============================
+    TABLA DETALLES – MISMO ESTILO
+    ================================ */
+
+    #tbl_detalles {
+        min-width: 900px;
+    }
+
+    #tbl_detalles thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    #tbl_detalles tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #tbl_detalles tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    #tbl_detalles td:last-child {
+        white-space: nowrap;
+    }
+
+    /* Subtotales */
+    #tbl_detalles tfoot .fila-subtotal {
+        background-color: var(--gris-suave);
+        font-weight: bold;
+    }
+
+    /* Total final */
+    #tbl_detalles tfoot .fila-total {
+        background-color: var(--cafe-suave);
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
+</style>
+<div class="table-responsive mt-3">
+    <table class="table table-bordered table-hover align-middle" id="tbl_detalles">
+
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Valor unitario</th>
+                <th>Subtotal</th>
+                <th>Recargo unitario</th>
+                <th>Recargo total</th>
+                <th>Observación</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for det in pedido.detalles.all %}
+            <tr>
+                <td>{{ det.producto.nombre }}</td>
+
+                <td class="text-center">{{ det.cantidad }}</td>
+
+                <td class="text-center">
+                    ${{ det.precio_unitario|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.subtotal|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.recargo|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.recargo_total|floatformat:2 }}
+                </td>
+
+                <td>{{ det.observacion }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    Aún no hay productos agregados.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+
+        {% if pedido.detalles.all %}
+        <tfoot>
+            <tr class="fila-subtotal">
+                <td colspan="3" class="text-end">Subtotal productos:</td>
+                <td class="text-center">${{ pedido.subtotal|floatformat:2 }}</td>
+
+                <td class="text-end">Total recargo:</td>
+                <td class="text-center">
+                    ${{ total_recargos|floatformat:2 }}
+                </td>
+
+                <td colspan="2"></td>
+            </tr>
+
+            <tr class="fila-total">
+                <td colspan="5" class="text-end">TOTAL FINAL:</td>
+                <td class="text-center text-success">
+                    ${{ pedido.total|floatformat:2 }}
+                </td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+
+    </table>
+</div>

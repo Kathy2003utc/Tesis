@@ -1,0 +1,572 @@
+{% extends 'cajero/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br>
+
+<style>
+    /* ================= PALETA COMPLETA ================= */
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+    /* ================ FONDO Y WRAPPER ================ */
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+    }
+
+    .main-content-wrapper {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+    }
+
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--cafe-suave);
+    }
+
+    /* ================ TÍTULOS ================ */
+    h2.text-primary {
+        color: var(--cafe-profundo) !important;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 25px;
+        text-shadow: 1px 1px 2px #ffffff70;
+    }
+
+    h4.text-success {
+        color: var(--verde-profundo) !important;
+        font-weight: 600;
+    }
+
+    /* ================ TABLAS ================ */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+
+    table {
+        min-width: 700px;
+        background: var(--blanco-calido);
+    }
+
+    table thead th {
+        background-color: var(--cafe-crema) !important;
+        color: var(--texto-oscuro) !important;
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    table tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    table tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    /* ================ BOTONES ================ */
+    .btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    .btn-success:hover {
+        background-color: var(--verde) !important;
+    }
+
+    .btn-primary {
+        background-color: var(--azul-pizarra) !important;
+        border-color: var(--azul-pizarra) !important;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--azul-gris) !important;
+        border-color: var(--azul-gris) !important;
+    }
+
+    .btn-secondary {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        color: #fff !important;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    /* ================ BADGES ESTADO PAGO (MISMOS COLORES) ================ */
+    .badge {
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    /* pendiente */
+    .badge.bg-warning {
+        background-color: var(--advertencia) !important;
+    }
+
+    /* confirmado */
+    .badge.bg-success {
+        background-color: var(--exito) !important;
+    }
+
+    /* finalizado u otros (si lo usas) */
+    .badge.bg-primary {
+        background-color: var(--azul-pizarra) !important;
+    }
+
+    /* ================ MODAL ================ */
+    .modal-content {
+        border-radius: 15px;
+        border: 1px solid var(--cafe-suave);
+        background: var(--blanco-calido);
+    }
+
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, var(--azul-pizarra), var(--cafe-profundo)) !important;
+        color: #fff;
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+    }
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1);
+    }
+
+    .modal-title {
+        font-weight: 600;
+    }
+
+    .modal-body p strong {
+        color: var(--texto-oscuro);
+    }
+
+    .form-label {
+        color: var(--texto-oscuro);
+        font-weight: 500;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 10px;
+        border: 1px solid var(--gris-claro-calido);
+        box-shadow: none;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--verde-profundo);
+        box-shadow: 0 0 0 0.2rem rgba(79, 138, 87, 0.2);
+    }
+
+    #cambio_box p strong {
+        color: var(--verde-profundo);
+    }
+
+    /* ================ RESPONSIVE ================ */
+    @media (max-width: 576px) {
+        table {
+            min-width: 100%;
+        }
+
+        .content-card {
+            padding: 20px;
+        }
+    }
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-5">
+        <div class="content-card">
+
+            <h2 class="text-center text-primary mb-4">Cobros - Domicilio</h2>
+
+            <!-- ======================================================= -->
+            <!-- TABLA DE PEDIDOS A COBRAR (DOMICILIO) -->
+            <!-- ======================================================= -->
+            <h4 class="text-success mb-3">Pedidos a Cobrar</h4>
+
+            <div class="table-responsive shadow-sm rounded-3">
+                <table class="table table-hover align-middle">
+                    <thead class="text-center">
+                        <tr>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th>Estado pago</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="tbody-cobros">
+                        {% for p in pedidos_cobrar %}
+                        <tr id="fila-{{ p.id }}">
+                            <td>{{ p.codigo_pedido }}</td>
+                            <td>{{ p.nombre_cliente }}</td>
+                            <td>$ {{ p.total }}</td>
+                            <td>
+                                <span class="badge bg-warning">pendiente</span>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-primary btn-sm"
+                                    onclick="abrirCobro('{{ p.id }}', '{{ p.total }}')">
+                                    $ Cobrar
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr id="fila-vacia-cobros">
+                            <td colspan="6" class="text-center text-muted py-3">
+                                No hay pedidos pendientes
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <br><br>
+
+            <!-- ======================================================= -->
+            <!-- TABLA DE PEDIDOS PAGADOS -->
+            <!-- ======================================================= -->
+            <h4 class="text-success mt-4 mb-3">Pedidos Pagados</h4>
+            <div class="table-responsive shadow-sm rounded-3" id="contenedor-tabla-pagados">
+                {% include "cajero/pago/tabla_pedidos_pagados_domicilio.html" %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- MODAL DE COBRO (DOMICILIO) -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalCobro" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content shadow-lg">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Cobrar Pedido a Domicilio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- ID oculto -->
+                <input type="hidden" id="pedido_id">
+
+                <!-- Total -->
+                <p><strong>Total a pagar:</strong> $ <span id="total_pagar"></span></p>
+
+                <!-- Método -->
+                <label class="form-label">Método de pago</label>
+                <select class="form-select" id="metodo_pago">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+
+                <!-- Efectivo -->
+                <div id="contenedor_monto" class="mt-3">
+                    <label class="form-label">Monto recibido</label>
+                    <input type="number" class="form-control" id="monto_recibido" min="0" step="0.01">
+                </div>
+
+                <!-- Transferencia -->
+                <div id="contenedor_referencia" class="mt-3" style="display:none;">
+                    <label class="form-label">Número de comprobante</label>
+                    <input type="text" class="form-control" id="referencia_transferencia">
+                </div>
+
+                <div id="contenedor_monto_transfer" class="mt-3" style="display:none;">
+                    <label class="form-label">Monto transferido</label>
+                    <input type="number" class="form-control" id="monto_transferencia" min="0" step="0.01">
+                </div>
+
+                <!-- Cambio -->
+                <div id="cambio_box" class="mt-3">
+                    <p><strong>Cambio:</strong> $ <span id="cambio">0.00</span></p>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-success" onclick="confirmarCobro()">Confirmar Pago</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- JAVASCRIPT / WEBSOCKET (SIN CAMBIOS DE LÓGICA) -->
+<!-- ======================================================= -->
+<script>
+    function abrirCobro(id, total) {
+        document.getElementById("pedido_id").value = id;
+        document.getElementById("total_pagar").innerText = total;
+
+        document.getElementById("monto_recibido").value = "";
+        document.getElementById("cambio").innerText = "0.00";
+
+        new bootstrap.Modal(document.getElementById("modalCobro")).show();
+    }
+
+    document.getElementById("monto_recibido").addEventListener("input", function () {
+        let recibido = parseFloat(this.value.replace(",", ".")) || 0;
+        let total = parseFloat(document.getElementById("total_pagar").innerText.replace(",", "."));
+        document.getElementById("cambio").innerText = (recibido - total).toFixed(2);
+    });
+
+    document.getElementById("metodo_pago").addEventListener("change", function () {
+        let metodo = this.value;
+        document.getElementById("contenedor_monto").style.display =
+            metodo === "efectivo" ? "block" : "none";
+        document.getElementById("cambio_box").style.display =
+            metodo === "efectivo" ? "block" : "none";
+        document.getElementById("contenedor_referencia").style.display =
+            metodo === "transferencia" ? "block" : "none";
+        document.getElementById("contenedor_monto_transfer").style.display =
+            metodo === "transferencia" ? "block" : "none";
+    });
+
+    function confirmarCobro() {
+
+        const id = document.getElementById("pedido_id").value;
+        const metodo = document.getElementById("metodo_pago").value;
+
+        const totalTexto = document.getElementById("total_pagar").innerText.replace(",", ".");
+        const total = parseFloat(totalTexto);
+
+        let recibido;
+        let referencia = document.getElementById("referencia_transferencia").value.trim();
+
+        if (metodo === "efectivo") {
+
+            const txt = document.getElementById("monto_recibido").value.replace(",", ".");
+            recibido = parseFloat(txt);
+
+            if (isNaN(recibido)) {
+                Swal.fire("Error", "Debe ingresar el monto recibido.", "error");
+                return;
+            }
+
+            if (recibido < total) {
+                Swal.fire("Error", "El cliente no puede pagar menos del total.", "error");
+                return;
+            }
+        }
+
+        if (metodo === "transferencia") {
+
+            const txtTransf = document.getElementById("monto_transferencia").value.replace(",", ".");
+            recibido = parseFloat(txtTransf);
+
+            if (isNaN(recibido)) {
+                Swal.fire("Error", "Debe ingresar el monto transferido.", "error");
+                return;
+            }
+
+            if (recibido !== total) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Monto incorrecto",
+                    text: "En transferencias, el monto debe ser EXACTAMENTE igual al total.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                });
+                return;
+            }
+
+            if (referencia === "") {
+                Swal.fire("Error", "Debe ingresar el número de comprobante.", "error");
+                return;
+            }
+        }
+
+        fetch(`/cajero/domicilio/${id}/pagar/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                metodo: metodo,
+                recibido: recibido,
+                referencia: referencia
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+
+                if (data.success) {
+
+                    bootstrap.Modal.getInstance(document.getElementById("modalCobro")).hide();
+
+                    Swal.fire({
+                        title: "Pago registrado",
+                        text: data.message,
+                        icon: "success",
+                        confirmButtonText: "Aceptar",
+                        background: "#FFF7F0",
+                        confirmButtonColor: "#3E7A3F",
+                        iconColor: "#3E7A3F"
+                    }).then(() => {
+
+                        if (data.comprobante_url) {
+                            window.open(data.comprobante_url, "_blank");
+                        }
+
+                        const fila = document.getElementById("fila-" + id);
+                        if (fila) fila.remove();
+
+                        fetch("/cajero/tabla-pedidos-pagados-domicilio/")
+                            .then(res => res.json())
+                            .then(resp => {
+                                document.getElementById("contenedor-tabla-pagados").innerHTML = resp.html;
+                            });
+
+                    });
+                } else {
+                    Swal.fire("Error", data.message, "error");
+                }
+
+            });
+    }
+
+    let ws = new WebSocket("ws://" + window.location.host + "/ws/pedidos/");
+
+    ws.onmessage = function (e) {
+        let data = JSON.parse(e.data);
+
+        if (data.type === "nuevo_cobro" && data.origen === "domicilio") {
+
+            if (document.getElementById("fila-" + data.pedido_id)) { return; }
+
+            const filaVacia = document.getElementById("fila-vacia-cobros");
+            if (filaVacia) filaVacia.remove();
+
+            // IMPORTANTE: aquí usamos data.codigo_pedido para mostrar el código
+            let fila = `
+                <tr id="fila-${data.pedido_id}">
+                    <td>${data.codigo_pedido}</td>
+                    <td>${data.cliente}</td>
+                    <td>$ ${data.total}</td>
+                    <td>
+                        <span class="badge bg-warning">pendiente</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm"
+                                onclick="abrirCobro('${data.pedido_id}', '${data.total}')">
+                            $ Cobrar
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            document.querySelector("#tbody-cobros")
+                .insertAdjacentHTML("afterbegin", fila);
+        }
+
+        if (data.type === "nuevo_pagado" && data.origen === "domicilio") {
+            // También mostramos código en la tabla de pagados
+            let fila = `
+                <tr>
+                    <td>${data.codigo_pedido}</td>
+                    <td>${data.cliente}</td>
+                    <td>$ ${parseFloat(data.total).toFixed(2)}</td>
+                    <td><span class="badge bg-success">confirmado</span></td>
+                    <td>${data.fecha}</td>
+                </tr>
+            `;
+            document.querySelector("#tabla-pagados tbody")
+                .insertAdjacentHTML("afterbegin", fila);
+        }
+    };
+</script>
+
+<br>
+{% endblock %}

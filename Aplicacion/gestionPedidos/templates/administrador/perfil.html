@@ -1,7 +1,7 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
 :root {
@@ -44,7 +44,12 @@
 
 /* Fondo con gradiente */
 html, body {
-    background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 40%, var(--blanco-calido));
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
     overflow-x: hidden;
 }
 
@@ -167,5 +172,5 @@ html, body {
     </div>
 </div>
 
-<br><br>
+<br>
 {% endblock %}

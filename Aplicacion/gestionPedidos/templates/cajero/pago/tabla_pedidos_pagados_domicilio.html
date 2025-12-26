@@ -1,0 +1,67 @@
+<div class="table-responsive shadow p-3 bg-white rounded">
+    <table class="table table-hover align-middle" id="tabla-pagados">
+        <thead class="table-primary text-center">
+            <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Estado pago</th>
+                <th>Comprobante</th>
+                <th>Fecha Pago</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for p in pedidos_pagados %}
+            <tr>
+                {# MOSTRAR CÓDIGO EN LUGAR DE ID #}
+                <td>{{ p.codigo_pedido }}</td>
+                <td>{{ p.nombre_cliente }}</td>
+                <td>$ {{ p.total|floatformat:2 }}</td>
+
+                <td>
+                    <span class="badge bg-success">confirmado</span>
+                </td>
+
+                {# ------- COMPROBANTE PDF ------- #}
+                <td class="text-center">
+                    {% if p.pago_confirmado %}
+                    {% with comps=p.pago_confirmado.comprobante_set.all %}
+                    {% if comps %}
+                    {% with comp=comps.0 %}
+                    {% if comp.archivo_pdf %}
+                    <a href="{{ comp.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-danger">
+                        Ver PDF
+                    </a>
+                    {% else %}
+                    <span class="text-muted">No disponible</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}
+                    <span class="text-muted">No disponible</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}
+                    <span class="text-muted">No disponible</span>
+                    {% endif %}
+                </td>
+
+                {# ------- FECHA DEL PAGO CONFIRMADO ------- #}
+                <td class="text-center">
+                    {% if p.pago_confirmado %}
+                    {{ p.pago_confirmado.fecha_hora|date:"d/m/Y H:i" }}
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    No hay pagos registrados
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

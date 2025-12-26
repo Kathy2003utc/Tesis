@@ -1,0 +1,259 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+/* ================= PALETA ================= */
+:root {
+    --cafe-oscuro:#b4764f;
+    --cafe-medio:#cd966c;
+    --cafe-claro:#D7B999;
+    --cafe-suave:#EEDDC6;
+
+    --verde:#3E7A3F;
+    --verde-profundo:#2E5F32;
+
+    --blanco-calido:#F8F5F2;
+    --gris-suave:#E2DED8;
+    --texto-oscuro:#2B1A10;
+
+    --cafe-profundo:#8A5A3C;
+    --cafe-avellana:#C8A784;
+    --crema-suave:#FAF4EC;
+}
+
+/* ================= FONDO ================= */
+html, body{
+    background:linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x:hidden;
+}
+
+/* ================= CONTENEDOR ================= */
+.main-content-wrapper{
+    padding:20px;
+}
+
+.content-card{
+    background:var(--crema-suave);
+    padding:30px;
+    border-radius:15px;
+    border:1px solid var(--cafe-suave);
+    box-shadow:0 8px 18px rgba(0,0,0,.1);
+    max-width:1300px;
+    margin:auto;
+}
+
+/* ================= TITULO ================= */
+h2{
+    color:var(--cafe-profundo);
+    font-weight:bold;
+    text-shadow:1px 1px 2px #fff;
+}
+
+/* ================= FORM FILTROS ================= */
+.form-filtros{
+    background:var(--blanco-calido);
+    border:1px solid var(--gris-suave);
+    border-radius:12px;
+    padding:20px;
+}
+
+/* ================= BOTONES ================= */
+.btn-filtrar{
+    background:var(--verde-profundo);
+    color:white;
+    border-radius:10px;
+    padding:8px 18px;
+    font-weight:bold;
+}
+.btn-filtrar:hover{
+    background:var(--verde);
+}
+
+/* ================= TABLA ================= */
+.table{
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+}
+
+.table thead{
+    background:var(--cafe-medio);
+    color:white;
+}
+
+.table tbody tr:hover{
+    background:#f6efe7;
+}
+
+/* ================= TOTAL ================= */
+.total-box{
+    background:var(--blanco-calido);
+    border-left:6px solid var(--verde-profundo);
+    padding:12px 18px;
+    border-radius:10px;
+    font-size:1.1rem;
+    font-weight:bold;
+}
+</style>
+
+<style>
+.btn-regresar{
+    background: var(--cafe-profundo);
+    color: white;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: bold;
+    border: none;
+}
+
+.btn-regresar:hover{
+    background: var(--cafe-oscuro);
+    color: white;
+}
+</style>
+
+
+<div class="main-content-wrapper">
+    <div class="content-card">
+
+        <h2 class="text-center mb-4">
+            Reporte Unificado · Pedidos y Cobros
+        </h2>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button class="btn btn-regresar"
+                    onclick="window.history.back();">
+                Regresar
+            </button>
+        </div>
+
+        <br><br>
+        
+        <!-- ================= FILTROS ================= -->
+        <form method="GET" class="row g-3 form-filtros mb-4">
+
+            <div class="col-md-3">
+                <label class="fw-semibold">Fecha inicio</label>
+                <input type="date" name="inicio" class="form-control"
+                       value="{{ request.GET.inicio }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="fw-semibold">Fecha fin</label>
+                <input type="date" name="fin" class="form-control"
+                       value="{{ request.GET.fin }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="fw-semibold">Tipo de pedido</label>
+                <select name="tipo" class="form-select">
+                    <option value="todos">Todos</option>
+                    <option value="restaurante"
+                        {% if request.GET.tipo == "restaurante" %}selected{% endif %}>
+                        Restaurante
+                    </option>
+                    <option value="domicilio"
+                        {% if request.GET.tipo == "domicilio" %}selected{% endif %}>
+                        Domicilio
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-3 text-end align-self-end">
+                <button class="btn btn-filtrar">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
+        </form>
+
+        <!-- ================= EXPORTAR ================= -->
+            <a href="{% url 'exportar_unificado_pdf' %}?{{ request.GET.urlencode }}"
+               class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+
+            <br><br>
+
+            <a href="{% url 'exportar_unificado_excel' %}?{{ request.GET.urlencode }}"
+               class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </a>
+
+            <br><br>
+
+        <!-- ================= TOTAL ================= -->
+        <div class="d-flex justify-content-end mb-3">
+            <div class="total-box">
+                Total recaudado: $ {{ total_recaudado|floatformat:2 }}
+            </div>
+        </div>
+
+
+        <!-- ================= TABLA ================= -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="text-center">
+                    <tr>
+                        <th># Pedido</th>
+                        <th>Tipo</th>
+                        <th>Cliente / Mesa</th>
+                        <th>Responsable</th>
+                        <th>Estado</th>
+                        <th>Total</th>
+                        <th>Método</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for p in pagos %}
+                    <tr>
+                        <td class="text-center">#{{ p.pedido.id }}</td>
+                        <td class="text-center">{{ p.pedido.tipo_pedido|title }}</td>
+
+                        <td>
+                            {% if p.pedido.tipo_pedido == 'domicilio' %}
+                                {{ p.pedido.nombre_cliente }}
+                            {% else %}
+                                Mesa {{ p.pedido.mesa.numero }}
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if p.pedido.tipo_pedido == 'domicilio' %}
+                                {{ p.pedido.cajero.nombre }}
+                            {% else %}
+                                {{ p.pedido.mesero.nombre }}
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">{{ p.pedido.estado }}</td>
+                        <td class="text-success fw-bold">$ {{ p.total }}</td>
+                        <td class="text-center">{{ p.metodo_pago }}</td>
+                        <td class="text-center">
+                            {{ p.fecha_hora|date:"d/m/Y H:i" }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-3">
+                            No existen registros
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<br>
+{% endblock %}

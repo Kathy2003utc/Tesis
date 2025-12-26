@@ -1,0 +1,411 @@
+    {% extends 'cajero/plantilla.html' %}
+    {% load static %}
+
+    {% block contenido %}
+    <br><br><br>
+
+    <div class="container mt-4">
+
+        <h2 class="text-center text-primary mb-4">Cobros - Restaurante</h2>
+
+        <!-- ======================================================= -->
+        <!-- TABLA DE PEDIDOS A COBRAR -->
+        <!-- ======================================================= -->
+        <h4 class="text-success mb-3">Pedidos a Cobrar</h4>
+
+        <div class="table-responsive shadow p-3 bg-white rounded" id="tabla-cobros">
+            <table class="table table-hover align-middle">
+                <thead class="table-success text-center">
+                    <tr>
+                        <th>#</th>
+                        <th>Mesa</th>
+                        <th>Mesero</th>
+                        <th>Total</th>
+                        <th>Estado pago</th> 
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tbody-cobros">
+                    {% for p in pedidos_cobrar %}
+                    <tr id="fila-{{ p.id }}">
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.mesa.numero }}</td>
+                        <td>{{ p.mesero.nombre }}</td>
+                        <td>$ {{ p.total }}</td>
+                        <td>
+                            <span class="badge bg-warning text-dark">
+                                pendiente
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="abrirCobro('{{ p.id }}', '{{ p.total }}')">
+                                Cobrar
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted">No hay pedidos pendientes</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- ======================================================= -->
+        <!-- TABLA DE PEDIDOS PAGADOS -->
+        <!-- ======================================================= -->
+        <h4 class="text-primary mt-5 mb-3">Pedidos Pagados</h4>
+
+        <div class="table-responsive shadow p-3 bg-white rounded">
+            <table class="table table-hover align-middle" id="tabla-pagados">
+                <thead class="table-primary text-center">
+                    <tr>
+                        <th>#</th>
+                        <th>Mesa</th>
+                        <th>Mesero</th>
+                        <th>Total</th>
+                        <th>Estado pago</th> 
+                        <th>Fecha Pago</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for p in pedidos_pagados %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.mesa.numero }}</td>
+                        <td>{{ p.mesero.nombre }}</td>
+                        <td>$ {{ p.total|floatformat:2 }}</td>
+                        <td>
+                            <span class="badge bg-success">
+                                confirmado
+                            </span>
+                        </td>
+                        <td>{{ p.pagos.first.fecha_hora|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">No hay pedidos pagados aún</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+
+    <!-- =============================================== -->
+    <!-- MODAL DE COBRO PARA PEDIDOS A DOMICILIO -->
+    <!-- =============================================== -->
+    <div class="modal fade" id="modalCobro" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content shadow-lg">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Cobrar pedido a domicilio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- ID del pedido oculto -->
+                    <input type="hidden" id="pedido_id">
+
+                    <!-- Monto -->
+                    <p><strong>Total a pagar:</strong> $ <span id="total_pagar"></span></p>
+
+                    <!-- Método de pago -->
+                    <label class="form-label">Método de pago</label>
+                    <select class="form-select" id="metodo_pago">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                    </select>
+
+                    <!-- Monto recibido (efectivo) -->
+                    <div id="contenedor_monto" class="mt-3">
+                        <label class="form-label">Monto recibido</label>
+                        <input type="number" class="form-control" id="monto_recibido" min="0" step="0.01">
+                    </div>
+
+                    <!-- Número de comprobante (transferencia) -->
+                    <div id="contenedor_referencia" class="mt-3" style="display:none;">
+                        <label class="form-label">Número de comprobante</label>
+                        <input type="text" class="form-control" id="referencia_transferencia">
+                    </div>
+
+                    <!-- Monto transferido -->
+                    <div id="contenedor_monto_transfer" class="mt-3" style="display:none;">
+                        <label class="form-label">Monto transferido</label>
+                        <input type="number" class="form-control" id="monto_transferencia" min="0" step="0.01">
+                    </div>
+
+                    <!-- Cambio -->
+                    <div id="cambio_box" class="mt-3">
+                        <p><strong>Cambio:</strong> $ <span id="cambio">0.00</span></p>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-success" onclick="confirmarCobro()">Confirmar Pago</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    // ====================================================
+    // ABRIR FORMULARIO
+    // ====================================================
+    function abrirCobro(id, total){
+        document.getElementById("pedido_id").value = id;
+        document.getElementById("total_pagar").innerText = total;
+        document.getElementById("monto_recibido").value = "";
+        document.getElementById("cambio").innerText = "0.00";
+
+        new bootstrap.Modal(document.getElementById("modalCobro")).show();
+    }
+
+    // ====================================================
+    // CALCULAR CAMBIO
+    // ====================================================
+    document.getElementById("monto_recibido").addEventListener("input", function() {
+
+        // Convertir coma → punto
+        let texto = this.value.replace(",", ".");
+
+        let recibido = parseFloat(texto) || 0;
+        let total = parseFloat(document.getElementById("total_pagar").innerText.replace(",", "."));
+
+        let cambio = recibido - total;
+
+        // Mostrar siempre dos decimales
+        document.getElementById("cambio").innerText = cambio.toFixed(2);
+    });
+
+    // ====================================================
+    // CAMBIO AUTOMÁTICO DEL FORMULARIO SEGÚN MÉTODO DE PAGO
+    // ====================================================
+    document.getElementById("metodo_pago").addEventListener("change", function () {
+        let metodo = this.value;
+
+        // EFECTIVO
+        document.getElementById("contenedor_monto").style.display =
+            metodo === "efectivo" ? "block" : "none";
+
+        document.getElementById("cambio_box").style.display =
+            metodo === "efectivo" ? "block" : "none";
+
+        // TRANSFERENCIA
+        document.getElementById("contenedor_referencia").style.display =
+            metodo === "transferencia" ? "block" : "none";
+
+        document.getElementById("contenedor_monto_transfer").style.display =
+            metodo === "transferencia" ? "block" : "none";
+
+        // limpiar campos
+        if (metodo === "transferencia") {
+            document.getElementById("monto_recibido").value = "";
+            document.getElementById("cambio").innerText = "0.00";
+        }
+    });
+
+    // ====================================================
+    // CONFIRMAR COBRO (con validaciones)
+    // ====================================================
+
+    function confirmarCobro() {
+
+        const id = document.getElementById("pedido_id").value;
+        const metodo = document.getElementById("metodo_pago").value;
+
+        // Total a pagar (desde el span)
+        const totalTexto = document.getElementById("total_pagar").innerText.replace(",", ".");
+        const total = parseFloat(totalTexto);
+
+        let recibido;
+        let referencia = document.getElementById("referencia_transferencia").value.trim();
+
+        // ==========================
+        // VALIDACIÓN: EFECTIVO
+        // ==========================
+        if (metodo === "efectivo") {
+
+            const txt = document.getElementById("monto_recibido").value.replace(",", ".");
+            recibido = parseFloat(txt);
+
+            if (isNaN(recibido)) {
+                Swal.fire("Error", "Debe ingresar el monto recibido.", "error");
+                return;
+            }
+
+            if (recibido < total) {
+                Swal.fire("Error", "El cliente no puede pagar menos del total.", "error");
+                return;
+            }
+        }
+
+        // ==========================
+        // VALIDACIÓN: TRANSFERENCIA
+        // ==========================
+        if (metodo === "transferencia") {
+
+            const txtTransf = document.getElementById("monto_transferencia").value.replace(",", ".");
+            recibido = parseFloat(txtTransf);
+
+            if (isNaN(recibido)) {
+                Swal.fire("Error", "Debe ingresar el monto de la transferencia.", "error");
+                return;
+            }
+
+            if (recibido !== total) {
+                Swal.fire("Monto incorrecto", "En transferencias el monto debe ser EXACTAMENTE igual al total.", "warning");
+                return;
+            }
+
+            if (referencia === "") {
+                Swal.fire("Error", "Debe ingresar el número de comprobante.", "error");
+                return;
+            }
+        }
+
+        // ==========================
+        // ENVIAR PAGO AL BACKEND
+        // ==========================
+        fetch(`/cajero/restaurante/${id}/pagar/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                metodo: metodo,
+                recibido: recibido,
+                referencia: referencia
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+
+            if (data.success) {
+
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById("modalCobro")).hide();
+
+                // =====================================================
+                // NUEVO SWEETALERT — Solo al aceptar se abre comprobante
+                // =====================================================
+                Swal.fire({
+                    title: "Pago registrado",
+                    text: data.message,
+                    icon: "success",
+                    confirmButtonText: "Aceptar"
+                }).then(() => {
+
+                    // Abrir comprobante
+                    if (data.comprobante_url) {
+                        window.open(data.comprobante_url, "_blank");
+                    }
+
+                    // Quitar fila
+                    const fila = document.querySelector("#fila-" + id);
+                    if (fila) fila.remove();
+                });
+
+            } else {
+                Swal.fire("Error", data.message, "error");
+            }
+        });
+    }
+
+
+
+    </script>
+
+    <script>
+    // ================================================
+    // WEBSOCKET PARA RECIBIR PEDIDOS LISTOS EN TIEMPO REAL
+    // ================================================
+    let socket = new WebSocket("ws://" + window.location.host + "/ws/pedidos/");
+
+    socket.onopen = function() {
+        console.log("WS conectado (cajero)");
+    };
+
+    socket.onmessage = function(e) {
+        let data = JSON.parse(e.data);
+
+        console.log("EVENTO WS:", data);
+
+        if (data.type === "nuevo_cobro") {
+
+            // Evitar duplicados si ya está en la tabla
+            if (document.getElementById("fila-" + data.pedido_id)) {
+                return;
+            }
+
+            let fila = `
+                <tr id="fila-${data.pedido_id}">
+                    <td>${data.pedido_id}</td>
+                    <td>${data.mesa}</td>
+                    <td>${data.mesero}</td>
+                    <td>$ ${data.total}</td>
+                    <td>
+                        <span class="badge ${data.estado_pago === 'pendiente' ? 'bg-warning text-dark' : 'bg-success'}">
+                            ${data.estado_pago}
+                        </span>
+                    </td>
+
+                    <td>
+                        <button class="btn btn-primary btn-sm"
+                            onclick="abrirCobro('${data.pedido_id}', '${data.total}')">
+                            Cobrar
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            document.getElementById("tbody-cobros").insertAdjacentHTML("afterbegin", fila);
+        }
+
+        if (data.type === "eliminar_pedido") {
+            let fila = document.getElementById("fila-" + data.pedido_id);
+            if (fila) fila.remove();
+        }
+
+        if (data.type === "nuevo_pagado") {
+
+            // FORMATO CORRECTO DEL TOTAL: 1.5 → 1,50
+            let totalFormateado = parseFloat(data.total)
+                                    .toFixed(2)
+                                    .replace('.', ',');
+
+            let filaPagado = `
+                <tr>
+                    <td>${data.pedido_id}</td>
+                    <td>${data.mesa}</td>
+                    <td>${data.mesero}</td>
+                    <td>$ ${totalFormateado}</td>
+                    <td>
+                        <span class="badge ${data.estado_pago === "confirmado" 
+                                            ? "bg-success" 
+                                            : "bg-warning text-dark"}">
+                            ${data.estado_pago}
+                        </span>
+                    </td>
+                    <td>${data.fecha}</td>
+                </tr>
+            `;
+
+            document.querySelector("#tabla-pagados tbody")
+                    .insertAdjacentHTML("afterbegin", filaPagado);
+        }
+
+
+    };
+    </script>
+
+{% endblock %}

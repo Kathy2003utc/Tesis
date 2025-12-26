@@ -1,7 +1,7 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
     :root {
@@ -55,12 +55,12 @@
     html, body {
         height: 100%;
         margin: 0;
-        overflow-x: hidden;
         background: linear-gradient(
-                135deg,
-                var(--crema-suave),
-                var(--cafe-suave) 45%,
-                var(--blanco-calido));
+            135deg,
+            var(--crema-suave),
+            var(--cafe-suave) 45%,
+            var(--blanco-calido)
+        );
     }
 
     /* PADDING RESPONSIVO COMO EL EJEMPLO */
@@ -187,12 +187,92 @@
         color: #2B1A10 !important;            /* Texto oscuro del tema */
     }
 
-    /* Mantener bordes y hover coherentes */
-    table.dataTable thead th.sorting,
-    table.dataTable thead th.sorting_asc,
-    table.dataTable thead th.sorting_desc {
-        background-color: var(--cafe-crema) !important;
+
+    /* ================== RESPONSIVE MÓVIL TABLA ================== */
+
+    /* En móviles */
+    @media (max-width: 576px) {
+
+        /* Reduce padding general */
+        .content-card {
+            padding: 15px;
+        }
+
+        /* Texto más pequeño */
+        table {
+            font-size: 13px;
+        }
+
+        /* OCULTAR columnas no esenciales */
+        #tbl_trabajadores th:nth-child(4),
+        #tbl_trabajadores td:nth-child(4), /* Correo */
+
+        #tbl_trabajadores th:nth-child(6),
+        #tbl_trabajadores td:nth-child(6)  /* Dirección */ {
+            display: none;
+        }
+
+        /* Acciones en columna vertical */
+        #tbl_trabajadores td:last-child {
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        /* Botones más compactos */
+        #tbl_trabajadores .btn {
+            font-size: 12px;
+            padding: 4px 6px;
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        /* Quitar <br> innecesarios */
+        #tbl_trabajadores td br {
+            display: none;
+        }
     }
+
+    /* ================= FIX SCROLL HORIZONTAL MOBILE ================= */
+
+    /* Scroll horizontal REAL para tablas */
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto !important;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+
+
+    /* Forzar ancho mínimo de tabla */
+    #tbl_trabajadores {
+        min-width: 900px;
+    }
+
+    /* En móvil, quitar padding excesivo */
+    @media (max-width: 576px) {
+        .content-card {
+            padding: 15px;
+        }
+    }
+
+    /* ====== ENCABEZADO DE TABLA SIN DATATABLE ====== */
+    #tbl_trabajadores thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    /* Hover suave solo para filas */
+    #tbl_trabajadores tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+
+
 </style>
 
 <div class="main-content-wrapper">
@@ -240,18 +320,20 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'editar_trabajador' trabajador.id %}" class="btn btn-warning btn-sm me-1" title="Editar">
+                                <a href="{% url 'editar_trabajador' trabajador.id %}" 
+                                class="btn btn-warning btn-sm w-100 mb-2">
                                     <i class="fa fa-pen"></i> Editar
                                 </a>
-                                <br><br>
-                                <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}" style="display:inline;">
+
+                                <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm"
+                                    <button type="submit" class="btn btn-danger btn-sm w-100"
                                         onclick="return confirmarEliminacion(event);">
                                         <i class="fa fa-trash"></i> Eliminar
                                     </button>
                                 </form>
                             </td>
+
 
                         </tr>
                         {% endfor %}
@@ -274,7 +356,8 @@ function confirmarEliminacion(e) {
         confirmButtonColor: '#C14949',
         cancelButtonColor: '#4F6D7A',
         confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
+        cancelButtonText: 'Cancelar',
+        background: "#FFF7F0"
     }).then((result) => {
         if (result.isConfirmed) {
             e.target.closest("form").submit();
@@ -282,14 +365,8 @@ function confirmarEliminacion(e) {
     });
 }
 
-$('#tbl_trabajadores').DataTable({
-    dom: 'Bfrtip',
-    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-    language: {
-        url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
-    }
-});
+
 </script>
 
-<br><br><br>
+<br>
 {% endblock %}

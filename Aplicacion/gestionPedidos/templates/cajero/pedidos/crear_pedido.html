@@ -1,0 +1,277 @@
+{% extends 'cajero/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
+
+    --verde-profundo: #2E5F32;
+    --verde-oliva: #5E7A43;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
+
+    --crema-suave: #FAF4EC;
+    --gris-claro-calido: #D8D3CC;
+    --gris-medio-calido: #B8B1A8;
+    --gris-oscuro-calido: #4A3F38;
+
+    --exito: #4F8A57;
+    --exito-suave: #D9F2D6;
+    --advertencia: #D9A441;
+    --advertencia-suave: #FFF5DA;
+}
+
+/* Fondo elegante */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* Contenedor centrado */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta premium */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Animación */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 25px;
+    text-shadow: 1px 1px 2px #ffffff80;
+    font-size: 28px;
+}
+
+/* Labels */
+label {
+    font-weight: bold;
+    color: var(--cafe-profundo);
+}
+
+/* Inputs */
+.form-control, textarea {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    transition: 0.3s;
+    color: var(--texto-oscuro);
+}
+
+.form-control:focus, textarea:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62, 122, 63, 0.35);
+}
+
+/* Botones */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-menta);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+</style>
+
+<div class="form-container">
+
+    {% if messages %}
+        {% for message in messages %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                Swal.fire({
+                    icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                    title: "{% if message.tags == 'error' %}¡Atención!{% else %}Éxito{% endif %}",
+                    text: "{{ message|escapejs }}",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "{% if message.tags == 'error' %}#C14949{% else %}#4F8A57{% endif %}",
+                    background: "#FFF7F0"
+                });
+            });
+        </script>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card-form">
+        <form method="post" id="frm_pedido" novalidate>
+            {% csrf_token %}
+
+            <h2 class="titulo-form">Crear Pedido a Domicilio</h2>
+
+            <!-- Cajero automático -->
+            <div class="mb-3">
+                <label>Cajero:</label>
+                <input type="text" class="form-control"
+                       value="{{ user.nombre }} {{ user.apellido }}" disabled>
+            </div>
+
+            <!-- Cliente -->
+            <div class="mb-3">
+                <label>Nombre del cliente:</label>
+                <input id="nombre_cliente" type="text" name="nombre_cliente"
+                    class="form-control"
+                    value="{{ nombre_cliente|default_if_none:'' }}" required>
+                <div class="error-text" id="error_nombre"></div>
+            </div>
+
+            <div class="mb-3">
+                <label>Teléfono de contacto:</label>
+                <input id="contacto_cliente" type="text" name="contacto_cliente"
+                    class="form-control"
+                    value="{{ contacto_cliente|default_if_none:'' }}" required>
+                <div class="error-text" id="error_contacto"></div>
+            </div>
+
+            <div class="mb-3">
+                <label>Dirección de entrega:</label>
+                <input id="direccion_entrega" name="direccion_entrega"
+                    class="form-control" type="text"
+                    value="{{ direccion_entrega|default_if_none:'' }}" required>
+                <div class="error-text" id="error_direccion"></div>
+            </div>
+
+            <button type="submit" class="btn btn-guardar w-100 mt-4">
+                Agregar productos
+            </button>
+
+            <a href="{% url 'cajero_listar_pedidos' %}" class="btn btn-cancelar">
+                Cancelar
+            </a>
+        </form>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById("frm_pedido");
+
+    form.addEventListener("submit", function (e) {
+
+        let valido = true;
+
+        const nombre = document.getElementById("nombre_cliente");
+        const contacto = document.getElementById("contacto_cliente");
+        const direccion = document.getElementById("direccion_entrega");
+
+        const errNombre = document.getElementById("error_nombre");
+        const errContacto = document.getElementById("error_contacto");
+        const errDireccion = document.getElementById("error_direccion");
+
+        // Reset
+        [nombre, contacto, direccion].forEach(c => c.classList.remove("is-invalid"));
+        [errNombre, errContacto, errDireccion].forEach(e => e.textContent = "");
+
+        // Nombre
+        if (nombre.value.trim().length < 3 || !/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(nombre.value)) {
+            nombre.classList.add("is-invalid");
+            errNombre.textContent = "Ingrese un nombre válido (solo letras, mínimo 3 caracteres).";
+            valido = false;
+        }
+
+        // Teléfono
+        if (!/^\d{10}$/.test(contacto.value.trim())) {
+            contacto.classList.add("is-invalid");
+            errContacto.textContent = "Ingrese un teléfono válido (10 números).";
+            valido = false;
+        }
+
+        // Dirección
+        if (direccion.value.trim().length < 5) {
+            direccion.classList.add("is-invalid");
+            errDireccion.textContent = "Ingrese una dirección válida (mínimo 5 caracteres).";
+            valido = false;
+        }
+
+        if (!valido) {
+            e.preventDefault();
+            Swal.fire({
+                icon: "warning",
+                title: "Campos incompletos",
+                text: "Por favor corrija los errores antes de continuar.",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+            });
+        }
+    });
+
+});
+</script>
+
+<br>
+{% endblock %}

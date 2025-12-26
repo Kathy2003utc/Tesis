@@ -1,137 +1,343 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'cajero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br>
+<br>
 
-<div class="container mt-5">
-    <h2 class="text-center text-primary mb-4">Agregar Productos al Pedido #{{ pedido.id }}</h2>
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
-    <div class="row g-3">
-        {% for producto in productos %}
-        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-            <div class="card border-0 shadow-sm rounded-4 h-100" style="padding-bottom: 0 !important;">
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
 
-                <!-- SIN espacio abajo -->
-                <div class="p-2 d-flex flex-column" style="padding-bottom: 0 !important;">
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
 
-                    <h6 class="fw-bold text-center small mb-1">{{ producto.nombre }}</h6>
+        --rojo-alerta: #C14949;
+        --rojo-claro: #EA9A9A;
 
-                    <p class="text-muted small text-center mb-2" style="font-size: 0.75rem;">
-                        {{ producto.descripcion }}
-                    </p>
+        --cafe-profundo: #8A5A3C;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
 
-                    <p class="fw-bold text-success text-center mb-2" style="font-size: 0.9rem;">
-                        ${{ producto.precio }}
-                    </p>
+        --verde-profundo: #2E5F32;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
 
-                    <div class="d-flex flex-column mb-2" style="margin-bottom: 0 !important;">
-                        <input type="number"
-                            min="1"
-                            value="1"
-                            id="cantidad_{{ producto.id }}"
-                            class="form-control form-control-sm mb-2">
+        --crema-suave: #FAF4EC;
+        --azul-pizarra: #4F6D7A;
+        --advertencia: #D9A441;
+        --exito: #4F8A57;
+    }
 
-                        <input type="text"
-                            placeholder="Observación"
-                            id="obs_{{ producto.id }}"
-                            class="form-control form-control-sm mb-2">
-                    </div>
+    /* Fondo general */
+    html,
+    body {
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+        overflow-x: hidden;
+    }
 
-                    <button class="btn btn-primary btn-sm w-100"
-                            style="margin-bottom: 0 !important;"
-                            onclick="agregarProducto('{{ producto.id }}')">
+    /* Contenedor principal */
+    .container {
+        background: rgba(255, 255, 255, 0.35);
+        padding: 30px;
+        border-radius: 20px;
+    }
+
+    /* Tarjeta principal */
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 10px;
+        border-radius: 18px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Título */
+    .titulo-pedido {
+        color: var(--cafe-oscuro);
+        font-weight: 800;
+        text-shadow: 1px 1px 2px #ffffff70;
+    }
+
+    .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+    }
+
+
+    /* Tarjetas de producto */
+    .card-producto {
+        background: var(--crema-suave);
+        border-radius: 15px;
+        border: 1px solid var(--cafe-avellana);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        transition: 0.3s;
+
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        /* Asegura que ocupe todo el ancho disponible */
+        padding: 10px;
+    }
+
+    .card-producto:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 22px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Inputs */
+    .form-control {
+        background: var(--blanco-calido);
+        border: 1px solid var(--cafe-claro);
+        border-radius: 12px;
+        padding: 10px;
+        color: var(--texto-oscuro);
+    }
+
+    /* Botón agregar */
+    .btn-agregar {
+        background: var(--verde);
+        color: white;
+        border-radius: 12px;
+        padding: 10px;
+        font-weight: bold;
+        transition: .3s;
+    }
+
+    .btn-agregar:hover {
+        background: var(--verde-claro);
+        color: var(--texto-oscuro);
+    }
+
+    /* Tabla */
+    table {
+        border-radius: 12px !important;
+        overflow: hidden;
+    }
+
+    thead {
+        background: var(--cafe-medio);
+        color: white;
+    }
+
+    tbody tr:hover {
+        background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Botones tabla */
+    .btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+
+    .btn-warning:hover {
+        color: var(--texto-oscuro) !important;
+    }
+
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+
+    .btn-danger:hover {
+        background-color: var(--rojo-claro) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    /* Botón finalizar */
+    .btn-finalizar {
+        background: var(--verde);
+        color: white;
+        padding: 15px;
+        font-size: 18px;
+        border-radius: 15px;
+        font-weight: bold;
+        transition: .3s;
+    }
+
+    .btn-finalizar:hover {
+        background: var(--verde-claro);
+        color: var(--texto-oscuro);
+    }
+
+    /* Wrapper */
+    .main-content-wrapper {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+    }
+
+    @media(min-width:768px) {
+        .main-content-wrapper {
+            padding-left: 40px !important;
+            padding-right: 40px !important;
+        }
+    }
+
+    @media(min-width:1200px) {
+        .main-content-wrapper {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        }
+    }
+
+    /* Título con altura fija */
+    .card-producto h5 {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Descripción fija */
+    .card-producto p.text-muted {
+        min-height: 48px;
+        max-height: 48px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Empuja el botón al fondo */
+    .card-producto .btn-agregar {
+        margin-top: auto;
+    }
+
+    /* Botón siempre abajo */
+    .card-producto .btn-agregar {
+        margin-top: auto;
+    }
+
+    .menu-grid>div {
+        flex-direction: column;
+    }
+
+    @media (max-width: 576px) {
+
+        .pedido-wrapper {
+            padding: 10px;
+        }
+
+        .content-card {
+            padding: 12px;
+            border-radius: 14px;
+        }
+
+        .titulo-pedido {
+            font-size: 1.2rem;
+            line-height: 1.3;
+        }
+
+        .card-producto {
+            padding: 12px;
+        }
+
+        .card-producto h5 {
+            min-height: auto;
+            font-size: 1rem;
+        }
+
+        .card-producto p.text-muted {
+            min-height: auto;
+            max-height: none;
+            font-size: .85rem;
+        }
+
+        .btn-agregar {
+            padding: 12px;
+            font-size: .95rem;
+        }
+    }
+</style>
+
+
+<div class="main-content-wrapper">
+    <div class="container mt-5 content-card">
+
+        <h2 class="text-center titulo-pedido mb-4">
+            Agregar Productos al Pedido {{ pedido.codigo_pedido }}
+        </h2>
+
+        <div class="menu-grid">
+            {% for producto in productos %}
+            <div>
+                <div class="card card-producto p-3 h-100">
+
+                    <h5 class="fw-bold text-center mb-2" style="color: var(--cafe-profundo);">{{ producto.nombre }}</h5>
+                    <p class="text-muted text-center small mb-2">{{ producto.descripcion }}</p>
+                    <p class="fw-bold text-success text-center mb-2">${{ producto.precio }}</p>
+
+                    <label>Cantidad:</label>
+                    <input type="number" min="1" value="1" id="cantidad_{{ producto.id }}" class="form-control mb-2">
+
+                    <label>Observación:</label>
+                    <input type="text" id="obs_{{ producto.id }}" class="form-control mb-2">
+
+                    <button class="btn btn-agregar w-100" onclick="agregarProducto('{{ producto.id }}')">
                         Agregar
                     </button>
 
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
 
-    <h4 class="mt-5 text-center">Detalles del Pedido</h4>
-    <div id="tabla_detalles">
-        <div class="table-responsive shadow rounded-4 mt-3">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-primary text-center">
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Valor unitario</th>
-                        <th>Subtotal</th>
-                        <th>Recargo</th>
-                        <th>Observación</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for det in pedido.detalles.all %}
-                <tr>
-                    <td>{{ det.producto.nombre }}</td>
-                    <td class="text-center">{{ det.cantidad }}</td>
-                    <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
-                    <td class="text-center">${{ det.subtotal }}</td>
-                    <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
-                    <td>{{ det.observacion }}</td>
-                    <td class="text-center">
-                        <button class="btn btn-warning btn-sm me-1" 
-                                onclick="editarDetalleAjax(
-                                    '{{ det.id }}',
-                                    '{{ det.cantidad }}',
-                                    '{{ det.observacion|default_if_none:''|escapejs }}',
-                                    '{{ det.recargo|default:0|escapejs }}'
-                                )">
-                            Editar
-                        </button>
+        <!-- TABLA -->
+        <h4 class="mt-5 text-center titulo-pedido">Detalles del Pedido</h4>
 
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDetalleAjax('{{ det.id }}')">
-                            Eliminar
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-6">
-                        Aún no hay productos agregados.
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
+        <div id="tabla_detalles">
+            {% include 'cajero/pedidos/tabla_detalles_acciones.html' %}
+        </div>
 
-            </table>
+        <div class="text-center mt-4">
+            <a href="{% url 'cajero_ver_pedido' pedido.id %}" class="btn btn-finalizar" id="btn_finalizar">
+                Finalizar & Enviar a cocina
+            </a>
+
+            <!-- Cancelar -->
+            <a href="{% url 'cajero_cancelar_pedido' pedido.id %}" class="btn btn-danger px-4 py-3 fw-bold">
+                Cancelar
+            </a>
+
         </div>
     </div>
-
-
-    <div class="text-center mt-4">
-        <a href="{% url 'ver_pedido' pedido.id %}" 
-        class="btn btn-primary" 
-        id="btn_finalizar">
-        Finalizar & Ver pedido
-        </a>
-    </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// ------------------------------
-// Agregar producto
-// ------------------------------
-function agregarProducto(id) {
-    let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
-    let observacion = document.getElementById(`obs_${id}`).value;
+    // Agregar producto (cajero - domicilio)
+    function agregarProducto(id) {
+        let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
+        let observacion = document.getElementById(`obs_${id}`).value;
 
-    // Verificar si el pedido es a domicilio
-    const tipoPedido = "{{ pedido.tipo_pedido }}"; // Lo pasamos desde la vista
+        if (isNaN(cantidad) || cantidad <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cantidad inválida',
+                text: 'Ingrese una cantidad mayor a 0',
+                background: "#FFF7F0"
+            });
+            return;
+        }
 
-    if(tipoPedido === "domicilio") {
+        // SweetAlert para el recargo unitario
         Swal.fire({
-            title: 'Recargo por envase/desechable',
+            title: 'Recargo por envase/domicilio',
             input: 'number',
-            inputLabel: 'Ingrese el valor unitario del recargo',
-            inputValue: 0,
+            inputLabel: 'Valor unitario del recargo (ej. 0.25)',
+            inputPlaceholder: '0.00',
             inputAttributes: {
                 min: 0,
                 step: 0.01
@@ -139,19 +345,22 @@ function agregarProducto(id) {
             showCancelButton: true,
             confirmButtonText: 'Agregar producto',
             cancelButtonText: 'Cancelar',
-            preConfirm: (valorRecargo) => {
-                if(valorRecargo === "" || isNaN(valorRecargo) || valorRecargo < 0) {
-                    Swal.showValidationMessage("Ingrese un valor válido para el recargo");
+            background: "#FFF7F0",
+            confirmButtonColor: "#3E7A3F",
+            cancelButtonColor: "#C14949",
+            preConfirm: (valor) => {
+                if (valor === "" || isNaN(valor) || valor < 0) {
+                    Swal.showValidationMessage('Ingrese un valor válido (0 o mayor)');
                 }
-                return parseFloat(valorRecargo);
+                return parseFloat(valor || 0);
             }
         }).then((result) => {
-            if(!result.isConfirmed) return;
+            if (!result.isConfirmed) return;
 
-            const recargoUnitario = result.value;
-            const totalRecargo = recargoUnitario * cantidad;
+            const recargo_unitario = result.value;
+            const recargo_total = recargo_unitario * cantidad;
 
-            fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
+            fetch("{% url 'cajero_agregar_detalle_ajax' pedido.id %}", {
                 method: "POST",
                 headers: {
                     "X-CSRFToken": "{{ csrf_token }}",
@@ -161,248 +370,200 @@ function agregarProducto(id) {
                     producto_id: id,
                     cantidad: cantidad,
                     observacion: observacion,
-                    recargo: recargoUnitario  // Pasamos el recargo total
+                    recargo_unitario: recargo_unitario,
+                    recargo_total: recargo_total
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success){
-                    document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Producto agregado',
-                        text: data.mensaje,
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('tabla_detalles').innerHTML = data.tabla;
 
-                    document.getElementById(`obs_${id}`).value = "";
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.mensaje
-                    });
-                }
-            });
-        });
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Producto agregado',
+                            text: data.mensaje,
+                            timer: 1200,
+                            background: "#FFF7F0",
+                            showConfirmButton: false,
+                            iconColor: "#3E7A3F"
+                        });
 
-    } else {
-        // Pedido restaurante normal
-        fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                producto_id: id,
-                cantidad: cantidad,
-                observacion: observacion
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success){
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Producto agregado',
-                    text: data.mensaje,
-                    timer: 1000,
-                    showConfirmButton: false
+                        document.getElementById(`obs_${id}`).value = "";
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje });
+                    }
                 });
-                document.getElementById(`obs_${id}`).value = "";
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.mensaje
-                });
-            }
         });
     }
-}
 
-
-// ------------------------------
-// Editar detalle
-// ------------------------------
-function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, recargo_actual=0) {
-    const tipoPedido = "{{ pedido.tipo_pedido }}";
-
-    let htmlSwal = `
-        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-            <label style="font-weight:500; font-size:0.9rem;">Cantidad</label>
-            <input id="swal_cantidad" type="number" min="1" 
-                   value="${cantidad_actual}" 
-                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
-
-            <label style="font-weight:500; font-size:0.9rem;">Observación</label>
-            <input id="swal_observacion" type="text" 
-                   value="${observacion_actual}" 
-                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
-    `;
-
-    if(tipoPedido === "domicilio") {
-        htmlSwal += `
-            <label style="font-weight:500; font-size:0.9rem;">Recargo por envase/desechable</label>
-            <input id="swal_recargo" type="number" min="0" step="0.01" 
-                   value="${recargo_actual}" 
-                   style="padding:10px; border-radius:8px; border:1px solid #ced4da; font-size:0.9rem;">
-        `;
-    }
-
-    htmlSwal += `</div>`;
-
-    Swal.fire({
-        title: "Editar detalle",
-        html: htmlSwal,
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonText: "Actualizar",
-        cancelButtonText: "Cancelar",
-        customClass: {
-            confirmButton: 'btn btn-primary btn-sm px-4 me-2',
-            cancelButton: 'btn btn-secondary btn-sm px-4 ms-2'
-        },
-        buttonsStyling: false,
-        preConfirm: () => {
-            const result = {
-                cantidad: parseInt(document.getElementById('swal_cantidad').value),
-                observacion: document.getElementById('swal_observacion').value
-            };
-            if(tipoPedido === "domicilio") {
-                result.recargo = parseFloat(document.getElementById('swal_recargo').value) || 0;
-            }
-            return result;
-        }
-    }).then((result) => {
-        if (!result.isConfirmed) return;
-
-        fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(result.value)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Detalle actualizado',
-                    text: data.mensaje,
-                    timer: 1400,
-                    showConfirmButton: false
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.mensaje
-                });
-            }
-        });
-    });
-}
-
-// ------------------------------
-// Eliminar detalle
-// ------------------------------
-function eliminarDetalleAjax(detalle_id) {
-    Swal.fire({
-        title: "¿Eliminar producto?",
-        text: "Esta acción no se puede deshacer",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar",
-    }).then((result) => {
-        if (!result.isConfirmed) return;
-
-        fetch("{% url 'eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}"
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success){
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Eliminado',
-                    text: data.mensaje,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.mensaje
-                });
-            }
-        });
-    });
-}
-
-// ------------------------------
-// Validar que el pedido tenga productos antes de finalizar
-// ------------------------------
-function validarProductos() {
-    const filas = document.querySelectorAll("#tabla_detalles tbody tr");
-
-    if (filas.length === 1 && filas[0].textContent.includes("Aún no hay productos")) {
+    // Editar detalle (cantidad, observación y recargo)
+    function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, recargo_actual = 0) {
 
         Swal.fire({
-            icon: 'warning',
-            title: 'Sin productos',
-            text: 'Debe agregar al menos un producto antes de finalizar.',
+            title: "Editar detalle",
+            html: `
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+
+                <label style="font-weight:600;">Cantidad</label>
+                <input id="swal_cantidad" 
+                       type="number" 
+                       min="1"
+                       value="${cantidad_actual}" 
+                       class="form-control">
+
+                <label style="font-weight:600;">Observación</label>
+                <input id="swal_observacion" 
+                       type="text" 
+                       value="${observacion_actual}" 
+                       class="form-control">
+
+                <label style="font-weight:600;">Recargo unitario ($)</label>
+                <input id="swal_recargo" 
+                       type="number"
+                       min="0"
+                       step="0.01"
+                       value="${recargo_actual}"
+                       class="form-control">
+            </div>
+        `,
+            showCancelButton: true,
+            confirmButtonText: "Actualizar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#3E7A3F",
+            cancelButtonColor: "#C14949",
+            background: "#FFF7F0",
+            preConfirm: () => {
+                let cantidad = parseInt(document.getElementById('swal_cantidad').value);
+                let observacion = document.getElementById('swal_observacion').value;
+                let recargo = parseFloat(document.getElementById('swal_recargo').value);
+
+                if (isNaN(cantidad) || cantidad <= 0) {
+                    Swal.showValidationMessage("La cantidad debe ser mayor a 0");
+                }
+
+                if (isNaN(recargo) || recargo < 0) {
+                    Swal.showValidationMessage("El recargo debe ser un número válido mayor o igual a 0");
+                }
+
+                return {
+                    cantidad: cantidad,
+                    observacion: observacion,
+                    recargo: recargo
+                };
+            }
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            fetch("{% url 'cajero_editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(result.value)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('tabla_detalles').innerHTML = data.tabla;
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Detalle actualizado',
+                            text: data.mensaje,
+                            timer: 1400,
+                            showConfirmButton: false,
+                            background: "#FFF7F0",
+                            iconColor: "#3E7A3F"
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.mensaje,
+                            background: "#FFF7F0"
+                        });
+                    }
+                });
+        });
+    }
+
+
+    // Eliminar detalle
+    function eliminarDetalleAjax(detalle_id) {
+        Swal.fire({
+            title: "¿Eliminar producto?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            background: "#FFF7F0",
+            confirmButtonColor: "#C14949",
+            cancelButtonColor: '#4F6D7A',
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            fetch("{% url 'cajero_eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
+                method: "POST",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('tabla_detalles').innerHTML = data.tabla;
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Eliminado',
+                            text: data.mensaje,
+                            timer: 1500,
+                            showConfirmButton: false,
+                            background: "#FFF7F0",
+                            iconColor: "#3E7A3F"
+                        });
+                    }
+                });
+        });
+    }
+
+    // Validar que haya productos antes de finalizar
+    function validarProductos() {
+        const filas = document.querySelectorAll("#tabla_detalles tbody tr");
+        if (filas.length === 1 && filas[0].textContent.includes("Aún no hay productos")) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sin productos',
+                text: 'Debe agregar al menos un producto antes de finalizar.',
+                background: "#FFF7F0"
+            });
+            return false;
+        }
+        return true;
+    }
+
+    document.getElementById("btn_finalizar").addEventListener("click", function (event) {
+        if (!validarProductos()) {
+            event.preventDefault();
+            return;
+        }
+
+        event.preventDefault();
+        Swal.fire({
+            icon: "success",
+            title: "Pedido registrado correctamente",
+            text: "Enviando a cocina...",
+            timer: 1500,
+            showConfirmButton: false,
+            background: "#FFF7F0",
+            iconColor: "#3E7A3F"
         });
 
-        return false;
-    }
-
-    return true;
-}
-
-// Bloquear el botón si no hay productos
-document.getElementById("btn_finalizar").addEventListener("click", function(event){
-    if (!validarProductos()) {
-        event.preventDefault();
-        return;
-    }
-
-    event.preventDefault();
-
-    Swal.fire({
-        icon: "success",
-        title: "Pedido registrado correctamente",
-        text: "Redirigiendo...",
-        timer: 1500,
-        showConfirmButton: false
+        setTimeout(() => {
+            window.location.href = this.href;
+        }, 1500);
     });
-
-    setTimeout(() => {
-        window.location.href = this.href; 
-    }, 1500);
-});
-
 </script>
 
-
-
-
-<br><br><br>
+<br>
 {% endblock %}

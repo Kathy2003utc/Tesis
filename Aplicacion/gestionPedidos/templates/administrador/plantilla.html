@@ -1,367 +1,455 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Artistico</title>
-    <meta
-      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-      name="viewport"
-    />
-    <!--PASO 1 jQuery-->
-    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <!--PASO 2 jQuery validacion-->
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.js"></script>
-    
+<head>
+    <meta charset="UTF-8">
+    <title>Café Restaurante Productos Carlos Gerardo · Administración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <link
-      rel="icon"
-      href="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/favicon.ico'}"
-      type="image/x-icon"
-    />
 
-    <!--Importando sweetalert2-->
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
-    <!-- DataTables 1.13.x -->
+    <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    <!-- Botones para exportar -->
+    <!-- DataTables Buttons -->
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-
-    <!-- Librerías necesarias para exportar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-    <!-- ImpoRTANDO FILE INPUT-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/js/fileinput.min.js" integrity="sha512-0wQvB58Ha5coWmcgtg4f11CTSSxfrfLClUp9Vy0qhzYzCZDSnoB4Vhu5JXJFs7rU24LE6JsH+6hpP7vQ22lk5w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/css/fileinput.min.css" integrity="sha512-yDVMONIXJPPAoULZ92Ygngsn8ZUGB4ejm6fCc6q9ZvdH8blFAOgg75XZSEaAJ5m4E/yPI1BAi5fF2axMHVuZ5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        
-    <!--Idioma español para agregar la imagen-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.0/js/locales/es.min.js"></script>
-    
-    <!--IMportacion de boostrap-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js" integrity="sha512-ykZ1QQr0Jy/4ZkvKuqWn4iF3lqPZyij9iRv6sGqLRdTPkY69YX6+7wvVGmsdBbiIfN/8OdsI7HABjvEok6ZopQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!--Importando Css de Boostrap-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" integrity="sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!--Importando iconos de fint awasome-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Bootstrap Icons CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+/* ================= PALETA (MISMA DEL SIDEBAR ORIGINAL) ================= */
+:root{
+  --cafe-profundo:#8A5A3C;
+  --cafe-tostado:#A66E4A;
+  --verde:#3E7A3F;
+  --blanco-calido:#F8F5F2;
+  --crema-suave:#FAF4EC;
+  --gris-suave:#E2DED8;
+  --texto-oscuro:#2B1A10;
+  --rojo-alerta:#C14949;
+}
 
-    <!-- Fonts and icons -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/webfont/webfont.min.js' %}"></script>
-    <script>
-      WebFont.load({
-        google: { families: ["Public Sans:300,400,500,600,700"] },
-        custom: {
-          families: [
-            "Font Awesome 5 Solid",
-            "Font Awesome 5 Regular",
-            "Font Awesome 5 Brands",
-            "simple-line-icons",
-          ],
-          urls: ["{% static 'plantilla/kaiadmin/assets/css/fonts.min.css' %}"],
-        },
-        active: function () {
-          sessionStorage.fonts = true;
-        },
-      });
-    </script>
+/* ================= BASE ================= */
+body{
+  margin:0;
+  background:var(--blanco-calido);
+  color:var(--texto-oscuro);
+  font-family:system-ui,-apple-system,sans-serif;
+}
 
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/bootstrap.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/plugins.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/kaiadmin.min.css' %}" />
+.app{
+  display:flex;
+  min-height:100vh;
+}
 
-    <!-- CSS Just for demo purpose, don't include it in your project -->
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/demo.css' %}" />
+/* ================= OVERLAY ================= */
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.35);
+  display:none;
+  z-index:1040;
+}
+.overlay.show{display:block;}
 
-    <style>
-      .main-panel > footer {
-          margin-top: auto;
-      }
-  </style>
+/* ================= SIDEBAR ================= */
+.sidebar{
+  width:260px;
+  background:linear-gradient(180deg,var(--cafe-profundo),var(--cafe-tostado));
+  color:white;
+  position:fixed;
+  top:0;
+  left:-260px;
+  height:100%;
+  transition:.3s ease;
+  z-index:1050;
+}
+.sidebar.show{left:0;}
 
-  </head>
-  <body>
-    <div class="wrapper">
-      <!-- Sidebar -->
-      <div class="sidebar" data-background-color="dark">
-        <div class="sidebar-logo">
-          <!-- Logo Header -->
-          <div class="logo-header" data-background-color="dark">
-            <a href="" class="logo">
-              <img
-                src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
-                alt="navbar brand"
-                class="navbar-brand"
-                height="20"
-              />
-            </a>
-            <div class="nav-toggle">
-              <button class="btn btn-toggle toggle-sidebar">
-                <i class="gg-menu-right"></i>
-              </button>
-              <button class="btn btn-toggle sidenav-toggler">
-                <i class="gg-menu-left"></i>
-              </button>
-            </div>
-            <button class="topbar-toggler more">
-              <i class="gg-more-vertical-alt"></i>
-            </button>
-          </div>
-          <!-- End Logo Header -->
-        </div>
-          
-        <div class="sidebar-wrapper scrollbar scrollbar-inner">
-        <div class="sidebar-content">
-            <ul class="nav nav-secondary">
-            <li class="nav-section">
-                <span class="sidebar-mini-icon">
-                <i class="fa fa-ellipsis-h"></i>
-                </span>
-                <h4 class="text-section">Contratación de artistas</h4>
-            </li>
+.sidebar-header{
+  padding:18px 14px;
+  text-align:center;
+  background:rgba(0,0,0,.18);
+}
 
-            <li class="nav-item">
-                <a href="{% url 'dashboard_admin' %}">
-                <i class="fas fa-home"></i>
-                <p>Inicio</p>
-                </a>
-            </li>
+.sidebar-header img{
+  width:102px;           /* CAMBIO: un poquito mas grande */
+  height:102px;          /* CAMBIO: un poquito mas grande */
+  object-fit:cover;
+  border-radius:50%;
+  margin-bottom:10px;
+  background:transparent; /* ya sin fondo feo */
+}
 
-            <li class="nav-item">
-                <a href="{}">
-                <i class="fas fa-calendar-alt"></i>
-                <p>Lista de eventos</p>
-                </a>
-            </li>
+.sidebar-header strong{
+  display:block;
+  font-size:.95rem;
+}
 
-            <li class="nav-item">
-                <a href="{}">
-                <i class="fas fa-file-signature"></i>
-                <p>Lista de contratos</p>
-                </a>
-            </li>
+/* ================= MENU ================= */
+.menu{
+  list-style:none;
+  padding:8px 0;
+  margin:0;
+}
 
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-palette"></i>
-                <p>Lista de artistas</p>
-                </a>
-            </li>
+.menu li{
+  margin:10px 0;
+}
 
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-users"></i>
-                <p>Lista de clientes</p>
-                </a>
-            </li>
+.menu li a{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:13px 22px;
+  color:#f7f3ee;
+  text-decoration:none;
+  font-size:.95rem;
+  border-left:4px solid transparent;
+}
 
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-money-check-alt"></i>
-                <p>Lista de pagos</p>
-                </a>
-            </li>
+.menu li a i{width:20px;}
 
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-star"></i>
-                <p>Reseñas</p>
-                </a>
-            </li>
+.menu li a:hover{
+  background:rgba(255,255,255,.08);
+}
 
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-envelope"></i>
-                <p>Mensajes</p>
-                </a>
-            </li>
-            </ul>
-        </div>
-        </div>
+.menu li a.active{
+  background:rgba(255,255,255,.18);
+  border-left-color:var(--verde);
+  font-weight:600;
+}
 
-      </div>
-      <!-- End Sidebar -->
+/* ================= MAIN ================= */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
 
-      <div class="main-panel">
-        <div class="main-header">
-          <div class="main-header-logo">
-            <!-- Logo Header -->
-            <div class="logo-header" data-background-color="dark">
-              <a href="index.html" class="logo">
-                <img
-                  src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
-                  alt="navbar brand"
-                  class="navbar-brand"
-                  height="20"
-                />
-              </a>
-              <div class="nav-toggle">
-                <button class="btn btn-toggle toggle-sidebar">
-                  <i class="gg-menu-right"></i>
-                </button>
-                <button class="btn btn-toggle sidenav-toggler">
-                  <i class="gg-menu-left"></i>
-                </button>
-              </div>
-              <button class="topbar-toggler more">
-                <i class="gg-more-vertical-alt"></i>
-              </button>
-            </div>
-            <!-- End Logo Header -->
-          </div>
-          <!-- Navbar Header -->
-          <nav
-            class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom"
-          >
-            <div class="container-fluid">
-              <nav
-                class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex"
-              >
-                  <a class="navbar-brand" href="#">Sistema - Administrador</a>
-              </nav>
+/* ================= TOPBAR ================= */
+.topbar{
+  height:56px;
+  background:var(--crema-suave);
+  border-bottom:1px solid var(--gris-suave);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  position:sticky;
+  top:0;
+  z-index:1000;
+}
 
-              <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
+.menu-btn{
+  background:none;
+  border:none;
+  font-size:1.6rem;
+  color:var(--texto-oscuro);
+}
 
-                <div class="container-fluid">
+/* ================= CONTENT ================= */
+.content{
+  padding:20px;
+  flex:1;
+}
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCliente" aria-controls="navbarCliente" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+/* ================= FOOTER ================= */
+footer{
+  background:var(--crema-suave);
+  border-top:1px solid var(--gris-suave);
+  font-size:13px;
+  padding:10px;
+  text-align:center;
+}
 
-            <div class="collapse navbar-collapse" id="navbarCliente">
+/* ================= FORM ERRORS ================= */
+.error{color:var(--rojo-alerta);font-weight:600;font-size:.85rem;}
+.form-control.error{border:1px solid var(--rojo-alerta);}
 
-                <div class="d-flex align-items-center">
-                <a href="{% url 'perfil_admin' %}" class="btn btn-light btn-sm me-2">
-                    <i class="bi bi-person-circle me-1"></i> Ver mi perfil
-                </a>
-                <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
-                    <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
-                </a>
+/* ================= DESKTOP ================= */
+@media(min-width:992px){
+  .sidebar{left:0;}
+  .main{margin-left:260px;}
+  .menu-btn{display:inline-flex;} /* CAMBIO: permitir colapsar en desktop */
+  .overlay{display:none!important;}
 
-                </div>
-            </div>
-            </div>
-              </ul>
-            </div>
-          </nav>
-          <!-- End Navbar -->
-        </div>
+  /* ================= NUEVO: SIDEBAR COLAPSADO (SOLO ICONOS) ================= */
+  .sidebar.collapsed{
+    width:74px;
+  }
+  .main.collapsed{
+    margin-left:74px;
+  }
 
-    {% block contenido %}
-    {% endblock %}
+  /* Al pasar mouse: se expande completo */
+  .sidebar.collapsed:hover{
+    width:260px;
+  }
+
+  /* Ocultar textos cuando esta colapsado */
+  .sidebar.collapsed .sidebar-header strong{
+    opacity:0;
+    height:0;
+    overflow:hidden;
+    display:block;
+    transition:.2s ease;
+  }
+
+  .sidebar.collapsed .menu li a{
+    justify-content:center;
+    padding:13px 0;
+    gap:0;
+  }
+
+  .sidebar.collapsed .menu li a i{
+    width:auto;
+    font-size:1.05rem;
+  }
+
+  .sidebar.collapsed .menu li a{
+    font-size:0;
+  }
+
+  .sidebar.collapsed .menu li a i{
+    font-size:1.05rem;
+  }
+
+  /* Cuando hace hover y se expande: vuelven textos */
+  .sidebar.collapsed:hover .sidebar-header strong{
+    opacity:1;
+    height:auto;
+    overflow:visible;
+  }
+
+  .sidebar.collapsed:hover .menu li a{
+    justify-content:flex-start;
+    padding:13px 22px;
+    gap:12px;
+    font-size:.95rem;
+  }
+
+  .sidebar.collapsed:hover .menu li a i{
+    width:20px;
+  }
+
+  /* Logo más pequeño en modo colapsado, y vuelve al normal en hover */
+  .sidebar.collapsed .sidebar-header img{
+    width:46px;
+    height:46px;
+    margin-bottom:0;
+    transition:.2s ease;
+  }
+  .sidebar.collapsed:hover .sidebar-header img{
+    width:102px;
+    height:102px;
+    margin-bottom:10px;
+  }
+}
+
+/* ================= FIX SCROLL HORIZONTAL GLOBAL ================= */
+.main{
+  min-width: 0;
+}
+
+.content{
+  min-width: 0;
+  overflow-x: visible;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="app">
+
+<!-- ================= SIDEBAR ================= -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{% get_media_prefix %}logo/logo.jpeg" alt="Logo">
+    <strong>Café Restaurante<br>Productos Carlos Gerardo</strong>
+  </div>
+
+  <ul class="menu"><li><a href="{% url 'dashboard_admin' %}" class="{% if '/administrador/dashboard/' in request.path %}active{% endif %}">
+      <i class="fas fa-home"></i> Inicio</a></li>
+
+    <li><a href="{% url 'listar_trabajadores' %}" class="{% if '/trabajadores/' in request.path %}active{% endif %}">
+      <i class="fas fa-users"></i> Trabajadores</a></li>
+
+    <li><a href="{% url 'listar_mesas' %}" class="{% if '/mesas/' in request.path %}active{% endif %}">
+      <i class="fas fa-table"></i> Mesas</a></li>
+
+    <li><a href="{% url 'listar_menu' %}" class="{% if '/menu/' in request.path %}active{% endif %}">
+      <i class="fas fa-utensils"></i> Menú</a></li>
+
+    <li><a href="{% url 'reportes_general' %}" class="{% if '/reportes/' in request.path %}active{% endif %}">
+      <i class="fas fa-chart-line"></i> Reportes</a></li>
+  </ul>
+</aside>
+
+<!-- ================= MAIN ================= -->
+<div class="main" id="main">
+
+<div class="topbar">
+  <button class="menu-btn" id="btnMenu">
+    <i class="bi bi-list" id="btnMenuIcon"></i> <!-- CAMBIO: id para cambiar icono -->
+  </button>
+  <strong>Panel Administrativo</strong>
+
+  <div class="d-flex align-items-center gap-3">
+    <a href="{% url 'perfil_admin' %}" class="text-dark">
+      <i class="bi bi-person-circle fs-4"></i>
+    </a>
+    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger">
+      Cerrar Sesión
+    </a>
+  </div>
+</div>
+
+<main class="content">
+  {% block contenido %}{% endblock %}
+</main>
+
+<footer>
+  <strong>Katherin Pico</strong> · kathy.jim06.cc@gmail.com · 0958615103
+</footer>
+
+</div>
+</div>
+
+<script>
+const btnMenu = document.getElementById("btnMenu");
+const btnMenuIcon = document.getElementById("btnMenuIcon"); // NUEVO
+const sidebar = document.getElementById("sidebar");
+const main = document.getElementById("main"); // NUEVO
+const overlay = document.getElementById("overlay");
+
+function isDesktop(){
+  return window.matchMedia("(min-width: 992px)").matches;
+}
+
+function setBtnIconCollapsed(isCollapsed){
+  if(!btnMenuIcon) return;
+  btnMenuIcon.classList.remove("bi-list","bi-three-dots-vertical");
+  btnMenuIcon.classList.add(isCollapsed ? "bi-three-dots-vertical" : "bi-list");
+}
+
+btnMenu.onclick = () => {
+  if(isDesktop()){
+    // DESKTOP: colapsar/expandir (barra de iconos)
+    const willCollapse = !sidebar.classList.contains("collapsed");
+    sidebar.classList.toggle("collapsed", willCollapse);
+    main.classList.toggle("collapsed", willCollapse);
+    setBtnIconCollapsed(willCollapse);
+
+    // En desktop no usamos overlay
+    overlay.classList.remove("show");
+    sidebar.classList.remove("show");
+    return;
+  }
+
+  // MOVIL: tu comportamiento actual (overlay + show)
+  sidebar.classList.toggle("show");
+  overlay.classList.toggle("show");
+};
+
+overlay.onclick = () => {
+  // Solo aplica en móvil
+  sidebar.classList.remove("show");
+  overlay.classList.remove("show");
+};
+
+// Si cambias tamaño de pantalla, aseguramos estado correcto
+window.addEventListener("resize", () => {
+  if(isDesktop()){
+    overlay.classList.remove("show");
+    sidebar.classList.remove("show");
+    // si estaba en móvil abierto, lo cerramos
+  } else {
+    // en móvil no forzamos collapsed
+    // (puedes dejarlo, o si quieres, quitar collapsed cuando pase a móvil)
+    sidebar.classList.remove("collapsed");
+    main.classList.remove("collapsed");
+    setBtnIconCollapsed(false);
+  }
+});
+</script>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="django-message"
+         data-type="{{ message.tags }}"
+         data-text="{{ message|escapejs }}">
+    </div>
+  {% endfor %}
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    document.querySelectorAll(".django-message").forEach(msg => {
+        const type = msg.dataset.type;
+        const text = msg.dataset.text;
+
+        let config = {
+            success: {
+                icon: "success",
+                title: "Éxito",
+                color: "#4F8A57"
+            },
+            error: {
+                icon: "error",
+                title: "Error",
+                color: "#C14949"
+            },
+            warning: {
+                icon: "warning",
+                title: "Advertencia",
+                color: "#D9A441"
+            }
+        };
+
+        const cfg = config[type] || config.success;
+
+        Swal.fire({
+            icon: cfg.icon,
+            title: cfg.title,
+            text: text,
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: cfg.color,
+            iconColor: cfg.color,
+            background: "#FFF7F0"
+        });
+
+        msg.remove(); // limpia el DOM
+    });
+
+});
+</script>
 
 
-        <footer>
-          <div class="row" style="padding: 30px; color:#2B1A10; background-color:white;">
-            <div class="text-center">
-              <h4 class="text-center">Desarrollado por Katherin Pico</h4>
-              <h5 class="text-center">kathy.jim06.cc@gmail.com</h5>
-              <h5 class="text-center">0958615103</h5>
-            </div>
-          </div>
-        </footer>
-    <!--   Core JS Files   -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/jquery-3.7.1.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/bootstrap.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/popper.min.js' %}"></script>
 
-    <!-- jQuery Scrollbar -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js' %}"></script>
-
-    <!-- Chart JS -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart.js/chart.min.js' %}"></script>
-
-    <!-- jQuery Sparkline -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery.sparkline/jquery.sparkline.min.js' %}"></script>
-
-    <!-- Chart Circle -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart-circle/circles.min.js' %}"></script>
-
-    <!-- Datatables -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/datatables/datatables.min.js' %}"></script>
-
-    <!-- jQuery Vector Maps -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/jsvectormap.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/world.js' %}"></script>
-
-    <!-- Sweet Alert -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/sweetalert/sweetalert.min.js' %}"></script>
-
-    <!-- Kaiadmin JS -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/kaiadmin.min.js' %}"></script>
-
-    <!-- Kaiadmin DEMO methods, don't include it in your project! -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/setting-demo.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/demo.js' %}"></script>
-    <script>
-      $("#lineChart").sparkline([102, 109, 120, 99, 110, 105, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#177dff",
-        fillColor: "rgba(23, 125, 255, 0.14)",
-      });
-
-      $("#lineChart2").sparkline([99, 125, 122, 105, 110, 124, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#f3545d",
-        fillColor: "rgba(243, 84, 93, .14)",
-      });
-
-      $("#lineChart3").sparkline([105, 103, 123, 100, 95, 105, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#ffa534",
-        fillColor: "rgba(255, 165, 52, .14)",
-      });
-    </script>
-
-    {% if messages %}
-      {% for mensaje in messages %}
-        <script>
-            Swal.fire({
-              title: "CONFIRMACIÓN",
-              text: "{{ mensaje }}",
-              icon: "success",
-              showConfirmButton: false,
-              timer: 1500
-            });
-        </script>
-      {% endfor %}
-    {% endif %}
-
-    <style>
-      .error{
-      color:#8C2F39;
-      font-weight: bold;
-      }
-
-      .form-control.error{
-      border: 1px solid #C14949;
-      }
-    </style>
-
-  </body>
+</body>
 </html>

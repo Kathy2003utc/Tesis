@@ -1,3 +1,4 @@
+import json
 import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -5,7 +6,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from .decorators import rol_requerido
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
-from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje
+from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje, Pago, Comprobante
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -16,6 +17,30 @@ from django.views.decorators.csrf import csrf_protect
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.timezone import localtime
+from django.db.models import Exists, OuterRef
+from django.utils import timezone
+from decimal import Decimal, ROUND_HALF_UP
+from django.db import transaction
+from django.http import HttpResponse
+from django.template.loader import get_template
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Image
+import os
+from django.conf import settings
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.drawing.image import Image as ExcelImage
+from django.utils import timezone
+from weasyprint import HTML
+from django.template.loader import render_to_string
+from django.core.files.base import ContentFile
+import tempfile
 
 
 # ----------------------------
@@ -539,7 +564,17 @@ def registrar_menu(request):
         precio = request.POST.get('precio', '').strip()
         tipo = request.POST.get('tipo', '').strip()
 
-        # Validación backend: nombre solo letras
+        # 1. VALIDAR CAMPOS VACÍOS PRIMERO
+        if not nombre or not precio or not tipo:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return render(request, 'administrador/menu/registrar_menu.html', {
+                'nombre': nombre,
+                'descripcion': descripcion,
+                'precio': precio,
+                'tipo': tipo,
+            })
+
+        # 2. VALIDAR SOLO LETRAS
         if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$', nombre):
             messages.error(request, "El nombre solo debe contener letras.")
             return render(request, 'administrador/menu/registrar_menu.html', {
@@ -549,17 +584,7 @@ def registrar_menu(request):
                 'tipo': tipo,
             })
 
-        # Validar que no esté vacío
-        if not nombre or not precio or not tipo:
-            messages.error(request, "Todos los campos obligatorios deben completarse.")
-            return render(request, 'administrador/menu/registrar_menu.html', {
-                'nombre': nombre,
-                'descripcion': descripcion,
-                'precio': precio,
-                'tipo': tipo,
-            })
-
-        # Validar precio
+        # 3. VALIDAR PRECIO
         try:
             precio = float(precio)
             if precio <= 0:
@@ -573,7 +598,7 @@ def registrar_menu(request):
                 'tipo': tipo,
             })
 
-        # Validar nombre repetido
+        # 4. VALIDAR NOMBRE DUPLICADO
         if Producto.objects.filter(nombre__iexact=nombre).exists():
             messages.error(request, "Ya existe un producto con ese nombre.")
             return render(request, 'administrador/menu/registrar_menu.html', {
@@ -582,7 +607,7 @@ def registrar_menu(request):
                 'tipo': tipo,
             })
 
-        # Crear el producto
+        # 5. CREAR PRODUCTO
         Producto.objects.create(
             nombre=nombre,
             descripcion=descripcion,
@@ -703,8 +728,17 @@ def api_estados_pedidos(request):
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def listar_pedidos(request):
-    pedidos = Pedido.objects.filter(tipo_pedido='restaurante', mesero=request.user).order_by('-id')
-    return render(request, 'mesero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
+
+    hoy = timezone.localdate()  # Fecha del sistema
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='restaurante',
+        mesero=request.user,
+        fecha_hora__date=hoy      
+    ).order_by('-id')
+
+    return render(request, 'mesero/pedidos/listar_pedidos.html', {
+        'pedidos': pedidos
+    })
 
 # Crear pedido
 @login_required(login_url='login')
@@ -753,32 +787,17 @@ def ver_pedido(request, pedido_id):
         messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
-    # Enviar pedido a cocina si está en creación
+    # --- Enviar a cocina ---
     if pedido.estado == 'en_creacion':
+        # Primera vez que se envía
         pedido.estado = 'en preparacion'
         pedido.save()
+        enviar_pedido_cocina(pedido)          # ← SOLO AQUÍ SE ENVÍA nuevo_pedido
+    else:
+        # Pedido ya fue enviado antes: solo actualizar
+        pedido.refresh_from_db()
+        enviar_actualizacion_cocina(pedido)   # ← ACTUALIZA sin duplicar
 
-        # Notificar a cocineros
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            "pedidos_activos",
-            {
-                "type": "nuevo_pedido",
-                "pedido": {
-                    "id": pedido.id,
-                    "mesa": pedido.mesa.numero if pedido.mesa else None,
-                    "mesero": pedido.mesero.nombre,
-                    "productos": [
-                        {
-                            "nombre": d.producto.nombre,
-                            "cantidad": d.cantidad,
-                            "observacion": d.observacion
-                        }
-                        for d in pedido.detalles.all()
-                    ]
-                }
-            }
-        )
 
     return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
 
@@ -786,33 +805,90 @@ def ver_pedido(request, pedido_id):
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def editar_pedido(request, pedido_id):
+
     pedido = get_object_or_404(Pedido, id=pedido_id)
 
     if request.method == 'POST':
-        pedido.mesero_id = request.POST.get('mesero')
-        pedido.mesa_id = request.POST.get('mesa')
 
-        # Solo cocinero puede modificar estado
-        if request.user.rol == 'cocinero':
-            pedido.estado = request.POST.get('estado')
+        nueva_mesa_id = request.POST.get('mesa')
+        mesa_anterior_id = pedido.mesa_id
 
+        # ---------------------------------------------
+        # 1. CAMBIO DE MESA → Liberar anterior y ocupar nueva
+        # ---------------------------------------------
+        if str(mesa_anterior_id) != str(nueva_mesa_id):
+
+            # Liberar mesa anterior
+            if mesa_anterior_id:
+                mesa_old = Mesa.objects.get(id=mesa_anterior_id)
+                mesa_old.estado = "libre"
+                mesa_old.save()
+
+            # Ocupar nueva mesa
+            mesa_new = Mesa.objects.get(id=nueva_mesa_id)
+            mesa_new.estado = "ocupada"
+            mesa_new.save()
+
+            pedido.mesa_id = nueva_mesa_id
+
+        # ---------------------------------------------
+        # 2. Estado siempre vuelve a en preparación
+        # ---------------------------------------------
+        pedido.estado = "en preparacion"
         pedido.save()
+
+        # ---------------------------------------------
+        # 3. ENVIAR ACTUALIZACIÓN A COCINA
+        # ---------------------------------------------
+        enviar_actualizacion_cocina(pedido)
 
         return JsonResponse({
             "success": True,
-            "mensaje": f"Pedido #{pedido.id} actualizado correctamente."
+            "mensaje": f"Pedido #{pedido.id} actualizado correctamente.",
+            "pedido_id": pedido.id
         })
 
-    meseros = Usuario.objects.filter(rol='mesero')
-    mesas = Mesa.objects.all()
+    # SOLO MESAS LIBRES + LA MESA ACTUAL
+    mesas = Mesa.objects.filter(estado="libre") | Mesa.objects.filter(id=pedido.mesa_id)
     productos = Producto.objects.all()
 
     return render(request, 'mesero/pedidos/editar_pedido.html', {
         'pedido': pedido,
-        'meseros': meseros,
         'mesas': mesas,
         'productos': productos
     })
+
+def enviar_actualizacion_cocina(pedido):
+    channel_layer = get_channel_layer()
+
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "actualizar_pedido",
+            "pedido": {
+                "id": pedido.id,
+                # Mantener título igual al original
+                "mesa": pedido.mesa.numero if pedido.mesa else "Domicilio",
+
+                # Mostrar correctamente quién atendió
+                "mesero": pedido.mesero.nombre if pedido.tipo_pedido == 'restaurante' else f"Cajero: {pedido.cajero.nombre}",
+
+                # Productos del pedido
+                "productos": [
+                    {
+                        "nombre": d.producto.nombre,
+                        "cantidad": d.cantidad,
+                        "observacion": d.observacion,
+                    }
+                    for d in pedido.detalles.all()
+                ],
+
+                # MUY IMPORTANTE: indicar tipo de pedido
+                "tipo": pedido.tipo_pedido
+            }
+        }
+    )
+
 
 # Eliminar pedido
 @login_required(login_url='login')
@@ -961,18 +1037,24 @@ def eliminar_detalle_ajax(request, detalle_id):
 # ----------------------------
 
 def vista_cocina(request):
+
+    hoy = timezone.localdate()
+
     pedidos = Pedido.objects.filter(
         estado='en preparacion',
-        tipo_pedido='restaurante'
+        tipo_pedido='restaurante',
+        fecha_hora__date=hoy
     ).order_by('id')
 
     meseros = Usuario.objects.filter(rol='mesero')
+    cajeros = Usuario.objects.filter(rol='cajero')
+
 
     return render(request, 'cocinero/pedido.html', {
-        'pedidos': pedidos,
-        'meseros': meseros
+        'pedidos_restaurante': pedidos,
+        'meseros': meseros,
+        'cajeros': cajeros
     })
-
 
 
 @csrf_protect
@@ -982,33 +1064,68 @@ def marcar_pedido_listo(request, pedido_id):
         pedido.estado = "listo"
         pedido.save()
 
-        # Guardar notificación en BD
-        Notificacion.objects.create(
-            usuario_destino=pedido.mesero,
+        # Destinatario de la notificación (mesero si restaurante, cajero si domicilio)
+        destinatario = pedido.mesero if pedido.tipo_pedido == 'restaurante' else pedido.cajero
+
+        # Guardar y obtener la instancia de la notificación
+        notif = Notificacion.objects.create(
+            usuario_destino=destinatario,
             tipo="pedido_listo",
             mensaje=f"El pedido #{pedido.id} está listo.",
             pedido=pedido
         )
 
-        # Emitir WebSocket
+        # ==========================================
+        # 1) NOTIFICACIÓN NORMAL (mesero / cajero)
+        # ==========================================
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
-            f"notificaciones_{pedido.mesero.id}",
+            f"notificaciones_{destinatario.id}",
             {
                 "type": "enviar_notificacion",
                 "tipo": "pedido_listo",
                 "mensaje": f"El pedido #{pedido.id} está listo.",
-                "mesa": pedido.mesa.numero,
-                "pedido": pedido.id
+                "mesa": pedido.mesa.numero if pedido.mesa else None,
+                "pedido": pedido.id,
+                "id": notif.id,
+                "fecha": localtime(notif.fecha_hora).strftime("%d/%m/%Y %H:%M"),
+            }
+        )
+
+        # ==========================================
+        # 2) EVENTO PARA LA TABLA DE COBROS (cajero)
+        #    → nuevo_cobro (WebSocket)
+        # ==========================================
+
+        # Nombre que se mostrará en "mesa"
+        mesa_texto = pedido.mesa.numero if pedido.mesa else "Domicilio"
+
+        # Quien aparece como "mesero" en la tabla de cobro
+        if pedido.tipo_pedido == 'restaurante' and pedido.mesero:
+            nombre_atendio = pedido.mesero.nombre
+        elif pedido.tipo_pedido == 'domicilio' and pedido.cajero:
+            nombre_atendio = f"Cajero: {pedido.cajero.nombre}"
+        else:
+            nombre_atendio = "N/A"
+
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",
+            {
+                "type": "nuevo_cobro",
+                "origen": "domicilio" if pedido.tipo_pedido == "domicilio" else "restaurante",
+                "pedido_id": pedido.id,
+                "mesa": mesa_texto,
+                "mesero": nombre_atendio,
+                "total": float(pedido.total),
+                "estado_pago": "pendiente",
             }
         )
 
         return JsonResponse({"success": True})
-    return JsonResponse({"success": False}, status=400)
 
 def enviar_pedido_cocina(pedido):
-    """Enviar el pedido al grupo de cocineros solo cuando esté finalizado."""
     channel_layer = get_channel_layer()
+
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
         {
@@ -1016,7 +1133,11 @@ def enviar_pedido_cocina(pedido):
             "pedido": {
                 "id": pedido.id,
                 "mesa": pedido.mesa.numero if pedido.mesa else None,
-                "mesero": pedido.mesero.nombre,
+                "mesero": (
+                    pedido.mesero.nombre 
+                    if pedido.mesero 
+                    else f"Cajero: {pedido.cajero.nombre}"
+                ),
                 "productos": [
                     {
                         "nombre": d.producto.nombre,
@@ -1035,37 +1156,43 @@ def enviar_mensaje_mesero(request):
         import json
         data = json.loads(request.body)
 
-        mesero_id = data.get("mesero_id")
+        usuario_id = data.get("usuario_id")
         mensaje = data.get("mensaje")
 
-        mesero = get_object_or_404(Usuario, id=mesero_id)
+        destinatario = get_object_or_404(Usuario, id=usuario_id)
 
-        Mensaje.objects.create(
+        # Guardar mensaje
+        msg = Mensaje.objects.create(
             remitente=request.user,
-            destinatario=mesero,
+            destinatario=destinatario,
             contenido=mensaje
         )
 
-        Notificacion.objects.create(
-            usuario_destino=mesero,
+        # Crear notificación
+        notif = Notificacion.objects.create(
+            usuario_destino=destinatario,
             tipo="mensaje",
             mensaje=mensaje
         )
 
+        # Enviar websocket
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
-            f"notificaciones_{mesero_id}",
+            f"notificaciones_{destinatario.id}",
             {
                 "type": "enviar_notificacion",
                 "tipo": "mensaje",
                 "mensaje": mensaje,
+                "id": notif.id,
+                "fecha": notif.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+                "pedido": None,
+                "mesa": None,
             }
         )
 
         return JsonResponse({"success": True})
 
     return JsonResponse({"success": False}, status=400)
-
 
 def notificaciones_mesero(request):
     notificaciones = Notificacion.objects.filter(
@@ -1085,7 +1212,7 @@ def obtener_notificaciones(request):
             "mensaje": n.mensaje,
             "pedido": n.pedido_id if n.pedido else None,
             "mesa": n.pedido.mesa.numero if n.pedido and n.pedido.mesa else None,
-            "fecha": n.fecha_hora.strftime("%d/%m/%Y %H:%M")
+            "fecha": localtime(n.fecha_hora).strftime("%d/%m/%Y %H:%M"),
         }
         for n in notifs
     ], safe=False)
@@ -1099,217 +1226,183 @@ def eliminar_notificacion(request, notif_id):
 
     return JsonResponse({"success": False}, status=400)
 
-
-"""
 # ----------------------------
-# Cajero-Pedidos
+# Cajero - Pedidos a domicilio
 # ----------------------------
-
-# Listar pedidos
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def listar_pedidos(request):
-    pedidos = Pedido.objects.filter(mesero=request.user).order_by('id')
-    return render(request, 'mesero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
+@rol_requerido('cajero')
+def cajero_listar_pedidos(request):
 
-# Crear pedido
-@login_required(login_url='login')
-def crear_pedido(request):
-    if request.method == 'POST':
-        tipo_pedido = request.POST.get('tipo_pedido')
+    hoy = timezone.localdate()
 
-        # Validaciones según el rol
-        if tipo_pedido == 'restaurante' and request.user.rol != 'mesero':
-            messages.error(request, "Solo los meseros pueden crear pedidos en restaurante.")
-            return redirect('crear_pedido')
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user,
+        fecha_hora__date=hoy
+    ).exclude(estado__in=['borrador', 'en_creacion']).order_by('-id')
 
-        if tipo_pedido == 'domicilio' and request.user.rol != 'cajero':
-            messages.error(request, "Solo los cajeros pueden crear pedidos a domicilio.")
-            return redirect('crear_pedido')
-
-        # Si pasa las validaciones, se crea normalmente
-        mesero_id = request.user.id
-        mesa_id = request.POST.get('mesa')
-
-        pedido = Pedido.objects.create(
-            mesero_id=mesero_id,
-            mesa_id=mesa_id if mesa_id else None,
-            tipo_pedido=tipo_pedido,
-            estado='en preparacion'
-        )
-
-        return redirect('agregar_detalles', pedido_id=pedido.id)
-
-    mesas = Mesa.objects.all()
-    return render(request, 'mesero/pedidos/crear_pedido.html', {'mesas': mesas})
-
-
-# Ver pedido
-@login_required(login_url='login')
-@rol_requerido('mesero')
-def ver_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-
-    # Validación: no permitir ver pedido sin productos
-    if not pedido.detalles.exists():
-        messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
-        return redirect('agregar_detalles', pedido_id=pedido.id)
-
-    # 🔹 Enviar pedido a cocina solo si está en creación
-    if pedido.estado == 'en_creacion':
-        pedido.estado = 'en preparacion'
-        pedido.save()
-
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            "pedidos_activos",  # grupo para los cocineros
-            {
-                "type": "nuevo_pedido",
-                "pedido": {
-                    "id": pedido.id,
-                    "mesa": pedido.mesa.numero if pedido.mesa else None,
-                    "mesero": pedido.mesero.nombre,
-                    "productos": [
-                        {
-                            "nombre": d.producto.nombre,
-                            "cantidad": d.cantidad,
-                            "observacion": d.observacion
-                        }
-                        for d in pedido.detalles.all()
-                    ]
-                }
-            }
-        )
-
-    return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
-
-# Editar pedido
-@login_required(login_url='login')
-@rol_requerido('mesero')
-def editar_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-
-    if request.method == 'POST':
-        pedido.mesero_id = request.POST.get('mesero')
-        pedido.mesa_id = request.POST.get('mesa') if request.POST.get('mesa') else None
-        # Solo el cocinero puede cambiar el estado del pedido
-        if request.user.rol == 'cocinero':
-            pedido.estado = request.POST.get('estado')
-
-        pedido.save()
-
-        return JsonResponse({
-            "success": True,
-            "mensaje": f"Pedido #{pedido.id} actualizado correctamente."
-        })
-
-    meseros = Usuario.objects.filter(rol='mesero')
-    mesas = Mesa.objects.all()
-    productos = Producto.objects.all()
-
-    return render(request, 'mesero/pedidos/editar_pedido.html', {
-        'pedido': pedido,
-        'meseros': meseros,
-        'mesas': mesas,
-        'productos': productos
+    return render(request, 'cajero/pedidos/listar_pedidos.html', {
+        'pedidos': pedidos
     })
 
-# Eliminar pedido
+
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def eliminar_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-
-    if pedido.estado == 'listo':
-        messages.error(request, f"El pedido #{pedido.id} ya está listo y no puede eliminarse.")
-        return redirect('listar_pedidos')
-
+@rol_requerido('cajero')
+def cajero_crear_pedido(request):
+    """
+    Crea el pedido a domicilio: SOLO datos del cliente.
+    El recargo por producto se pedirá al agregar cada detalle.
+    """
     if request.method == 'POST':
-        id_eliminado = pedido.id
-        pedido.delete()
-        messages.success(request, f"Pedido #{id_eliminado} eliminado.")
-        return redirect('listar_pedidos')
+        nombre_cliente = request.POST.get('nombre_cliente', '').strip()
+        contacto_cliente = request.POST.get('contacto_cliente', '').strip()
+        direccion_entrega = request.POST.get('direccion_entrega', '').strip()
 
-    return redirect('listar_pedidos')
+        # Validaciones básicas
+        if not nombre_cliente or not contacto_cliente or not direccion_entrega:
+            messages.error(request, "Todos los datos del cliente son obligatorios.")
+            return render(request, 'cajero/pedidos/crear_pedido.html', {
+                'user': request.user,
+                'nombre_cliente': nombre_cliente,
+                'contacto_cliente': contacto_cliente,
+                'direccion_entrega': direccion_entrega,
+            })
 
-# ----------------------------
-# Detalles con AJAX
-# ----------------------------
+        # Crear pedido a domicilio (sin recargo, se usará recargo por detalle)
+        pedido = Pedido.objects.create(
+            cajero=request.user,
+            tipo_pedido='domicilio',
+            estado='borrador',
+            nombre_cliente=nombre_cliente,
+            contacto_cliente=contacto_cliente,
+            direccion_entrega=direccion_entrega,
+            # recargo_domicilio = 0 por defecto si existe el campo
+        )
 
-# Agregar detalles con AJAX
+        return redirect('cajero_agregar_detalles', pedido_id=pedido.id)
+
+    return render(request, 'cajero/pedidos/crear_pedido.html', {
+        'user': request.user
+    })
+
+
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def agregar_detalles(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
+@rol_requerido('cajero')
+def cajero_agregar_detalles(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user,
+        estado__in=['borrador', 'en_creacion']
+    )
     productos = Producto.objects.all()
-    return render(request, 'mesero/pedidos/agregar_detalles.html', {'pedido': pedido, 'productos': productos})
+
+    # CALCULAR RECARGOS AQUÍ ✔️✔️✔️
+    total_recargos = pedido.detalles.aggregate(
+        total=Sum(F('recargo') * F('cantidad'))
+    )['total'] or 0
+
+    return render(request, 'cajero/pedidos/agregar_detalles.html', {
+        'pedido': pedido,
+        'productos': productos,
+        'total_recargos': total_recargos
+    })
+
+
 
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def agregar_detalle_ajax(request, pedido_id):
+@rol_requerido('cajero')
+def cajero_agregar_detalle_ajax(request, pedido_id):
+    """
+    Agrega productos al pedido a domicilio.
+    Ahora recibe recargo unitario desde el front (SweetAlert).
+    """
     if request.method == 'POST':
         import json
         data = json.loads(request.body)
+
         producto_id = data.get('producto_id')
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
-        recargo = float(data.get("recargo", 0))
 
-        # Crear o actualizar detalle
+        # Nuevos campos desde JS:
+        recargo_unitario = float(data.get("recargo_unitario", 0))
+        recargo_total = float(data.get("recargo_total", 0))
+
         detalle, creado = DetallePedido.objects.get_or_create(
             pedido_id=pedido_id,
             producto_id=producto_id,
-            defaults={'cantidad': cantidad, 'observacion': observacion, 'recargo': recargo}
+            defaults={
+                'cantidad': cantidad,
+                'observacion': observacion,
+                'recargo': recargo_unitario,
+            }
         )
 
         if not creado:
             detalle.cantidad += cantidad
-            detalle.observacion = observacion  # actualizar observación
-            detalle.recargo = recargo
+            # Si vuelve a agregar, sumamos recargo_total también
+            detalle.recargo = recargo_unitario
+            detalle.observacion = observacion
             detalle.save()
 
-        # Actualizar totales del pedido
         pedido = get_object_or_404(Pedido, id=pedido_id)
         pedido.calcular_totales()
 
-        # Renderizar tabla actualizada
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+        total_recargos = pedido.detalles.aggregate(
+            total=Sum(F('recargo') * F('cantidad'))
+        )['total'] or 0
+
+        tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
+            'pedido': pedido,
+            'total_recargos': total_recargos
+        })
 
         return JsonResponse({
             'success': True,
-            'mensaje': f'Producto {detalle.producto.nombre} agregado.',
+            'mensaje': 'Producto agregado con recargo.',
             'tabla': tabla_html
         })
 
-    return JsonResponse({'success': False, 'mensaje': 'Error al agregar producto'})
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
+
 
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def editar_detalle_ajax(request, detalle_id):
+@rol_requerido('cajero')
+def cajero_editar_detalle_ajax(request, detalle_id):
+    """
+    Editar cantidad, observación y recargo unitario de un detalle de pedido.
+    """
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
+
+    # Evitar que editen pedidos de otros cajeros
+    if pedido.tipo_pedido != 'domicilio' or pedido.cajero != request.user:
+        return JsonResponse({'success': False, 'mensaje': 'No autorizado.'}, status=403)
 
     if request.method == 'POST':
         import json
         data = json.loads(request.body)
-        
-        # Datos del SweetAlert
-        cantidad = int(data.get("cantidad", detalle.cantidad))
-        observacion = data.get("observacion", detalle.observacion)
-        
-        # Solo actualizar recargo si el pedido es a domicilio
-        recargo = detalle.recargo
-        if pedido.tipo_pedido == 'domicilio':
-            recargo = float(data.get("recargo", detalle.recargo))
 
-        # Guardar cambios
-        detalle.cantidad = cantidad
-        detalle.observacion = observacion
-        detalle.recargo = recargo
-        detalle.save()  # ⚡ recalcula subtotal y totales del pedido
+        # Actualizar los valores
+        detalle.cantidad = int(data.get("cantidad", detalle.cantidad))
+        detalle.observacion = data.get("observacion", detalle.observacion)
+        detalle.recargo = float(data.get("recargo", detalle.recargo))
+
+        detalle.save()  # recalcula subtotal y pedido.total
 
         # Renderizar tabla actualizada
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+        total_recargos = pedido.detalles.aggregate(
+            total=Sum(F('recargo') * F('cantidad'))
+        )['total'] or 0
+
+        tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
+            'pedido': pedido,
+            'total_recargos': total_recargos
+        })
+
 
         return JsonResponse({
             'success': True,
@@ -1317,18 +1410,1879 @@ def editar_detalle_ajax(request, detalle_id):
             'tabla': tabla_html
         })
 
-    return JsonResponse({'success': False, 'mensaje': 'Error al actualizar detalle.'})
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
+
 
 @login_required(login_url='login')
-@rol_requerido('mesero')
-def eliminar_detalle_ajax(request, detalle_id):
+@rol_requerido('cajero')
+def cajero_eliminar_detalle_ajax(request, detalle_id):
+    """
+    Eliminar un detalle de pedido a domicilio.
+    """
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
 
+    if pedido.tipo_pedido != 'domicilio' or pedido.cajero != request.user:
+        return JsonResponse({'success': False, 'mensaje': 'No autorizado.'}, status=403)
+
     if request.method == 'POST':
         detalle.delete()
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
-        return JsonResponse({'success': True, 'mensaje': 'Producto eliminado correctamente.', 'tabla': tabla_html})
 
-    return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
-"""
+        total_recargos = pedido.detalles.aggregate(
+            total=Sum(F('recargo') * F('cantidad'))
+        )['total'] or 0
+
+        tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
+            'pedido': pedido,
+            'total_recargos': total_recargos
+        })
+
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Producto eliminado correctamente.',
+            'tabla': tabla_html
+        })
+
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_ver_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user
+    )
+
+    if not pedido.detalles.exists():
+        messages.error(
+            request,
+            "No se puede enviar a cocina un pedido sin productos."
+        )
+        return redirect('cajero_agregar_detalles', pedido_id=pedido.id)
+
+    pedido.estado = 'en preparacion'
+    pedido.save()
+
+    enviar_pedido_cocina(pedido)
+
+    return render(request, 'cajero/pedidos/ver_pedido.html', {
+        'pedido': pedido
+    })
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_api_estados_pedidos(request):
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user
+    ).values(
+        'id',
+        'estado'
+    )
+    return JsonResponse(list(pedidos), safe=False)
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_eliminar_pedido(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user
+    )
+
+    # Solo dejar eliminar si está en preparación
+    if pedido.estado != 'en preparacion':
+        return JsonResponse({
+            "success": False,
+            "message": "Solo se puede eliminar un pedido que esté en preparación."
+        })
+
+    if request.method == 'POST':
+        pedido_id = pedido.id
+        pedido.delete()
+
+        # Avisar a cocina que se eliminó (opcional)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",
+            {
+                "type": "eliminar_pedido",
+                "pedido_id": pedido_id
+            }
+        )
+
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_finalizar_pedido(request, pedido_id):
+
+    if request.method != 'POST':
+        return JsonResponse({"success": False, "message": "Método no permitido."})
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user
+    )
+
+    # (opcional) solo permitir si ya está "listo"
+    if pedido.estado != "listo":
+        return JsonResponse({
+            "success": False,
+            "message": "Solo se puede finalizar un pedido que ya esté listo."
+        })
+
+    pedido.estado = "finalizado"
+    pedido.save()
+
+    return JsonResponse({
+        "success": True,
+        "message": f"El pedido #{pedido.id} ha sido finalizado."
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_editar_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user
+    )
+
+    # NECESARIOS PARA QUE SE VEAN LOS PRODUCTOS Y DETALLES
+    productos = Producto.objects.all()
+    detalles = pedido.detalles.all()
+
+    if request.method == "POST":
+
+        nombre_cliente = request.POST.get('nombre_cliente', '').strip()
+        contacto_cliente = request.POST.get('contacto_cliente', '').strip()
+        direccion_entrega = request.POST.get('direccion_entrega', '').strip()
+        recargo_domicilio = request.POST.get('recargo_domicilio', '0').strip()
+
+        # Validaciones
+        if not nombre_cliente or not contacto_cliente or not direccion_entrega:
+            return JsonResponse({
+                "success": False,
+                "mensaje": "Todos los campos son obligatorios."
+            })
+
+        try:
+            recargo_decimal = float(recargo_domicilio)
+        except:
+            return JsonResponse({
+                "success": False,
+                "mensaje": "El recargo debe ser un número válido."
+            })
+
+        # Guardar cambios
+        pedido.nombre_cliente = nombre_cliente
+        pedido.contacto_cliente = contacto_cliente
+        pedido.direccion_entrega = direccion_entrega
+        pedido.recargo_domicilio = recargo_decimal
+        pedido.save()
+        pedido.calcular_totales()
+
+        enviar_actualizacion_cocina(pedido)
+
+
+        return JsonResponse({
+            "success": True,
+            "mensaje": f"Pedido #{pedido.id} actualizado correctamente.",
+            "pedido_id": pedido.id
+        })
+
+    # SE ENVÍAN LOS PRODUCTOS Y DETALLES AQUÍ
+    return render(request, 'cajero/pedidos/editar_pedido.html', {
+        'pedido': pedido,
+        'productos': productos,    # ← NECESARIO
+        'detalles': detalles       # ← NECESARIO
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_cancelar_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='domicilio',
+        cajero=request.user,
+        estado='borrador'
+    )
+
+    pedido.delete()
+
+    messages.info(request, "Pedido cancelado correctamente.")
+    return redirect('cajero_listar_pedidos')
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_notificaciones(request):
+    notificaciones = Notificacion.objects.filter(
+        usuario_destino=request.user
+    ).order_by('-fecha_hora')
+
+    return render(request, "cajero/notificaciones/listar.html", {
+        "notificaciones": notificaciones
+    })
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_restaurante_cobros(request):
+
+    # ----------- PAGOS CONFIRMADOS PARA ANOTACIÓN -----------
+    pagos_confirmados = Pago.objects.filter(
+        pedido=OuterRef('pk'),
+        estado_pago='confirmado'
+    )
+
+    # FECHA DE HOY
+    hoy = timezone.localdate()
+
+    # ----------- PEDIDOS PENDIENTES DE COBRO (SOLO HOY) -----------
+    pedidos_cobrar = Pedido.objects.filter(
+        tipo_pedido='restaurante',
+        estado__in=['listo', 'finalizado'],
+        fecha_hora__date=hoy              # ⬅️ SOLO PEDIDOS DE HOY
+    ).annotate(
+        tiene_pago=Exists(pagos_confirmados)
+    ).filter(
+        tiene_pago=False
+    ).order_by('-id')
+
+    # ----------- SOLO PAGOS DEL DÍA ACTUAL -----------
+    pedidos_pagados = Pedido.objects.filter(
+        tipo_pedido='restaurante',
+        pagos__estado_pago='confirmado',
+        pagos__fecha_hora__date=hoy       # ⬅️ YA LO TENÍAS BIEN
+    ).distinct().order_by('-id')
+
+    return render(request, "cajero/pago/cobros_restaurante.html", {
+        "pedidos_cobrar": pedidos_cobrar,
+        "pedidos_pagados": pedidos_pagados
+    })
+
+
+
+# ============================================================
+#                    REGISTRAR PAGO DEL PEDIDO
+# ============================================================
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_restaurante_pagar(request, pedido_id):
+
+    if request.method != "POST":
+        return JsonResponse({"success": False})
+
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+
+    data = json.loads(request.body)
+    metodo = data.get("metodo")
+    recibido_raw = data.get("recibido", "")
+    referencia = data.get("referencia", "")
+
+    # Solo permitir cobrar pedidos listos o finalizados
+    if pedido.estado not in ['listo', 'finalizado']:
+        return JsonResponse({"success": False, "message": "El pedido no puede ser pagado."})
+
+    # Convertir valores en Decimal (sin errores de float)
+    try:
+        total = Decimal(str(pedido.total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        if recibido_raw not in ["", None]:
+            recibido = Decimal(str(recibido_raw)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        else:
+            recibido = None
+
+    except:
+        return JsonResponse({"success": False, "message": "El monto ingresado no es válido."})
+
+    # =====================================================
+    #                VALIDACIONES SEGÚN MÉTODO
+    # =====================================================
+
+    # TRANSFERENCIA
+    if metodo == "transferencia":
+
+        if recibido is None:
+            return JsonResponse({"success": False, "message": "Debe ingresar el monto de la transferencia."})
+
+        if recibido != total:
+            return JsonResponse({"success": False, "message": "El monto debe ser EXACTO para transferencias."})
+
+        if not referencia:
+            return JsonResponse({"success": False, "message": "Debe ingresar el número de comprobante."})
+
+        cambio = Decimal("0.00")
+
+    # EFECTIVO
+    elif metodo == "efectivo":
+
+        if recibido is None:
+            return JsonResponse({"success": False, "message": "Debe ingresar el monto recibido."})
+
+        if recibido < total:
+            return JsonResponse({"success": False, "message": "El cliente no puede pagar menos del total."})
+
+        cambio = recibido - total
+
+    else:
+        return JsonResponse({"success": False, "message": "Método de pago no válido."})
+
+    # =====================================================
+    #                 REGISTRAR EL PAGO
+    # =====================================================
+    pago = Pago.objects.create(
+        pedido=pedido,
+        total=total,
+        monto_recibido=recibido,
+        metodo_pago=metodo,
+        referencia_transferencia=referencia if metodo == "transferencia" else "",
+        cambio=cambio,
+        estado_pago="confirmado"
+    )
+
+    # =====================================================
+    #               WEBSOCKET: ACTUALIZAR TABLAS
+    # =====================================================
+    channel_layer = get_channel_layer()
+
+    # eliminar de pendientes
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {"type": "eliminar_pedido", "pedido_id": pedido.id}
+    )
+
+    # agregar a pagados (con fecha en zona local)
+    fecha_local = timezone.localtime(pago.fecha_hora).strftime("%d/%m/%Y %H:%M")
+
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "nuevo_pagado",
+            "pedido_id": pedido.id,
+            "mesa": pedido.mesa.numero if pedido.mesa else "Domicilio",
+            "mesero": pedido.mesero.nombre,
+            "total": float(total),
+            "fecha": fecha_local,
+            "estado_pago": "confirmado",
+        }
+    )
+
+    # =====================================================
+    #     CREAR COMPROBANTE AUTOMÁTICAMENTE
+    # =====================================================
+
+    numero = f"C-{pedido.id}-{pago.id}"
+
+    comprobante = Comprobante.objects.create(
+        pago=pago,
+        numero_comprobante=numero,
+        nombre_cliente="Consumidor final",
+        direccion_cliente=pedido.direccion_entrega if pedido.direccion_entrega else "N/A",
+        correo_cliente=None
+    )
+
+    generar_comprobante_pdf(comprobante)
+
+    # =====================================================
+    # RESPUESTA CON LINK PARA IMPRIMIR
+    # =====================================================
+    return JsonResponse({
+        "success": True,
+        "message": "Pago registrado correctamente.",
+        "comprobante_url": comprobante.archivo_pdf.url
+    })
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_domicilio_cobros(request):
+
+    pagos_confirmados = Pago.objects.filter(
+        pedido=OuterRef('pk'),
+        estado_pago='confirmado'
+    )
+
+    # FECHA DE HOY
+    hoy = timezone.localdate()
+
+    # PEDIDOS PENDIENTES DE COBRO
+    pedidos_cobrar = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        estado__in=['listo', 'finalizado'],
+        cajero=request.user,
+        fecha_hora__date=hoy  
+    ).annotate(
+        tiene_pago=Exists(pagos_confirmados)
+    ).filter(tiene_pago=False).order_by('-id')
+
+    # 🔴 AQUÍ ESTABA EL PROBLEMA:
+    # antes solo hacías un filter simple.
+    # Usa la MISMA lógica que en tabla_pedidos_pagados_domicilio:
+
+    pedidos_pagados = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='domicilio',
+            cajero=request.user,
+            pagos__estado_pago='confirmado',
+            pagos__fecha_hora__date=hoy 
+        )
+        .prefetch_related('pagos__comprobante_set')  # para acceder a los comprobantes sin más queries
+        .distinct()
+        .order_by('-id')
+    )
+
+    # añadir el último pago confirmado a cada pedido
+    for p in pedidos_pagados:
+        p.pago_confirmado = (
+            p.pagos
+            .filter(estado_pago='confirmado')
+            .order_by('-id')
+            .first()
+        )
+
+    return render(request, "cajero/pago/cobros_domicilio.html", {
+        "pedidos_cobrar": pedidos_cobrar,
+        "pedidos_pagados": pedidos_pagados
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_domicilio_pagar(request, pedido_id):
+
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Método no permitido."})
+
+    try:
+        data = json.loads(request.body)
+    except:
+        return JsonResponse({"success": False, "message": "Datos inválidos."})
+
+    metodo = data.get("metodo")
+    recibido = data.get("recibido")
+    referencia = data.get("referencia", "")
+
+    try:
+        pedido = Pedido.objects.get(id=pedido_id, tipo_pedido="domicilio")
+    except Pedido.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Pedido no encontrado."})
+
+    total = float(pedido.total)
+
+    # ================================
+    # VALIDACIÓN DE MÉTODO DE PAGO
+    # ================================
+    if metodo not in ["efectivo", "transferencia"]:
+        return JsonResponse({"success": False, "message": "Método de pago inválido."})
+
+    if metodo == "efectivo":
+        try:
+            recibido = float(recibido)
+        except:
+            return JsonResponse({"success": False, "message": "Monto recibido inválido."})
+
+        if recibido < total:
+            return JsonResponse({"success": False, "message": "El monto recibido es insuficiente."})
+
+    if metodo == "transferencia":
+        if not referencia:
+            return JsonResponse({"success": False, "message": "Debe ingresar número de comprobante."})
+
+        try:
+            recibido = float(recibido)
+        except:
+            return JsonResponse({"success": False, "message": "Monto transferido inválido."})
+
+        if recibido < total:
+            return JsonResponse({"success": False, "message": "El monto transferido es insuficiente."})
+
+    fecha_local = timezone.localtime(timezone.now())
+
+    # ================================
+    # REGISTRO DEL PAGO (CORREGIDO)
+    # ================================
+    with transaction.atomic():
+        pago = Pago.objects.create(
+            pedido=pedido,
+            total=total,                    
+            metodo_pago=metodo,             
+            monto_recibido=recibido,
+            cambio=recibido - total if metodo == "efectivo" else 0,
+            referencia_transferencia=referencia if metodo == "transferencia" else "",  # <-- CAMBIO AQUÍ
+            estado_pago="confirmado",
+            fecha_hora=fecha_local,
+        )
+
+        # Cambiar estado del pedido
+        pedido.estado = "finalizado"
+        pedido.save()
+
+    # ================================
+    # WEBSOCKET → NOTIFICAR AL CAJERO
+    # ================================
+    channel_layer = get_channel_layer()
+
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "nuevo_pagado",
+            "origen": "domicilio",
+            "pedido_id": pedido.id,
+            "cliente": pedido.nombre_cliente,
+            "total": float(total),
+            "fecha": fecha_local.strftime("%d/%m/%Y %H:%M"),
+            "estado_pago": "confirmado",
+        }
+    )
+
+    # ================================
+    # COMPROBANTE
+    # ================================
+    numero = f"D-{pedido.id}-{pago.id}"
+
+    comprobante = Comprobante.objects.create(
+        pago=pago,
+        numero_comprobante=numero,
+        nombre_cliente="Consumidor final",
+        direccion_cliente=pedido.direccion_entrega,
+        correo_cliente=None
+    )
+
+    generar_comprobante_pdf(comprobante)
+
+    return JsonResponse({
+        "success": True,
+        "message": "Pago registrado correctamente.",
+        "comprobante_url": comprobante.archivo_pdf.url
+    })
+
+
+@login_required(login_url='login')
+def ver_comprobante(request, comp_id):
+
+    comprobante = get_object_or_404(Comprobante, id=comp_id)
+    pago = comprobante.pago
+    pedido = pago.pedido
+    detalles = pedido.detalles.all()
+
+    # Seleccionar comprobante según tipo de pedido
+    if pedido.tipo_pedido == "restaurante":
+        template = "cajero/comprobantes/comprobante_restaurante.html"
+    else:
+        template = "cajero/comprobantes/comprobante_domicilio.html"
+
+    return render(request, template, {
+        "comprobante": comprobante,
+        "pago": pago,
+        "pedido": pedido,
+        "detalles": detalles
+    })
+
+def generar_comprobante_pdf(comprobante):
+    pago = comprobante.pago
+    pedido = pago.pedido
+    detalles = pedido.detalles.all()
+
+    # seleccionar plantilla
+    if pedido.tipo_pedido == "restaurante":
+        template = "cajero/comprobantes/comprobante_restaurante.html"
+    else:
+        template = "cajero/comprobantes/comprobante_domicilio.html"
+
+    html_string = render_to_string(template, {
+        "comprobante": comprobante,
+        "pago": pago,
+        "pedido": pedido,
+        "detalles": detalles
+    })
+
+    pdf_file = HTML(string=html_string).write_pdf()
+
+    nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
+    comprobante.archivo_pdf.save(
+        nombre_archivo,
+        ContentFile(pdf_file),
+        save=True
+    )
+
+#----------------
+# Reportes
+#----------------
+
+def reportes_general(request):
+    return render(request, 'administrador/reportes/reportes_general.html')
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def reporte_pagos_restaurante(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='restaurante',
+        estado_pago='confirmado'
+    ).select_related('pedido')
+
+    fecha_inicio = request.GET.get("inicio")
+    fecha_fin = request.GET.get("fin")
+    metodo = request.GET.get("metodo")
+    mesero_id = request.GET.get("mesero")
+
+    if fecha_inicio:
+        pagos = pagos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pagos = pagos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo and metodo != "todos":
+        pagos = pagos.filter(metodo_pago=metodo)
+
+    if mesero_id and mesero_id != "todos":
+        pagos = pagos.filter(pedido__mesero_id=mesero_id)
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    meseros = Usuario.objects.filter(rol='mesero')
+
+    return render(request, "administrador/reportes/reporte_restaurante.html", {
+        "pagos": pagos,
+        "total_recaudado": total_recaudado,
+        "meseros": meseros,
+    })
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def reporte_pagos_domicilio(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='domicilio',
+        estado_pago='confirmado'
+    ).select_related('pedido')
+
+    fecha_inicio = request.GET.get("inicio")
+    fecha_fin = request.GET.get("fin")
+    metodo = request.GET.get("metodo")
+    cajero_id = request.GET.get("cajero")
+
+    if fecha_inicio:
+        pagos = pagos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pagos = pagos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo and metodo != "todos":
+        pagos = pagos.filter(metodo_pago=metodo)
+
+    if cajero_id and cajero_id != "todos":
+        pagos = pagos.filter(pedido__cajero_id=cajero_id)
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    cajeros = Usuario.objects.filter(rol='cajero')
+
+    return render(request, "administrador/reportes/reporte_domicilio.html", {
+        "pagos": pagos,
+        "total_recaudado": total_recaudado,
+        "cajeros": cajeros,
+    })
+
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def reporte_pedidos_restaurante(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='restaurante'
+    ).select_related('mesa', 'mesero').prefetch_related('detalles')
+
+    # ----------- FILTROS -----------
+    fecha_inicio = request.GET.get("inicio")
+    fecha_fin = request.GET.get("fin")
+    estado = request.GET.get("estado")
+    mesero_id = request.GET.get("mesero")
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if estado and estado != "todos":
+        pedidos = pedidos.filter(estado=estado)
+
+    if mesero_id and mesero_id != "todos":
+        pedidos = pedidos.filter(mesero_id=mesero_id)
+
+    # ----------- RESÚMENES -----------
+    total_pedidos = pedidos.count()
+    total_ventas = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
+    meseros = Usuario.objects.filter(rol='mesero')
+
+    return render(request, "administrador/reportes/reporte_pedidos_restaurante.html", {
+        "pedidos": pedidos.order_by('-fecha_hora'),
+        "total_pedidos": total_pedidos,
+        "total_ventas": total_ventas,
+        "meseros": meseros,
+    })
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def reporte_pedidos_domicilio(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio'
+    ).select_related('cajero')
+
+    # Filtros
+    fecha_inicio = request.GET.get("inicio")
+    fecha_fin = request.GET.get("fin")
+    estado = request.GET.get("estado")
+    cajero_id = request.GET.get("cajero")
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if estado and estado != "todos":
+        pedidos = pedidos.filter(estado=estado)
+
+    if cajero_id and cajero_id != "todos":
+        pedidos = pedidos.filter(cajero_id=cajero_id)
+
+    total_pedidos = pedidos.count()
+    total_ventas = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
+    cajeros = Usuario.objects.filter(rol='cajero')
+
+    return render(request, "administrador/reportes/reporte_pedidos_domicilio.html", {
+        "pedidos": pedidos,
+        "total_pedidos": total_pedidos,
+        "total_ventas": total_ventas,
+        "cajeros": cajeros,
+    })
+
+def obtener_logo():
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        return Image(logo_path, width=110, height=100)
+    return None
+
+#Exportar en pdf
+@login_required
+@rol_requerido('admin')
+def exportar_pedidos_restaurante_pdf(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='restaurante'
+    ).select_related('mesa', 'mesero')
+
+    # ======= FILTROS (IGUAL QUE EL REPORTE HTML) =======
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    estado = request.GET.get("estado")
+    mesero = request.GET.get("mesero")
+
+    if inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=inicio)
+    if fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fin)
+    if estado and estado != "todos":
+        pedidos = pedidos.filter(estado=estado)
+    if mesero and mesero != "todos":
+        pedidos = pedidos.filter(mesero_id=mesero)
+
+    total_final = pedidos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pedidos_restaurante.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    # LOGO
+    logo = obtener_logo()
+    if logo:
+        elementos.append(logo)
+
+    elementos.append(Spacer(1, 8))
+
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+    elementos.append(Table([[f"Fecha de reporte: {fecha_reporte}"]], colWidths=[480]))
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["REPORTE DE PEDIDOS - RESTAURANTE"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    data = [["Pedido", "Fecha", "Mesa", "Mesero", "Estado", "Total"]]
+
+    for p in pedidos:
+        data.append([
+            f"#{p.id}",
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+            p.mesa.numero if p.mesa else "—",
+            p.mesero.nombre if p.mesero else "",
+            p.estado.capitalize(),
+            f"$ {p.total:.2f}"
+        ])
+
+    tabla = Table(data, colWidths=[60, 90, 50, 90, 80, 60])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    elementos.append(Table(
+        [["TOTAL GENERAL", f"$ {total_final:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+@login_required
+@rol_requerido('admin')
+def exportar_pedidos_domicilio_pdf(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio'
+    ).select_related('cajero')
+
+    # ===== FILTROS =====
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    estado = request.GET.get("estado")
+    cajero = request.GET.get("cajero")
+
+    if inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=inicio)
+    if fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fin)
+    if estado and estado != "todos":
+        pedidos = pedidos.filter(estado=estado)
+    if cajero and cajero != "todos":
+        pedidos = pedidos.filter(cajero_id=cajero)
+
+    total_final = pedidos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pedidos_domicilio.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    logo = obtener_logo()
+    if logo:
+        elementos.append(logo)
+
+    elementos.append(Spacer(1, 8))
+
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+    elementos.append(Table([[f"Fecha de reporte: {fecha_reporte}"]], colWidths=[480]))
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["REPORTE DE PEDIDOS - DOMICILIO"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    data = [["Pedido", "Cliente", "Cajero", "Estado", "Fecha", "Total"]]
+
+    for p in pedidos:
+        data.append([
+            f"#{p.id}",
+            p.nombre_cliente,
+            p.cajero.nombre if p.cajero else "",
+            p.estado.capitalize(),
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+            f"$ {p.total:.2f}"
+        ])
+
+    tabla = Table(data, colWidths=[60, 140, 90, 80, 90, 60])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    elementos.append(Table(
+        [["TOTAL GENERAL", f"$ {total_final:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+
+@login_required
+@rol_requerido('admin')
+def exportar_cobros_domicilio_pdf(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='domicilio',
+        estado_pago='confirmado'
+    ).select_related('pedido', 'pedido__cajero')
+
+    # ================= FILTROS =================
+    if request.GET.get("inicio"):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET["inicio"])
+
+    if request.GET.get("fin"):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET["fin"])
+
+    if request.GET.get("metodo") and request.GET["metodo"] != "todos":
+        pagos = pagos.filter(metodo_pago=request.GET["metodo"])
+
+    if request.GET.get("cajero") and request.GET["cajero"] != "todos":
+        pagos = pagos.filter(pedido__cajero_id=request.GET["cajero"])
+    # ===========================================
+
+    total_final = pagos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="cobros_domicilio.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    elementos = []
+
+    logo = obtener_logo()
+    if logo:
+        elementos.append(logo)
+
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('FONT',(0,0),(-1,-1),'Helvetica-Bold'),
+            ('FONTSIZE',(0,0),(-1,-1),13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+    elementos.append(Table([[f"Fecha de reporte: {fecha_reporte}"]], colWidths=[480]))
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["REPORTE DE COBROS - DOMICILIO"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND',(0,0),(-1,-1),colors.HexColor("#cd966c")),
+            ('TEXTCOLOR',(0,0),(-1,-1),colors.white),
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('FONT',(0,0),(-1,-1),'Helvetica-Bold'),
+            ('FONTSIZE',(0,0),(-1,-1),14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    data = [["Pedido", "Cliente", "Cajero", "Método", "Total", "Fecha"]]
+
+    for p in pagos:
+        data.append([
+            f"#{p.pedido.id}",
+            p.pedido.nombre_cliente,
+            p.pedido.cajero.nombre if p.pedido.cajero else "",
+            p.metodo_pago.capitalize(),
+            f"$ {p.total:.2f}",
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[60,120,90,80,60,90])
+    tabla.setStyle(TableStyle([
+        ('GRID',(0,0),(-1,-1),1,colors.black),
+        ('BACKGROUND',(0,0),(-1,0),colors.HexColor("#b4764f")),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.white),
+        ('FONT',(0,0),(-1,0),'Helvetica-Bold'),
+        ('ALIGN',(0,1),(-1,-1),'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    elementos.append(Table(
+        [["TOTAL RECAUDADO", f"$ {total_final:.2f}"]],
+        colWidths=[350,130],
+        style=[
+            ('BACKGROUND',(0,0),(-1,-1),colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR',(0,0),(-1,-1),colors.white),
+            ('FONT',(0,0),(-1,-1),'Helvetica-Bold'),
+            ('ALIGN',(1,0),(1,0),'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+@login_required
+@rol_requerido('admin')
+def exportar_cobros_restaurante_pdf(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='restaurante',
+        estado_pago='confirmado'
+    ).select_related('pedido', 'pedido__mesero', 'pedido__mesa')
+
+    # ================= FILTROS (IGUALES AL HTML) =================
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    metodo = request.GET.get("metodo")
+    mesero_id = request.GET.get("mesero")
+
+    if inicio:
+        pagos = pagos.filter(fecha_hora__date__gte=inicio)
+
+    if fin:
+        pagos = pagos.filter(fecha_hora__date__lte=fin)
+
+    if metodo and metodo != "todos":
+        pagos = pagos.filter(metodo_pago=metodo)
+
+    if mesero_id and mesero_id != "todos":
+        pagos = pagos.filter(pedido__mesero_id=mesero_id)
+
+    # ================= TOTALES =================
+    total_final = pagos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")
+
+    # ================= PDF =================
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="cobros_restaurante.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    # LOGO
+    logo = obtener_logo()
+    if logo:
+        elementos.append(logo)
+
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+
+    elementos.append(Table(
+        [[f"Fecha de reporte: {fecha_reporte}"]],
+        colWidths=[480],
+        style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["REPORTE DE COBROS - RESTAURANTE"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= TABLA =================
+    data = [["Pedido", "Mesa", "Mesero", "Método", "Total", "Fecha"]]
+
+    for p in pagos:
+        data.append([
+            f"#{p.pedido.id}",
+            p.pedido.mesa.numero if p.pedido.mesa else "—",
+            p.pedido.mesero.nombre if p.pedido.mesero else "",
+            p.metodo_pago.capitalize(),
+            f"$ {p.total:.2f}",
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[60, 60, 90, 80, 60, 90])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    # ================= TOTAL =================
+    elementos.append(Table(
+        [["TOTAL RECAUDADO", f"$ {total_final:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+
+
+#exportar en excel
+def estilos_tabla():
+    header_fill = PatternFill("solid", fgColor="CD966C")
+    header_font = Font(bold=True, color="FFFFFF")
+    center = Alignment(horizontal="center", vertical="center")
+    border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    return header_fill, header_font, center, border
+
+@login_required
+@rol_requerido('admin')
+def exportar_pedidos_restaurante_excel(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='restaurante'
+    ).select_related('mesa', 'mesero')
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['inicio'])
+    if request.GET.get('fin'):
+        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fin'])
+    if request.GET.get('estado') and request.GET['estado'] != 'todos':
+        pedidos = pedidos.filter(estado=request.GET['estado'])
+    if request.GET.get('mesero') and request.GET['mesero'] != 'todos':
+        pedidos = pedidos.filter(mesero_id=request.GET['mesero'])
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Restaurante"
+
+    header_fill, header_font, center, border = estilos_tabla()
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        logo = ExcelImage(logo_path)
+        logo.width = 120
+        logo.height = 60
+        ws.add_image(logo, "A1")
+
+    # -------- TITULOS --------
+    ws.merge_cells("A3:F3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
+
+    ws.merge_cells("A4:F4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
+
+    # -------- ENCABEZADOS --------
+    headers = ["ID", "Fecha", "Mesa", "Mesero", "Estado", "Total"]
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=6, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    # -------- DATOS --------
+    for p in pedidos:
+        ws.append([
+            p.id,
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
+            p.mesa.numero if p.mesa else "",
+            p.mesero.nombre if p.mesero else "",
+            p.estado.capitalize(),
+            float(p.total)
+        ])
+
+    # -------- FORMATO --------
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=6):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
+
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 20
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="pedidos_restaurante.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@rol_requerido('admin')
+def exportar_pedidos_domicilio_excel(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio'
+    ).select_related('cajero')
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['inicio'])
+    if request.GET.get('fin'):
+        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fin'])
+    if request.GET.get('estado') and request.GET['estado'] != 'todos':
+        pedidos = pedidos.filter(estado=request.GET['estado'])
+    if request.GET.get('cajero') and request.GET['cajero'] != 'todos':
+        pedidos = pedidos.filter(cajero_id=request.GET['cajero'])
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Domicilio"
+
+    header_fill, header_font, center, border = estilos_tabla()
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        logo = ExcelImage(logo_path)
+        logo.width = 120
+        logo.height = 60
+        ws.add_image(logo, "A1")
+
+    # -------- TITULOS --------
+    ws.merge_cells("A3:G3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
+
+    ws.merge_cells("A4:G4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
+
+    # -------- ENCABEZADOS --------
+    headers = ["ID", "Fecha", "Cliente", "Dirección", "Cajero", "Estado", "Total"]
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=6, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    # -------- DATOS --------
+    for p in pedidos:
+        ws.append([
+            p.id,
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
+            p.nombre_cliente,
+            p.direccion_entrega,
+            p.cajero.nombre if p.cajero else "",
+            p.estado.capitalize(),
+            float(p.total)
+        ])
+
+    # -------- FORMATO --------
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=7):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
+
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="pedidos_domicilio.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@rol_requerido('admin')
+def exportar_cobros_restaurante_excel(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='restaurante',
+        estado_pago='confirmado'
+    ).select_related('pedido', 'pedido__mesero', 'pedido__mesa')
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+
+    if request.GET.get('cajero') and request.GET['cajero'] != 'todos':
+        pagos = pagos.filter(pedido__mesero_id=request.GET['cajero'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Cobros Restaurante"
+
+    header_fill, header_font, center, border = estilos_tabla()
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        logo = ExcelImage(logo_path)
+        logo.width = 110
+        logo.height = 100
+        ws.add_image(logo, "A1")
+
+    # -------- TITULOS --------
+    ws.merge_cells("A3:F3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
+
+    ws.merge_cells("A4:F4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
+
+    # -------- ENCABEZADOS TABLA --------
+    headers = ["Pedido", "Mesa", "Mesero", "Método", "Total", "Fecha"]
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=6, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    # -------- DATOS --------
+    for p in pagos:
+        ws.append([
+            f"#{p.pedido.id}",
+            p.pedido.mesa.numero if p.pedido.mesa else "",
+            p.pedido.mesero.nombre if p.pedido.mesero else "",
+            p.metodo_pago.capitalize(),
+            float(p.total),
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M')
+        ])
+
+    # -------- FORMATO FILAS --------
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=6):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
+
+    # -------- TOTAL --------
+    ws.append([])
+    total_row = ws.max_row + 1
+    ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=4)
+    ws.cell(row=total_row, column=1, value="TOTAL RECAUDADO").font = Font(bold=True)
+    ws.cell(row=total_row, column=1).alignment = Alignment(horizontal="right")
+    ws.cell(row=total_row, column=5, value=float(total_recaudado)).font = Font(bold=True)
+
+    # -------- AUTO ANCHO --------
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="cobros_restaurante.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required
+@rol_requerido('admin')
+def exportar_cobros_domicilio_excel(request):
+
+    pagos = Pago.objects.filter(
+        pedido__tipo_pedido='domicilio',
+        estado_pago='confirmado'
+    ).select_related('pedido', 'pedido__cajero')
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+    if request.GET.get('cajero') and request.GET['cajero'] != 'todos':
+        pagos = pagos.filter(pedido__cajero_id=request.GET['cajero'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Cobros Domicilio"
+
+    header_fill, header_font, center, border = estilos_tabla()
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        img = ExcelImage(logo_path)
+        img.width = 110
+        img.height = 100
+        ws.add_image(img, "A1")
+
+    # -------- TITULOS --------
+    ws.merge_cells("A3:F3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
+
+    ws.merge_cells("A4:F4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
+
+    # -------- ENCABEZADOS --------
+    headers = ["Pedido", "Cliente", "Cajero", "Método", "Total", "Fecha"]
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=6, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    # -------- DATOS --------
+    for p in pagos:
+        ws.append([
+            f"#{p.pedido.id}",
+            p.pedido.nombre_cliente,
+            p.pedido.cajero.nombre if p.pedido.cajero else "",
+            p.metodo_pago.capitalize(),
+            float(p.total),
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M')
+        ])
+
+    # -------- FORMATO --------
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=6):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
+
+    # -------- TOTAL --------
+    ws.append([])
+    ws.append(["", "", "", "TOTAL RECAUDADO", float(total_recaudado), ""])
+    ws[f"E{ws.max_row}"].font = Font(bold=True)
+
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="cobros_domicilio.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required
+@rol_requerido('admin')
+def reporte_unificado(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+
+    if request.GET.get('tipo') and request.GET['tipo'] != 'todos':
+        pagos = pagos.filter(pedido__tipo_pedido=request.GET['tipo'])
+
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    return render(
+        request,
+        'administrador/reportes/reporte_unificado.html',
+        {
+            'pagos': pagos,
+            'total_recaudado': total_recaudado
+        }
+    )
+
+
+@login_required
+@rol_requerido('admin')
+def exportar_unificado_pdf(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # ================= FILTROS =================
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    tipo = request.GET.get("tipo")
+    metodo = request.GET.get("metodo")
+
+    if inicio:
+        pagos = pagos.filter(fecha_hora__date__gte=inicio)
+
+    if fin:
+        pagos = pagos.filter(fecha_hora__date__lte=fin)
+
+    if tipo and tipo != "todos":
+        pagos = pagos.filter(pedido__tipo_pedido=tipo)
+
+    if metodo and metodo != "todos":
+        pagos = pagos.filter(metodo_pago=metodo)
+
+    # ================= TOTALES =================
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")
+
+    # ================= PDF =================
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_unificado.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    # ================= LOGO =================
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        elementos.append(Image(logo_path, width=110, height=70))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= NOMBRE LOCAL =================
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+
+    elementos.append(Table(
+        [[f"Fecha de reporte: {fecha_reporte}"]],
+        colWidths=[480],
+        style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= TITULO =================
+    elementos.append(Table(
+        [["REPORTE UNIFICADO - PEDIDOS Y COBROS"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= TABLA =================
+    data = [[
+        "Pedido", "Tipo", "Cliente / Mesa",
+        "Responsable", "Total", "Método", "Fecha"
+    ]]
+
+    for p in pagos:
+        data.append([
+            f"#{p.pedido.id}",
+            p.pedido.tipo_pedido.capitalize(),
+            p.pedido.nombre_cliente if p.pedido.tipo_pedido == 'domicilio'
+            else f"Mesa {p.pedido.mesa.numero}",
+            p.pedido.cajero.nombre if p.pedido.tipo_pedido == 'domicilio'
+            else p.pedido.mesero.nombre,
+            f"$ {p.total:.2f}",
+            p.metodo_pago.capitalize(),
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[55, 65, 90, 90, 60, 65, 80])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    # ================= TOTAL =================
+    elementos.append(Table(
+        [["TOTAL RECAUDADO", f"$ {total_recaudado:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+@login_required
+@rol_requerido('admin')
+def exportar_unificado_excel(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+
+    if request.GET.get('tipo') and request.GET['tipo'] != 'todos':
+        pagos = pagos.filter(pedido__tipo_pedido=request.GET['tipo'])
+
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Reporte Unificado"
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        img = ExcelImage(logo_path)
+        img.width = 110
+        img.height = 100
+        ws.add_image(img, "A1")
+
+    # -------- TITULOS --------
+    ws.merge_cells("A3:G3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = Alignment(horizontal="center")
+
+    ws.merge_cells("A4:G4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = Alignment(horizontal="center")
+
+    # -------- ENCABEZADOS --------
+    ws.append([])
+    ws.append([
+        "Pedido", "Tipo", "Cliente / Mesa",
+        "Responsable", "Total", "Método", "Fecha"
+    ])
+
+    header_row = ws.max_row
+    for cell in ws[header_row]:
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+    # -------- DATOS --------
+    for p in pagos:
+        fecha_excel = timezone.localtime(p.fecha_hora).replace(tzinfo=None)
+
+        ws.append([
+            f"#{p.pedido.id}",
+            p.pedido.tipo_pedido.capitalize(),
+            p.pedido.nombre_cliente if p.pedido.tipo_pedido == 'domicilio'
+            else f"Mesa {p.pedido.mesa.numero}",
+            p.pedido.cajero.nombre if p.pedido.tipo_pedido == 'domicilio'
+            else p.pedido.mesero.nombre,
+            float(p.total),
+            p.metodo_pago.capitalize(),
+            fecha_excel
+        ])
+
+    # -------- TOTAL --------
+    ws.append([])
+    ws.append(["", "", "", "TOTAL RECAUDADO", float(total_recaudado), "", ""])
+    ws[f"E{ws.max_row}"].font = Font(bold=True)
+
+    # -------- FORMATO FECHA --------
+    for cell in ws["G"]:
+        cell.number_format = "DD/MM/YYYY HH:MM"
+
+    # -------- ANCHO COLUMNAS --------
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="reporte_unificado.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def tabla_pedidos_pagados_domicilio(request):
+
+    hoy = timezone.localdate()
+
+    pedidos_pagados = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='domicilio',
+            cajero=request.user,
+            pagos__estado_pago='confirmado',
+            pagos__fecha_hora__date=hoy 
+        )
+        .prefetch_related('pagos__comprobante_set')
+        .distinct()
+        .order_by('-id')
+    )
+
+    # añadimos el último pago confirmado manualmente
+    for p in pedidos_pagados:
+        p.pago_confirmado = (
+            p.pagos
+            .filter(estado_pago='confirmado')
+            .order_by('-id')
+            .first()
+        )
+
+    html = render_to_string(
+        "cajero/pago/tabla_pedidos_pagados_domicilio.html",
+        {"pedidos_pagados": pedidos_pagados},
+        request=request
+    )
+
+    return JsonResponse({"html": html})

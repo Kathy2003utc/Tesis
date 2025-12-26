@@ -93,6 +93,7 @@
       .main-panel > footer {
           margin-top: auto;
       }
+      
   </style>
 
   </head>
@@ -453,49 +454,21 @@
             return;
         }
 
-
-
-
             /// MENSAJE (toast elegante)
             if (tipo === "mensaje") {
+
                 const sndMensaje = document.getElementById("sndMensaje");
                 if (sndMensaje) sndMensaje.play();
 
                 Swal.fire({
-                    html: `
-                        <div style="
-                            background:white;
-                            border-left:6px solid #0d6efd;
-                            padding:14px 18px;
-                            border-radius:10px;
-                            font-size:16px;
-                            color:#2B1A10;
-                            text-align:left;
-                            box-shadow:0 4px 10px rgba(0,0,0,0.15);
-                            max-width:320px;
-                        ">
-                            <h4 style="margin:0; font-weight:600; color:#0d6efd;">
-                                Nuevo mensaje
-                            </h4>
-                            <p style="margin:6px 0 0 0; font-size:15px;">
-                                ${mensaje}
-                            </p>
-                        </div>
-                    `,
-                    toast: true,
-                    position: "top-end",
-                    showConfirmButton: false,
-                    timer: 5000,
-                    background: "transparent",
-                    customClass: {
-                        popup: 'swal2-no-padding'
-                    }
+                    icon: "info",
+                    title: "Nuevo mensaje del cocinero",
+                    text: mensaje,
+                    confirmButtonColor: "#3085d6"
                 });
 
                 cargarNotificaciones();
             }
-
-
         };
 
     </script>

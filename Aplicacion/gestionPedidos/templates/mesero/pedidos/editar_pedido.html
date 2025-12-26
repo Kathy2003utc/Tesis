@@ -3,6 +3,88 @@
 {% block contenido %}
 <br><br><br>
 
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+
+        --naranja-tierra: #D98555;
+        --azul-pizarra: #4F6D7A;
+    }
+    /* --- SweetAlert estilo café-crema para éxito global --- */
+    .swal-custom-success {
+        background: var(--crema-suave) !important;
+        border-radius: 18px !important;
+        padding: 20px !important;
+        width: 450px !important;
+    }
+
+    .swal-custom-success .swal2-html-container {
+        color: var(--texto-oscuro) !important;
+        font-size: 16px !important;
+        font-weight: 500;
+    }
+
+    .swal-custom-success-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 4px solid #4F8A57;
+        margin: 0 auto 15px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .swal-custom-success-icon {
+        font-size: 40px;
+        color: #4F8A57;
+    }
+
+    .swal-custom-title {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 10px;
+        color: var(--texto-oscuro);
+    }
+
+</style>
+
 <div class="container mt-5" style="max-width: 900px;">
     <h2 class="text-center text-primary mb-4">Editar Pedido #{{ pedido.id }}</h2>
 
@@ -16,37 +98,17 @@
     <form method="post" id="frm_editar_pedido">
         {% csrf_token %}
         <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Mesero:</label>
-                <select name="mesero" class="form-select" required>
-                    {% for m in meseros %}
-                        <option value="{{ m.id }}" {% if pedido.mesero.id == m.id %}selected{% endif %}>
-                            {{ m.nombre }} {{ m.apellido}}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
 
             <!-- MESA SOLO RESTAURANTE -->
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label class="form-label">Mesa:</label>
                 <select name="mesa" class="form-select" required>
                     {% for mesa in mesas %}
-                        <option value="{{ mesa.id }}" {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
+                        <option value="{{ mesa.id }}" 
+                            {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
                             Mesa {{ mesa.numero }}
                         </option>
                     {% endfor %}
-                </select>
-            </div>
-
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Estado:</label>
-                <select name="estado" class="form-select">
-                    <option value="en preparacion" {% if pedido.estado == 'en preparacion' %}selected{% endif %}>
-                        En preparación
-                    </option>
-                    <option value="listo" {% if pedido.estado == 'listo' %}selected{% endif %}>Listo</option>
-                    <option value="entregado" {% if pedido.estado == 'entregado' %}selected{% endif %}>Entregado</option>
                 </select>
             </div>
         </div>
@@ -102,9 +164,10 @@
     </div>
 
     <div class="text-center mt-4">
-        <a href="{% url 'ver_pedido' pedido.id %}" class="btn btn-primary" id="btn_finalizar">
+        <button type="submit" form="frm_editar_pedido" class="btn btn-primary">
             Finalizar & Ver pedido
-        </a>
+        </button>
+
     </div>
 </div>
 
@@ -205,6 +268,82 @@ function eliminarDetalleAjax(detalle_id) {
         });
     });
 }
+</script>
+
+<script>
+// ------------------------------
+// Validar que haya productos antes de finalizar
+// ------------------------------
+function validarProductos() {
+    const filas = document.querySelectorAll("#tabla_detalles tbody tr");
+
+    if (filas.length === 1 && filas[0].textContent.includes("Aún no hay productos")) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin productos',
+            text: 'Debe agregar al menos un producto antes de finalizar.',
+            background: "var(--crema-suave)",
+            color: "var(--texto-oscuro)"
+        });
+        return false;
+    }
+
+    return true;
+}
+
+// ------------------------------
+// SweetAlert con estilo del de CREAR pedido
+// ------------------------------
+
+document.getElementById("frm_editar_pedido").addEventListener("submit", function(e) {
+    e.preventDefault(); // No envío tradicional
+
+    if (!validarProductos()) return;
+
+    let formData = new FormData(this);
+
+    fetch("", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if (data.success) {
+
+            Swal.fire({
+                icon: "success",
+                title: "Pedido actualizado correctamente",
+                text: "Redirigiendo...",
+                background: "#fff",
+                color: "var(--texto-oscuro)",
+                showConfirmButton: false,
+                timer: 1500
+            });
+
+            setTimeout(() => {
+                // REDIRECCIÓN A ver_pedido
+                window.location.href = `/pedidos/ver/${data.pedido_id}/`;
+            }, 1500);
+
+        } else {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: data.mensaje || "Ocurrió un error"
+            });
+        }
+
+    })
+    .catch(() => {
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "No se pudo actualizar el pedido."
+        });
+    });
+});
+
 </script>
 
 <br><br><br>

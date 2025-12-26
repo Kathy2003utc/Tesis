@@ -36,6 +36,29 @@ urlpatterns = [
     path('menu/editar/<int:producto_id>/', views.editar_menu, name='editar_menu'),
     path('menu/eliminar/<int:producto_id>/', views.eliminar_menu, name='eliminar_menu'),
 
+    # Admin - Resportes
+    path('reportes/', views.reportes_general, name='reportes_general'),
+    path('reportes/restaurante/',views.reporte_pagos_restaurante,name='reporte_pagos_restaurante'),
+    path('reportes/domicilio/', views.reporte_pagos_domicilio, name='reporte_pagos_domicilio'),
+    path('reportes/pedidos-restaurante/', views.reporte_pedidos_restaurante, name='reporte_pedidos_restaurante'),
+    path('reportes/pedidos-domicilio/', views.reporte_pedidos_domicilio, name='reporte_pedidos_domicilio'),
+
+    path('reportes/pedidos/restaurante/pdf/', views.exportar_pedidos_restaurante_pdf, name='exportar_pedidos_restaurante_pdf'),
+    path('reportes/pagos/restaurante/pdf/', views.exportar_cobros_restaurante_pdf,name='exportar_cobros_restaurante_pdf'),
+    path('reportes/pagos/domicilio/pdf/', views.exportar_cobros_domicilio_pdf, name='exportar_cobros_domicilio_pdf'),
+    path('reportes/pedidos/domicilio/pdf/', views.exportar_pedidos_domicilio_pdf, name='exportar_pedidos_domicilio_pdf'),
+    
+    path('reportes/pedidos/domicilio/excel/', views.exportar_pedidos_domicilio_excel, name='exportar_pedidos_domicilio_excel'),
+    path('reportes/pedidos/restaurante/excel/', views.exportar_pedidos_restaurante_excel, name='exportar_pedidos_restaurante_excel'),
+    path('reportes/pagos/restaurante/excel/',views.exportar_cobros_restaurante_excel,name='exportar_cobros_restaurante_excel'),
+    path('reportes/pagos/domicilio/excel/',views.exportar_cobros_domicilio_excel,name='exportar_cobros_domicilio_excel'),
+
+    # Reporte Unificado
+    path('reportes/unificado/', views.reporte_unificado, name='reporte_unificado'),
+    path('reportes/unificado/pdf/',views.exportar_unificado_pdf,name='exportar_unificado_pdf'),
+    path( 'reportes/unificado/excel/', views.exportar_unificado_excel, name='exportar_unificado_excel'),
+
+
     # Pedidos
     path('mesero/api/pedidos/estados/', views.api_estados_pedidos, name='api_estados_pedidos'),
     path('pedidos/', views.listar_pedidos, name='listar_pedidos'),
@@ -45,7 +68,6 @@ urlpatterns = [
     path('pedidos/editar/<int:pedido_id>/', views.editar_pedido, name='editar_pedido'),
     path('pedidos/eliminar/<int:pedido_id>/', views.eliminar_pedido, name='eliminar_pedido'),
     path('pedidos/finalizar/<int:pedido_id>/', views.finalizar_pedido, name='finalizar_pedido'),
-
 
     # DetallePedido AJAX
     path('pedidos/detalle/agregar/ajax/<int:pedido_id>/', views.agregar_detalle_ajax, name='agregar_detalle_ajax'),
@@ -57,14 +79,39 @@ urlpatterns = [
     path('pedido/<int:pedido_id>/listo/', views.marcar_pedido_listo, name='marcar_pedido_listo'),
     path("cocina/enviar-mensaje/", views.enviar_mensaje_mesero, name="enviar_mensaje_mesero"),
 
-
     #notificaion al mesero de listo
     path("notificaciones/", views.notificaciones_mesero, name="notificaciones_mesero"),
     path("notificaciones/obtener/", views.obtener_notificaciones, name="obtener_notificaciones"),
     path("notificaciones/eliminar/<int:notif_id>/", views.eliminar_notificacion, name="eliminar_notificacion"),
 
+    # CAJERO - PEDIDOS A DOMICILIO
+    path('cajero/api/pedidos/estados/', views.cajero_api_estados_pedidos, name='cajero_api_estados_pedidos'),
+    path('cajero/pedidos/', views.cajero_listar_pedidos, name='cajero_listar_pedidos'),
+    path('cajero/pedidos/crear/', views.cajero_crear_pedido, name='cajero_crear_pedido'),
+    path('cajero/pedidos/<int:pedido_id>/agregar/', views.cajero_agregar_detalles, name='cajero_agregar_detalles'),
+    path('cajero/pedidos/<int:pedido_id>/ver/', views.cajero_ver_pedido, name='cajero_ver_pedido'),
+    path('cajero/pedidos/<int:pedido_id>/eliminar/', views.cajero_eliminar_pedido, name='cajero_eliminar_pedido'),
+    path('cajero/pedidos/<int:pedido_id>/editar/', views.cajero_editar_pedido, name='cajero_editar_pedido'),
+    path('cajero/pedidos/<int:pedido_id>/finalizar/', views.cajero_finalizar_pedido, name='cajero_finalizar_pedido'),
+    path('cajero/pedidos/<int:pedido_id>/cancelar/', views.cajero_cancelar_pedido, name='cajero_cancelar_pedido'),
 
+    # AJAX
+    path('cajero/pedidos/<int:pedido_id>/detalle/agregar/', views.cajero_agregar_detalle_ajax, name='cajero_agregar_detalle_ajax'),
+    path('cajero/detalle/<int:detalle_id>/editar/', views.cajero_editar_detalle_ajax, name='cajero_editar_detalle_ajax'),
+    path('cajero/detalle/<int:detalle_id>/eliminar/', views.cajero_eliminar_detalle_ajax, name='cajero_eliminar_detalle_ajax'),
 
+    #notificaciones al cajero
+    path("cajero/notificaciones/", views.cajero_notificaciones, name="cajero_notificaciones"),
 
+    # Cajero - cobros restaurante
+    path('cajero/restaurante/cobros/', views.cajero_restaurante_cobros, name='cajero_restaurante_cobros'),
+    path('cajero/restaurante/<int:pedido_id>/pagar/', views.cajero_restaurante_pagar, name='cajero_restaurante_pagar'),
+    # Cajero - cobros domicilio
+    path('cajero/domicilio/cobros/',views.cajero_domicilio_cobros,name='cajero_domicilio_cobros'),
+    path('cajero/domicilio/<int:pedido_id>/pagar/',views.cajero_domicilio_pagar,name='cajero_domicilio_pagar'),
+    path("cajero/tabla-pedidos-pagados-domicilio/", views.tabla_pedidos_pagados_domicilio, name="tabla_pedidos_pagados_domicilio"),
+
+    
+    path("comprobante/<int:comp_id>/", views.ver_comprobante, name="ver_comprobante"),
 
 ]

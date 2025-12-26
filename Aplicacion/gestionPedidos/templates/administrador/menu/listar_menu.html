@@ -1,187 +1,218 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
-    /* PALETA COMPLETA */
-    :root {
-        --cafe-oscuro: #b4764f;
-        --cafe-medio: #cd966c;
-        --cafe-claro: #D7B999;
-        --cafe-suave: #EEDDC6;
+/* ================= PALETA COMPLETA ================= */
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
 
-        --verde: #3E7A3F;
-        --verde-claro: #7FBF6A;
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
 
-        --blanco-calido: #F8F5F2;
-        --gris-suave: #E2DED8;
-        --texto-oscuro: #2B1A10;
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
 
-        --rojo-alerta: #C14949;
-        --rojo-oscuro: #8C2F39;
-        --rojo-claro: #EA9A9A;
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
 
-        --cafe-profundo: #8A5A3C;
-        --cafe-tostado: #A66E4A;
-        --cafe-avellana: #C8A784;
-        --cafe-crema: #F0E1CA;
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
 
-        --verde-profundo: #2E5F32;
-        --verde-oliva: #5E7A43;
-        --verde-menta: #A6D5A1;
-        --verde-musgo: #507B4C;
+    --verde-profundo: #2E5F32;
+    --verde-oliva: #5E7A43;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
 
-        --crema-suave: #FAF4EC;
-        --gris-claro-calido: #D8D3CC;
-        --gris-medio-calido: #B8B1A8;
-        --gris-oscuro-calido: #4A3F38;
+    --crema-suave: #FAF4EC;
+    --gris-claro-calido: #D8D3CC;
+    --gris-medio-calido: #B8B1A8;
+    --gris-oscuro-calido: #4A3F38;
 
-        --exito: #4F8A57;
-        --exito-suave: #D9F2D6;
-        --info: #6A93B0;
-        --info-suave: #DDE9F2;
-        --advertencia: #D9A441;
-        --advertencia-suave: #FFF5DA;
+    --exito: #4F8A57;
+    --info: #6A93B0;
+    --advertencia: #D9A441;
+    --naranja-tierra: #D98555;
+    --azul-pizarra: #4F6D7A;
+}
 
-        --naranja-tierra: #D98555;
-        --azul-pizarra: #4F6D7A;
+/* ================= BASE ================= */
+html, body {
+    margin: 0;
+    overflow-x: hidden;
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+}
+
+.main-content-wrapper {
+    padding: 15px !important;
+}
+@media (min-width: 768px) {
+    .main-content-wrapper { padding: 40px !important; }
+}
+@media (min-width: 1200px) {
+    .main-content-wrapper { padding: 80px !important; }
+}
+
+/* ================= CONTENEDOR ================= */
+.menu-page .container {
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.content-card {
+    background: var(--crema-suave);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    border: 1px solid var(--cafe-suave);
+    max-width: 1200px;
+    margin: auto;
+}
+
+@media (min-width: 1400px) {
+    .content-card { max-width: 1400px; }
+}
+
+/* ================= TITULO ================= */
+h2 {
+    color: var(--cafe-profundo);
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #ffffff70;
+}
+
+/* ================= BOTONES ================= */
+.btn-success {
+    background-color: var(--verde-profundo) !important;
+    border-color: var(--verde-profundo) !important;
+    border-radius: 10px;
+    font-weight: bold;
+}
+.btn-warning {
+    background-color: var(--advertencia) !important;
+    border-color: var(--advertencia) !important;
+    color: white !important;
+}
+.btn-danger {
+    background-color: var(--rojo-alerta) !important;
+    border-color: var(--rojo-alerta) !important;
+}
+
+/* ================= FILTRO (SE MANTIENE) ================= */
+.categoria-menu {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.categoria-menu::-webkit-scrollbar { display: none; }
+
+.categoria-menu a {
+    text-decoration: none;
+    text-align: center;
+    font-weight: 600;
+    color: var(--gris-medio-calido);
+    padding: 10px 15px;
+    border-radius: 10px;
+}
+.categoria-menu a i {
+    display: block;
+    font-size: 26px;
+}
+.categoria-item.active {
+    color: var(--cafe-profundo) !important;
+    border-bottom: 3px solid var(--cafe-profundo);
+}
+
+/* ================= GRID ================= */
+.menu-page .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-content: center;
+}
+.menu-page .row > [class^="col-"] {
+    padding: 12px;
+}
+
+/* ================= TARJETAS (MISMO DISEÑO) ================= */
+.card-producto {
+    background: var(--blanco-calido);
+    border-radius: 15px;
+    border: 1px solid var(--cafe-avellana);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    min-height: 250px;
+    transition: .3s;
+}
+.card-producto:hover {
+    transform: translateY(-5px);
+}
+
+/* ================= BADGES ================= */
+.badge {
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 10px;
+}
+.badge-desayuno { background: var(--cafe-medio); color: white; }
+.badge-almuerzo { background: var(--verde); color: white; }
+.badge-merienda { background: var(--naranja-tierra); color: white; }
+.badge-especial { background: var(--azul-pizarra); color: white; }
+.badge-bebida { background: var(--info); color: white; }
+
+/* ================= FIX CLAVE EN CELULAR ================= */
+@media (max-width: 576px) {
+
+    /* 1 tarjeta por fila */
+    .menu-page .row > .col-sm-6,
+    .menu-page .row > .col-md-6,
+    .menu-page .row > .col-lg-4,
+    .menu-page .row > .col-xl-3 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
     }
 
-    html, body {
-        height: 100%;
-        margin: 0;
-        overflow-x: hidden;
-        background: linear-gradient(
-            135deg,
-            var(--crema-suave),
-            var(--cafe-suave) 45%,
-            var(--blanco-calido)
-        );
+    /* Card centrada real */
+    .menu-page .card-producto {
+        max-width: 420px;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
+}
 
-    .main-content-wrapper {
-        padding-left: 15px !important;
-        padding-right: 15px !important;
+/* ===== FIX VISIBILIDAD COMPLETA DEL FILTRO EN CELULAR ===== */
+@media (max-width: 576px) {
+
+    .categoria-menu {
+        justify-content: flex-start !important; /* CLAVE */
+        padding-left: 12px;
+        padding-right: 12px;
     }
-
-    @media (min-width: 768px) {
-        .main-content-wrapper {
-            padding-left: 40px !important;
-            padding-right: 40px !important;
-        }
-    }
-
-    @media (min-width: 1200px) {
-        .main-content-wrapper {
-            padding-left: 80px !important;
-            padding-right: 80px !important;
-        }
-    }
-
-    .content-card {
-        background: var(--crema-suave);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--cafe-suave);
-    }
-
-    h2 {
-        color: var(--cafe-profundo);
-        font-weight: bold;
-        text-shadow: 1px 1px 2px #ffffff70;
-        letter-spacing: 1px;
-    }
-
-    /* BOTONES CON TU PALETA */
-    .btn-success {
-        background-color: var(--verde-profundo) !important;
-        border-color: var(--verde-profundo) !important;
-        padding: 10px 18px;
-        border-radius: 10px;
-        font-weight: bold;
-        transition: 0.3s;
-    }
-    .btn-success:hover { background-color: var(--verde) !important; }
-
-    .btn-warning {
-        background-color: var(--advertencia) !important;
-        border-color: var(--advertencia) !important;
-        color: white !important;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
-    }
-    .btn-warning:hover { background-color: var(--advertencia) !important; color: var(--texto-oscuro) !important; }
-
-    .btn-danger {
-        background-color: var(--rojo-alerta) !important;
-        border-color: var(--rojo-alerta) !important;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
-    }
-    .btn-danger:hover { background-color: var(--rojo-claro) !important; color: var(--texto-oscuro) !important }
-
-    /* TARJETAS DE PRODUCTO */
-    .card-producto {
-        transition: 0.3s;
-        border-radius: 15px;
-        border: 1px solid var(--cafe-avellana);
-        background: var(--blanco-calido);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
-    }
-
-    .card-producto:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
-    }
-
-    .badge {
-        font-size: 13px;
-        padding: 6px 10px;
-        border-radius: 10px;
-    }
-
-    .badge-desayuno { background-color: var(--cafe-medio) !important; color: white; }
-    .badge-almuerzo { background-color: var(--verde) !important; color: white; }
-    .badge-merienda { background-color: var(--naranja-tierra) !important; color: white; }
-    .badge-especial { background-color: var(--azul-pizarra) !important; color: white; }
-    .badge-bebida { background-color: var(--info) !important; color: white; }
 
     .categoria-menu a {
-        text-decoration: none;
-        text-align: center;
-        font-weight: 600;
-        color: var(--gris-medio-calido);
-        padding: 10px 15px;
-        border-radius: 10px;
-        transition: 0.3s;
-        font-size: 15px;
+        min-width: 80px;   /* evita que se aplasten */
+        flex-shrink: 0;    /* no se encogen */
     }
-
-    .categoria-menu a i {
-        font-size: 28px;
-        margin-bottom: 5px;
-        display: block;
-    }
-
-    .categoria-menu a:hover {
-        color: var(--cafe-profundo);
-        transform: translateY(-3px);
-    }
-
-    .categoria-item.active {
-        color: var(--cafe-profundo) !important;
-        border-bottom: 3px solid var(--cafe-profundo);
-    }
-
+}
 
 </style>
 
 
-<div class="main-content-wrapper">
+
+<div class="main-content-wrapper menu-page">
     <div class="container mt-5">
         <div class="content-card">
 
@@ -258,7 +289,6 @@
                             </span>
                         </div>
 
-
                         <div class="d-flex justify-content-center gap-2 mt-auto">
 
                             <a href="{% url 'editar_menu' p.id %}" 
@@ -303,7 +333,8 @@ document.querySelectorAll(".form-eliminar").forEach(form => {
             confirmButtonColor: '#C14949',
             cancelButtonColor: '#4F6D7A',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            background: "#FFF7F0"
         }).then((result) => {
             if (result.isConfirmed) {
                 form.submit();
@@ -311,8 +342,10 @@ document.querySelectorAll(".form-eliminar").forEach(form => {
         });
     });
 });
+
 </script>
 
 
-<br><br><br>
+
+<br>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
     :root {
@@ -162,6 +162,59 @@
     }
 
     table tbody tr:hover { background-color: var(--gris-suave) !important; }
+    /* ====== ENCABEZADO DE TABLA SIN DATATABLE ====== */
+    #tbl_mesas thead th{
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    /* Hover suave filas */
+    #tbl_mesas tbody tr:hover{
+        background-color: var(--gris-suave);
+    }
+
+    /* Scroll horizontal real */
+    .table-responsive{
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Forzar ancho mínimo para móvil */
+    #tbl_mesas{
+        min-width: 700px;
+    }
+
+    /* ===== TABLA EQUILIBRADA ===== */
+
+    /* Todas las columnas centradas */
+    #tbl_mesas th,
+    #tbl_mesas td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Columna Acciones compacta */
+    #tbl_mesas td:last-child {
+        white-space: nowrap;
+    }
+
+    /* Botones más pequeños y parejos */
+    #tbl_mesas .btn {
+        padding: 4px 10px;
+        font-size: 13px;
+    }
+
+    /* Espacio entre botones */
+    #tbl_mesas .btn + .btn {
+        margin-left: 6px;
+    }
+
 </style>
 
 <div class="main-content-wrapper">
@@ -233,7 +286,8 @@ function confirmarEliminacion(e) {
         confirmButtonColor: '#C14949',
         cancelButtonColor: '#4F6D7A',
         confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
+        cancelButtonText: 'Cancelar',
+        background: "#FFF7F0"
     }).then((result) => {
         if (result.isConfirmed) {
             e.target.closest("form").submit();
@@ -241,14 +295,7 @@ function confirmarEliminacion(e) {
     });
 }
 
-$('#tbl_mesas').DataTable({
-    dom: 'Bfrtip',
-    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-    language: {
-        url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
-    }
-});
 </script>
 
-<br><br><br>
+<br>
 {% endblock %}

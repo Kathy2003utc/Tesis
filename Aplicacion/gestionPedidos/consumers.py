@@ -19,10 +19,15 @@ class PedidosConsumer(AsyncWebsocketConsumer):
                 "pedido": data["pedido"],
             }
         )
-
     async def nuevo_pedido(self, event):
         await self.send(text_data=json.dumps({
             "type": "nuevo_pedido",
+            "pedido": event["pedido"]
+        }))
+
+    async def actualizar_pedido(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "actualizar_pedido",
             "pedido": event["pedido"]
         }))
 
@@ -31,6 +36,55 @@ class PedidosConsumer(AsyncWebsocketConsumer):
             "type": "eliminar_pedido",
             "pedido_id": event["pedido_id"],
         }))
+
+    async def nuevo_cobro(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "nuevo_cobro",
+            "origen": event.get("origen"),  
+            "pedido_id": event["pedido_id"],
+
+            "codigo_pedido": event.get("codigo_pedido"),
+            
+            # PARA RESTAURANTE:
+            "mesa": event.get("mesa"),
+
+            # PARA DOMICILIO:
+            "cliente": event.get("cliente"),
+
+            "mesero": event.get("mesero"),
+            "total": event["total"],
+            "estado_pago": event.get("estado_pago", "pendiente"),
+            
+        }))
+
+    
+    async def eliminar_pedido(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "eliminar_pedido",
+            "pedido_id": event["pedido_id"]
+        }))
+
+    async def nuevo_pagado(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "nuevo_pagado",
+            "origen": event.get("origen"), 
+            "pedido_id": event["pedido_id"],
+
+            "codigo_pedido": event.get("codigo_pedido"),
+
+            # RESTAURANTE:
+            "mesa": event.get("mesa"),
+
+            # DOMICILIO:
+            "cliente": event.get("cliente"),
+
+            "mesero": event.get("mesero"),
+            "total": event["total"],
+            "fecha": event["fecha"],
+            "estado_pago": event.get("estado_pago", "confirmado"),
+        }))
+
+
 
 class NotificacionesConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -48,9 +102,10 @@ class NotificacionesConsumer(AsyncWebsocketConsumer):
 
     async def enviar_notificacion(self, event):
         await self.send(text_data=json.dumps({
+            "tipo": event.get("tipo"),
             "mensaje": event.get("mensaje"),
             "pedido": event.get("pedido"),
-            "tipo": event.get("tipo"),  
-            "mesa": event.get("mesa"),   
+            "mesa": event.get("mesa"),
+            "id": event.get("id"),
+            "fecha": event.get("fecha"),
         }))
-

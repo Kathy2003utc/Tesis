@@ -1,0 +1,142 @@
+<style>
+    /* ===============================
+    TABLA DETALLES – MISMO ESTILO
+    ================================ */
+
+    #tbl_detalles {
+        min-width: 900px;
+    }
+
+    #tbl_detalles thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    #tbl_detalles tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #tbl_detalles tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    #tbl_detalles td:last-child {
+        white-space: nowrap;
+    }
+
+    /* Subtotales */
+    #tbl_detalles tfoot .fila-subtotal {
+        background-color: var(--gris-suave);
+        font-weight: bold;
+    }
+
+    /* Total final */
+    #tbl_detalles tfoot .fila-total {
+        background-color: var(--cafe-suave);
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
+</style>
+<div class="table-responsive mt-3">
+    <table class="table table-bordered table-hover align-middle" id="tbl_detalles">
+
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Valor unitario</th>
+                <th>Subtotal</th>
+                <th>Recargo unitario</th>
+                <th>Recargo total</th>
+                <th>Observación</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for det in pedido.detalles.all %}
+            <tr>
+                <td>{{ det.producto.nombre }}</td>
+
+                <td class="text-center">{{ det.cantidad }}</td>
+
+                <td class="text-center">
+                    ${{ det.precio_unitario|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.subtotal|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.recargo|floatformat:2 }}
+                </td>
+
+                <td class="text-center">
+                    ${{ det.recargo_total|floatformat:2 }}
+                </td>
+
+                <td>{{ det.observacion }}</td>
+
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-warning btn-sm"
+                            onclick="editarDetalleAjax(
+                                '{{ det.id }}',
+                                '{{ det.cantidad }}',
+                                '{{ det.observacion|default_if_none:''|escapejs }}',
+                                '{{ det.recargo|floatformat:2 }}'.replace(',', '.')
+                            )">
+                            <i class="fas fa-edit"></i>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm"
+                            onclick="eliminarDetalleAjax('{{ det.id }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    Aún no hay productos agregados.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+
+        {% if pedido.detalles.all %}
+        <tfoot>
+            <tr class="fila-subtotal">
+                <td colspan="3" class="text-end">Subtotal productos:</td>
+                <td class="text-center">${{ pedido.subtotal|floatformat:2 }}</td>
+
+                <td class="text-end">Total recargo:</td>
+                <td class="text-center">
+                    ${{ total_recargos|floatformat:2 }}
+                </td>
+
+                <td colspan="2"></td>
+            </tr>
+
+            <tr class="fila-total">
+                <td colspan="5" class="text-end">TOTAL FINAL:</td>
+                <td class="text-center text-success">
+                    ${{ pedido.total|floatformat:2 }}
+                </td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+
+    </table>
+</div>
