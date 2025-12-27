@@ -429,12 +429,28 @@
             recibido = parseFloat(txt);
 
             if (isNaN(recibido)) {
-                Swal.fire("Error", "Debe ingresar el monto recibido.", "error");
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Debe ingresar el monto recibido.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
                 return;
             }
 
             if (recibido < total) {
-                Swal.fire("Error", "El cliente no puede pagar menos del total.", "error");
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "El cliente no puede pagar menos del total.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
                 return;
             }
         }
@@ -445,7 +461,15 @@
             recibido = parseFloat(txtTransf);
 
             if (isNaN(recibido)) {
-                Swal.fire("Error", "Debe ingresar el monto transferido.", "error");
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Debe ingresar el monto transferido.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
                 return;
             }
 
@@ -457,12 +481,21 @@
                     confirmButtonText: "Aceptar",
                     confirmButtonColor: "#3E7A3F",
                     background: "#FFF7F0",
+                    iconColor: "#D9A441"
                 });
                 return;
             }
 
             if (referencia === "") {
-                Swal.fire("Error", "Debe ingresar el número de comprobante.", "error");
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Debe ingresar el número de comprobante.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
                 return;
             }
         }
@@ -511,7 +544,15 @@
 
                     });
                 } else {
-                    Swal.fire("Error", data.message, "error");
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.message || "Ocurrió un error al registrar el pago.",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#3E7A3F",
+                        background: "#FFF7F0",
+                        iconColor: "#C14949"
+                    });
                 }
 
             });

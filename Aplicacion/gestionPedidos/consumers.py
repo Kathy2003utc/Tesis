@@ -82,6 +82,8 @@ class PedidosConsumer(AsyncWebsocketConsumer):
             "total": event["total"],
             "fecha": event["fecha"],
             "estado_pago": event.get("estado_pago", "confirmado"),
+
+            "comprobante_url": event.get("comprobante_url", ""),
         }))
 
 

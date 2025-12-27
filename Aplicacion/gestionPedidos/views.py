@@ -1646,38 +1646,52 @@ def cajero_notificaciones(request):
 @rol_requerido('cajero')
 def cajero_restaurante_cobros(request):
 
-    # ----------- PAGOS CONFIRMADOS PARA ANOTACIÓN -----------
     pagos_confirmados = Pago.objects.filter(
         pedido=OuterRef('pk'),
         estado_pago='confirmado'
     )
 
-    # FECHA DE HOY
     hoy = timezone.localdate()
 
-    # ----------- PEDIDOS PENDIENTES DE COBRO (SOLO HOY) -----------
-    pedidos_cobrar = Pedido.objects.filter(
-        tipo_pedido='restaurante',
-        estado__in=['listo', 'finalizado'],
-        fecha_hora__date=hoy              # ⬅️ SOLO PEDIDOS DE HOY
-    ).annotate(
-        tiene_pago=Exists(pagos_confirmados)
-    ).filter(
-        tiene_pago=False
-    ).order_by('-id')
+    # ---------- PEDIDOS PENDIENTES DE COBRO (SOLO HOY) ----------
+    pedidos_cobrar = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='restaurante',
+            estado__in=['listo', 'finalizado'],
+            fecha_hora__date=hoy
+        )
+        .annotate(tiene_pago=Exists(pagos_confirmados))
+        .filter(tiene_pago=False)
+        .order_by('-id')
+    )
 
-    # ----------- SOLO PAGOS DEL DÍA ACTUAL -----------
-    pedidos_pagados = Pedido.objects.filter(
-        tipo_pedido='restaurante',
-        pagos__estado_pago='confirmado',
-        pagos__fecha_hora__date=hoy       # ⬅️ YA LO TENÍAS BIEN
-    ).distinct().order_by('-id')
+    # ---------- PEDIDOS PAGADOS (SOLO HOY) + COMPROBANTES ----------
+    pedidos_pagados = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='restaurante',
+            pagos__estado_pago='confirmado',
+            pagos__fecha_hora__date=hoy
+        )
+        .prefetch_related('pagos__comprobante_set')  # para acceder a los PDFs
+        .distinct()
+        .order_by('-id')
+    )
+
+    # añadir el último pago confirmado a cada pedido (igual que domicilio)
+    for p in pedidos_pagados:
+        p.pago_confirmado = (
+            p.pagos
+             .filter(estado_pago='confirmado')
+             .order_by('-id')
+             .first()
+        )
 
     return render(request, "cajero/pago/cobros_restaurante.html", {
         "pedidos_cobrar": pedidos_cobrar,
         "pedidos_pagados": pedidos_pagados
     })
-
 
 
 # ============================================================
@@ -1759,36 +1773,8 @@ def cajero_restaurante_pagar(request, pedido_id):
     )
 
     # =====================================================
-    #               WEBSOCKET: ACTUALIZAR TABLAS
-    # =====================================================
-    channel_layer = get_channel_layer()
-
-    # eliminar de pendientes
-    async_to_sync(channel_layer.group_send)(
-        "pedidos_activos",
-        {"type": "eliminar_pedido", "pedido_id": pedido.id}
-    )
-
-    # agregar a pagados (con fecha en zona local)
-    fecha_local = timezone.localtime(pago.fecha_hora).strftime("%d/%m/%Y %H:%M")
-
-    async_to_sync(channel_layer.group_send)(
-        "pedidos_activos",
-        {
-            "type": "nuevo_pagado",
-            "pedido_id": pedido.id,
-            "mesa": pedido.mesa.numero if pedido.mesa else "Domicilio",
-            "mesero": pedido.mesero.nombre,
-            "total": float(total),
-            "fecha": fecha_local,
-            "estado_pago": "confirmado",
-        }
-    )
-
-    # =====================================================
     #     CREAR COMPROBANTE AUTOMÁTICAMENTE
     # =====================================================
-
     numero = f"C-{pedido.id}-{pago.id}"
 
     comprobante = Comprobante.objects.create(
@@ -1801,13 +1787,50 @@ def cajero_restaurante_pagar(request, pedido_id):
 
     generar_comprobante_pdf(comprobante)
 
+    # URL segura del PDF
+    comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
+
+    # =====================================================
+    #               WEBSOCKET: ACTUALIZAR TABLAS
+    # =====================================================
+    channel_layer = get_channel_layer()
+
+    # eliminar de pendientes
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "eliminar_pedido",
+            "pedido_id": pedido.id
+        }
+    )
+
+    # agregar a pagados (con fecha en zona local)
+    fecha_local = timezone.localtime(pago.fecha_hora).strftime("%d/%m/%Y %H:%M")
+
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "nuevo_pagado",
+            "origen": "restaurante",                      # IMPORTANTE
+            "pedido_id": pedido.id,
+            "codigo_pedido": pedido.codigo_pedido,        # para mostrar el código en tiempo real
+            "mesa": pedido.mesa.numero if pedido.mesa else "Domicilio",
+            "mesero": pedido.mesero.nombre if pedido.mesero else "",
+            "total": float(total),
+            "fecha": fecha_local,
+            "estado_pago": "confirmado",
+            "comprobante_url": comprobante_url,           # para el botón "Ver PDF"
+        }
+    )
+
     # =====================================================
     # RESPUESTA CON LINK PARA IMPRIMIR
     # =====================================================
     return JsonResponse({
         "success": True,
         "message": "Pago registrado correctamente.",
-        "comprobante_url": comprobante.archivo_pdf.url
+        "comprobante_url": comprobante_url,
+        "codigo_pedido": pedido.codigo_pedido           # opcional pero útil en el JS del front
     })
 
 
