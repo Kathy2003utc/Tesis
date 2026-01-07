@@ -1,172 +1,280 @@
 {% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br>
+<br>
 
 <style>
-    :root {
-        --cafe-oscuro: #b4764f;
-        --cafe-medio: #cd966c;
-        --cafe-claro: #D7B999;
-        --cafe-suave: #EEDDC6;
+:root{
+    --cafe-oscuro:#b4764f;
+    --cafe-medio:#cd966c;
+    --cafe-claro:#D7B999;
+    --cafe-suave:#EEDDC6;
 
-        --verde: #3E7A3F;
-        --verde-claro: #7FBF6A;
+    --verde:#3E7A3F;
+    --verde-claro:#7FBF6A;
 
-        --blanco-calido: #F8F5F2;
-        --gris-suave: #E2DED8;
-        --texto-oscuro: #2B1A10;
+    --blanco-calido:#F8F5F2;
+    --gris-suave:#E2DED8;
+    --texto-oscuro:#2B1A10;
 
-        --rojo-alerta: #C14949;
-        --rojo-oscuro: #8C2F39;
-        --rojo-claro: #EA9A9A;
+    --rojo-alerta:#C14949;
+    --rojo-oscuro:#8C2F39;
+    --rojo-claro:#EA9A9A;
 
-        --cafe-profundo: #8A5A3C;
-        --cafe-tostado: #A66E4A;
-        --cafe-avellana: #C8A784;
-        --cafe-crema: #F0E1CA;
+    --cafe-profundo:#8A5A3C;
+    --cafe-tostado:#A66E4A;
+    --cafe-avellana:#C8A784;
+    --cafe-crema:#F0E1CA;
 
-        --verde-profundo: #2E5F32;
-        --verde-oliva: #5E7A43;
-        --verde-menta: #A6D5A1;
-        --verde-musgo: #507B4C;
+    --exito:#4F8A57;
+    --crema-suave:#FAF4EC;
+}
 
-        --crema-suave: #FAF4EC;
-        --gris-claro-calido: #D8D3CC;
-        --gris-medio-calido: #B8B1A8;
-        --gris-oscuro-calido: #4A3F38;
+/* Fondo */
+html,body{
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+}
 
-        --exito: #4F8A57;
-        --exito-suave: #D9F2D6;
-        --info: #6A93B0;
-        --info-suave: #DDE9F2;
-        --advertencia: #D9A441;
-        --advertencia-suave: #FFF5DA;
+/* Contenedor principal */
+.wrapper-editar{
+    max-width: 1100px;
+    margin: auto;
+    background: var(--blanco-calido);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+}
 
-        --naranja-tierra: #D98555;
-        --azul-pizarra: #4F6D7A;
-    }
-    /* --- SweetAlert estilo café-crema para éxito global --- */
-    .swal-custom-success {
-        background: var(--crema-suave) !important;
-        border-radius: 18px !important;
-        padding: 20px !important;
-        width: 450px !important;
-    }
+/* Título */
+.titulo-editar{
+    text-align:center;
+    font-weight:800;
+    color:var(--cafe-oscuro);
+    margin-bottom:25px;
+}
 
-    .swal-custom-success .swal2-html-container {
-        color: var(--texto-oscuro) !important;
-        font-size: 16px !important;
-        font-weight: 500;
-    }
+/* ===== DATOS PEDIDO ===== */
+.card-datos{
+    border: 1px solid var(--cafe-avellana);
+    background: var(--crema-suave);
+    border-radius:18px;
+    padding:14px 16px;
+    box-shadow:0 6px 16px rgba(0,0,0,.08);
+    margin-bottom:30px;
+}
 
-    .swal-custom-success-icon-wrapper {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        border: 4px solid #4F8A57;
-        margin: 0 auto 15px auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+.card-datos h5{
+    font-weight:700;
+    color:var(--cafe-oscuro);
+    margin-bottom:15px;
+}
 
-    .swal-custom-success-icon {
-        font-size: 40px;
-        color: #4F8A57;
-    }
+.grid-datos{
+    display:grid;
+    grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+}
 
-    .swal-custom-title {
-        font-size: 22px;
-        font-weight: 800;
-        margin-bottom: 10px;
-        color: var(--texto-oscuro);
-    }
+.grid-datos label{
+    font-weight:600;
+    color:#5a4636;
+}
 
+.form-control, .form-select{
+    border-radius:12px;
+    border:1px solid var(--cafe-claro);
+}
+
+/* ===== PRODUCTOS ===== */
+.titulo-seccion{
+    text-align:center;
+    font-weight:800;
+    color:var(--cafe-oscuro);
+    margin:40px 0 20px;
+}
+
+.grid-productos{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.card-producto{
+    background: var(--crema-suave);
+    border-radius: 15px;
+    border: 1px solid var(--cafe-avellana);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    display:flex;
+    flex-direction:column;
+    padding:14px;
+}
+
+.card-producto:hover{
+    transform: translateY(-5px);
+    box-shadow: 0 12px 22px rgba(0,0,0,0.15);
+}
+
+.card-producto h5{
+    min-height: 42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    text-align:center;
+    color: var(--cafe-profundo);
+}
+
+.card-producto p{
+    text-align:center;
+    font-size:.85rem;
+    line-height:1.4;
+    color:#6b6b6b;
+}
+
+.card-producto p.text-muted{
+    min-height:48px;
+    max-height:48px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.precio-producto{
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--exito);
+    margin: 6px 0 10px;
+    letter-spacing: 0.5px;
+}
+
+.card-producto .btn{
+    margin-top:auto;
+    border-radius:12px;
+    font-weight:700;
+}
+
+/* ===== BOTONES ===== */
+.btn-agregar{
+    background:var(--verde);
+    color:white;
+}
+.btn-agregar:hover{
+    background:var(--verde-claro);
+    color:var(--texto-oscuro);
+}
+
+.btn-final{
+    background:var(--verde);
+    color:white;
+    font-weight:700;
+    padding:14px 28px;
+    border-radius:16px;
+}
+.btn-final:hover{
+    background:var(--verde-claro);
+    color:var(--texto-oscuro);
+}
+
+/* Responsive */
+@media (max-width: 576px){
+    .wrapper-editar{ padding: 16px; border-radius: 16px; }
+}
 </style>
 
-<div class="container mt-5" style="max-width: 900px;">
-    <h2 class="text-center text-primary mb-4">Editar Pedido #{{ pedido.id }}</h2>
+<div class="main-content-wrapper">
+    <div class="wrapper-editar mt-5">
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+        <!-- TÍTULO -->
+        <h2 class="titulo-editar">
+            Editar Pedido Restaurante {{ pedido.codigo_pedido }}
+        </h2>
 
-    <!-- Formulario para editar el pedido -->
-    <form method="post" id="frm_editar_pedido">
-        {% csrf_token %}
-        <div class="row">
+        <!-- DATOS DEL PEDIDO -->
+        <div class="card-datos">
+            <h5>Datos del pedido</h5>
 
-            <!-- MESA SOLO RESTAURANTE -->
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Mesa:</label>
-                <select name="mesa" class="form-select" required>
-                    {% for mesa in mesas %}
-                        <option value="{{ mesa.id }}" 
-                            {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
-                            Mesa {{ mesa.numero }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-    </form>
+            <form method="post" id="frm_editar_pedido">
+                {% csrf_token %}
 
-    <!-- Agregar productos -->
-    <h4 class="mt-4">Agregar productos:</h4>
-    <div class="row g-3">
-        {% for producto in productos %}
-        <div class="col-lg-3 col-md-4 col-sm-6 col-12">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-
-                <div class="p-2 d-flex flex-column">
-
-                    <h6 class="fw-bold text-center small mb-1">{{ producto.nombre }}</h6>
-
-                    <p class="text-muted small text-center mb-2" style="font-size: 0.75rem;">
-                        {{ producto.descripcion }}
-                    </p>
-
-                    <p class="fw-bold text-success text-center mb-2" style="font-size: 0.9rem;">
-                        ${{ producto.precio }}
-                    </p>
-
-                    <div class="d-flex flex-column mb-2">
-                        <input type="number"
-                            min="1"
-                            value="1"
-                            id="cantidad_{{ producto.id }}"
-                            class="form-control form-control-sm mb-2">
-
-                        <input type="text"
-                            placeholder="Observación"
-                            id="obs_{{ producto.id }}"
-                            class="form-control form-control-sm mb-2">
+                <div class="grid-datos">
+                    <div>
+                        <label>Mesa</label>
+                        <select name="mesa" class="form-select" required>
+                            {% for mesa in mesas %}
+                                <option value="{{ mesa.id }}" {% if pedido.mesa.id == mesa.id %}selected{% endif %}>
+                                    Mesa {{ mesa.numero }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
 
-                    <button class="btn btn-primary btn-sm w-100"
-                            onclick="agregarProducto('{{ producto.id }}')">
-                        Agregar
-                    </button>
+                    <div>
+                        <label>Mesero</label>
+                        <input class="form-control" value="{{ request.user.nombre }} {{ request.user.apellido }}" disabled>
+                    </div>
 
+                    <div>
+                        <label>Estado</label>
+                        <input class="form-control" value="{{ pedido.estado }}" disabled>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
-        {% endfor %}
-    </div>
 
-    <!-- Tabla de detalles -->
-    <h4 class="mt-5 text-center">Detalles del Pedido</h4>
-    <div id="tabla_detalles">
-        {% include 'mesero/pedidos/tabla_detalles.html' %}
-    </div>
+        <!-- PRODUCTOS -->
+        <h4 class="titulo-seccion">Agregar productos</h4>
 
-    <div class="text-center mt-4">
-        <button type="submit" form="frm_editar_pedido" class="btn btn-primary">
-            Finalizar & Ver pedido
-        </button>
+        <div class="grid-productos">
+            {% for producto in productos %}
+            <div class="card-producto h-100">
+
+                <h5 class="fw-bold text-center mb-2">{{ producto.nombre }}</h5>
+
+                <p class="text-muted text-center small mb-2">
+                    {{ producto.descripcion }}
+                </p>
+
+                <p class="precio-producto text-center">
+                    ${{ producto.precio }}
+                </p>
+
+                <label>Cantidad:</label>
+                <input type="number" min="1" value="1"
+                    id="cantidad_{{ producto.id }}"
+                    class="form-control mt-2">
+
+                <label>Observación:</label>
+                <input type="text"
+                    placeholder="Observación"
+                    id="obs_{{ producto.id }}"
+                    class="form-control mt-2">
+
+                <button type="button" class="btn btn-agregar mt-3 w-100"
+                        onclick="agregarProducto('{{ producto.id }}')">
+                    Agregar
+                </button>
+
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- TABLA -->
+        <h4 class="titulo-seccion">Detalles del pedido</h4>
+        <div id="tabla_detalles">
+            {% include 'mesero/pedidos/tabla_detalles.html' %}
+        </div>
+
+        <!-- ACCIÓN FINAL -->
+        <div class="text-center mt-4">
+            <button form="frm_editar_pedido" class="btn btn-final">
+                Guardar cambios y ver pedido
+            </button>
+        </div>
 
     </div>
 </div>
@@ -174,129 +282,216 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// ----------------------------------------
-// Agregar producto (solo restaurante)
-// ----------------------------------------
+// -------------------------------------------------------------
+// Agregar producto (restaurante) + estilo Swal igual al cajero
+// -------------------------------------------------------------
 function agregarProducto(id) {
     let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
     let observacion = document.getElementById(`obs_${id}`).value;
 
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cantidad inválida',
+            text: 'Ingrese una cantidad mayor a 0',
+            background: "#FFF7F0",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#D9A441",
+            iconColor: "#D9A441"
+        });
+        return;
+    }
+
     fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
         method: "POST",
-        headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
-        body: JSON.stringify({ producto_id:id, cantidad, observacion })
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            producto_id: id,
+            cantidad: cantidad,
+            observacion: observacion
+        })
     })
     .then(res => res.json())
     .then(data => {
-        if(data.success){
-            document.getElementById('tabla_detalles').innerHTML = data.tabla;
-            Swal.fire({icon:'success', title:'Producto agregado', timer:1000, showConfirmButton:false});
+        if (data.success) {
+            document.getElementById("tabla_detalles").innerHTML = data.tabla;
+
+            Swal.fire({
+                icon: "success",
+                title: "Producto agregado",
+                timer: 1200,
+                background: "#FFF7F0",
+                showConfirmButton: false,
+                iconColor: "#3E7A3F",
+                iconColor: "#3E7A3F"
+            });
+
             document.getElementById(`obs_${id}`).value = "";
+        } else {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: data.mensaje || "No se pudo agregar el producto.",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                iconColor: "#C14949",
+            });
         }
+    })
+    .catch(() => {
+        Swal.fire({
+            icon: "error",
+            title: "Error de conexión",
+            text: "No se pudo contactar con el servidor.",
+            background: "#FFF7F0",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#C14949",
+            iconColor: "#C14949",
+        });
     });
 }
 
-
-// ----------------------------------------
-// Editar detalle (sin recargo)
-// ----------------------------------------
-function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
+// -------------------------------------------------------------
+// Editar detalle (sin recargo) + estilo cajero
+// -------------------------------------------------------------
+function editarDetalleAjax(detalle_id, cantidad, observacion) {
 
     let html = `
-        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-            <label>Cantidad</label>
-            <input id="swal_cantidad" type="number" min="1" value="${cantidad_actual}" class="form-control">
-            <label>Observación</label>
-            <input id="swal_observacion" type="text" value="${observacion_actual || ''}" class="form-control">
-        </div>
+        <label>Cantidad</label>
+        <input id="sw_cantidad" type="number" min="1" value="${cantidad}" class="form-control">
+
+        <label class="mt-2">Observación</label>
+        <input id="sw_obs" type="text" value="${observacion || ''}" class="form-control">
     `;
 
     Swal.fire({
         title: "Editar detalle",
         html: html,
-        showCancelButton:true,
-        confirmButtonText:"Actualizar",
-        cancelButtonText:"Cancelar",
-        preConfirm: () => {
-            return {
-                cantidad: parseInt(document.getElementById('swal_cantidad').value),
-                observacion: document.getElementById('swal_observacion').value
-            };
-        }
-    }).then(result=>{
-        if(!result.isConfirmed) return;
+        showCancelButton: true,
+        confirmButtonText: "Actualizar",
+        cancelButtonText: "Cancelar",
+        background: "#FFF7F0",
+        confirmButtonColor: "#3E7A3F",
+        cancelButtonColor: "#4F6D7A",
+        preConfirm: () => ({
+            cantidad: parseInt(document.getElementById("sw_cantidad").value),
+            observacion: document.getElementById("sw_obs").value
+        })
+    }).then(result => {
+        if (!result.isConfirmed) return;
 
         fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-            method:"POST",
-            headers:{"X-CSRFToken": "{{ csrf_token }}", "Content-Type":"application/json"},
-            body:JSON.stringify(result.value)
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(result.value)
         })
-        .then(res=>res.json())
-        .then(data=>{
-            if(data.success){
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                Swal.fire({icon:'success', title:'Detalle actualizado', timer:1400, showConfirmButton:false});
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Detalle actualizado",
+                    timer: 1200,
+                    background: "#FFF7F0",
+                    showConfirmButton: false,
+                    iconColor: "#3E7A3F"
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo actualizar.",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    iconColor: "#C14949",
+                });
             }
         });
     });
 }
 
-
-// ----------------------------------------
-// Eliminar detalle
-// ----------------------------------------
+// -------------------------------------------------------------
+// Eliminar detalle + estilo cajero
+// -------------------------------------------------------------
 function eliminarDetalleAjax(detalle_id) {
+
     Swal.fire({
         title: "¿Eliminar producto?",
-        icon:"warning",
-        showCancelButton:true,
-        confirmButtonText:"Sí, eliminar",
-        cancelButtonText:"Cancelar"
-    }).then(result=>{
-        if(!result.isConfirmed) return;
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        background: "#FFF7F0",
+        confirmButtonColor: "#C14949",
+        cancelButtonColor: "#4F6D7A",
+        iconColor: "#D9A441"
+    }).then(result => {
+        if (!result.isConfirmed) return;
 
         fetch("{% url 'eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-            method:"POST",
-            headers:{"X-CSRFToken":"{{ csrf_token }}"}
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
         })
-        .then(res=>res.json())
-        .then(data=>{
-            if(data.success){
-                document.getElementById('tabla_detalles').innerHTML = data.tabla;
-                Swal.fire({icon:'success', title:'Eliminado', timer:1500, showConfirmButton:false});
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Eliminado",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo eliminar.",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    iconColor: "#C14949",
+                });
             }
         });
     });
 }
-</script>
 
-<script>
-// ------------------------------
-// Validar que haya productos antes de finalizar
-// ------------------------------
+// -------------------------------------------------------------
+// Validar productos antes de guardar y ver pedido (igual cajero)
+// -------------------------------------------------------------
 function validarProductos() {
     const filas = document.querySelectorAll("#tabla_detalles tbody tr");
-
     if (filas.length === 1 && filas[0].textContent.includes("Aún no hay productos")) {
         Swal.fire({
             icon: 'warning',
             title: 'Sin productos',
             text: 'Debe agregar al menos un producto antes de finalizar.',
-            background: "var(--crema-suave)",
-            color: "var(--texto-oscuro)"
+            background: "#FFF7F0",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#D9A441",
+            iconColor: "#D9A441"
         });
         return false;
     }
-
     return true;
 }
 
-// ------------------------------
-// SweetAlert con estilo del de CREAR pedido
-// ------------------------------
-
 document.getElementById("frm_editar_pedido").addEventListener("submit", function(e) {
-    e.preventDefault(); // No envío tradicional
+    e.preventDefault();
 
     if (!validarProductos()) return;
 
@@ -308,43 +503,47 @@ document.getElementById("frm_editar_pedido").addEventListener("submit", function
     })
     .then(res => res.json())
     .then(data => {
-
         if (data.success) {
 
             Swal.fire({
                 icon: "success",
                 title: "Pedido actualizado correctamente",
                 text: "Redirigiendo...",
-                background: "#fff",
-                color: "var(--texto-oscuro)",
+                timer: 1500,
                 showConfirmButton: false,
-                timer: 1500
+                background: "#FFF7F0",
+                iconColor: "#3E7A3F"
             });
 
             setTimeout(() => {
-                // REDIRECCIÓN A ver_pedido
-                window.location.href = `/pedidos/ver/${data.pedido_id}/`;
+                window.location.href = "{% url 'ver_pedido' 99999 %}".replace("99999", data.pedido_id);
             }, 1500);
 
         } else {
             Swal.fire({
                 icon: "error",
                 title: "Error",
-                text: data.mensaje || "Ocurrió un error"
+                text: data.mensaje || "Ocurrió un error.",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                iconColor: "#C14949",
             });
         }
-
     })
     .catch(() => {
         Swal.fire({
             icon: "error",
-            title: "Error",
-            text: "No se pudo actualizar el pedido."
+            title: "Error de conexión",
+            text: "No se pudo actualizar el pedido.",
+            background: "#FFF7F0",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#C14949",
+            iconColor: "#C14949",
         });
     });
 });
-
 </script>
 
-<br><br><br>
+<br>
 {% endblock %}

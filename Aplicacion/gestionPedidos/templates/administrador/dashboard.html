@@ -51,22 +51,21 @@
         --advertencia-suave: #FFF5DA;
     }
 
-    html, body {
+    html,
+    body {
         height: 100%;
         margin: 0;
         overflow-x: hidden !important;
-        background: linear-gradient(
-            135deg,
-            var(--crema-suave),
-            var(--cafe-suave) 45%,
-            var(--blanco-calido)
-        );
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
         color: var(--texto-oscuro);
         font-family: 'Segoe UI', sans-serif;
     }
 
     .main-content-wrapper {
-        padding-left: 10px !important; 
+        padding-left: 10px !important;
         padding-right: 10px !important;
     }
 
@@ -85,13 +84,13 @@
         background: var(--blanco-calido);
         border: 1px solid var(--gris-claro-calido);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         height: 100%;
     }
 
     .card:hover {
         transform: translateY(-6px);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
         border-color: var(--cafe-medio);
         background: var(--crema-suave);
     }
@@ -127,7 +126,7 @@
     .btn-outline-success:hover {
         background-color: var(--verde-profundo);
         color: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         transform: translateY(-2px);
     }
 
@@ -136,7 +135,7 @@
     }
 
     h1.display-5 {
-        text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
+        text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     @media (max-width: 1200px) {
@@ -161,9 +160,11 @@
         .col-md-4 {
             width: 95%;
         }
+
         h1.display-5 {
             font-size: 1.7rem;
         }
+
         .icono {
             font-size: 2.3rem;
         }
@@ -174,7 +175,8 @@
     <div class="container my-5">
 
         <div class="text-center mb-5">
-            <h1 class="display-5 fw-bold text-success">¡Bienvenido/a, {{ user.first_name|default:"Administrador" }}!</h1>
+            <h1 class="display-5 fw-bold text-success">¡Bienvenido/a, {{ user.first_name|default:"Administrador" }}!
+            </h1>
             <p class="text-muted">Administra todo el funcionamiento del restaurante desde este panel central.</p>
         </div>
 
@@ -217,32 +219,10 @@
             <div class="col-md-4">
                 <div class="card text-center shadow-lg border-0">
                     <div class="card-body">
-                        <i class="bi bi-bag-check-fill icono"></i>
-                        <h5 class="card-title mt-3 fw-bold">Pedidos</h5>
-                        <p class="text-muted">Revisa y controla los pedidos en curso y finalizados.</p>
-                        <a href="{% url 'listar_pedidos' %}" class="btn btn-outline-success">Ver Pedidos</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card text-center shadow-lg border-0">
-                    <div class="card-body">
-                        <i class="bi bi-cash-coin icono"></i>
-                        <h5 class="card-title mt-3 fw-bold">Pagos</h5>
-                        <p class="text-muted">Revisar y consultar los pagos recibidos y su estado.</p>
-                        <a href="" class="btn btn-outline-success">Ver Pagos</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card text-center shadow-lg border-0">
-                    <div class="card-body">
                         <i class="bi bi-bar-chart-line-fill icono"></i>
                         <h5 class="card-title mt-3 fw-bold">Reportes</h5>
                         <p class="text-muted">Genera reportes de ventas, pedidos y rendimiento del personal.</p>
-                        <a href="" class="btn btn-outline-success">Ver Reportes</a>
+                        <a href="{% url 'reportes_general' %}" class="btn btn-outline-success">Ver Reportes</a>
                     </div>
                 </div>
             </div>

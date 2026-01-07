@@ -27,13 +27,12 @@
         --gris-oscuro-calido: #4A3F38;
     }
 
-    html, body {
-        background: linear-gradient(
-            135deg,
-            var(--crema-suave),
-            var(--cafe-suave) 45%,
-            var(--blanco-calido)
-        );
+    html,
+    body {
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
         color: var(--texto-oscuro);
         font-family: 'Segoe UI', sans-serif;
     }
@@ -50,13 +49,13 @@
         background: var(--blanco-calido);
         border: 1px solid var(--gris-suave);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         height: 100%;
     }
 
     .card:hover {
         transform: translateY(-6px);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
         border-color: var(--cafe-medio);
         background: var(--crema-suave);
     }
@@ -92,7 +91,7 @@
     .btn-outline-success:hover {
         background-color: var(--verde);
         color: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         transform: translateY(-2px);
     }
 
@@ -113,6 +112,7 @@
         h1.display-5 {
             font-size: 1.7rem;
         }
+
         .icono {
             font-size: 2.3rem;
         }
@@ -143,8 +143,7 @@
                     <p class="text-muted">
                         Visualiza pedidos realizados a domicilio.
                     </p>
-                    <a href="{% url 'cajero_listar_pedidos' %}"
-                       class="btn btn-outline-success">
+                    <a href="{% url 'cajero_listar_pedidos' %}" class="btn btn-outline-success">
                         Ver Pedidos
                     </a>
                 </div>
@@ -160,8 +159,7 @@
                     <p class="text-muted">
                         Visualiza pedidos listos para pago en restaurante.
                     </p>
-                    <a href="{% url 'cajero_restaurante_cobros' %}"
-                       class="btn btn-outline-success">
+                    <a href="{% url 'cajero_restaurante_cobros' %}" class="btn btn-outline-success">
                         Ver Cobros
                     </a>
                 </div>
@@ -177,8 +175,7 @@
                     <p class="text-muted">
                         Gestiona pagos de pedidos enviados a domicilio.
                     </p>
-                    <a href="{% url 'cajero_domicilio_cobros' %}"
-                       class="btn btn-outline-success">
+                    <a href="{% url 'cajero_domicilio_cobros' %}" class="btn btn-outline-success">
                         Ver Cobros
                     </a>
                 </div>
@@ -190,12 +187,12 @@
             <div class="card text-center">
                 <div class="card-body">
                     <i class="bi bi-file-earmark-text icono"></i>
-                    <h5 class="card-title mt-3 fw-bold">Comprobantes</h5>
+                    <h5 class="card-title mt-3 fw-bold">Reportes</h5>
                     <p class="text-muted">
-                        Consulta y genera comprobantes de pago.
+                        Consulta y genera reportes en PDF y Excel.
                     </p>
-                    <a href="#" class="btn btn-outline-success">
-                        Ver Comprobantes
+                    <a href="{% url 'cajero_reporte_unificado' %}" class="btn btn-outline-success">
+                        Ver Reporte
                     </a>
                 </div>
             </div>
@@ -210,8 +207,7 @@
                     <p class="text-muted">
                         Revisa alertas de pedidos listos para cobrar.
                     </p>
-                    <a href="{% url 'cajero_notificaciones' %}"
-                       class="btn btn-outline-success">
+                    <a href="{% url 'cajero_notificaciones' %}" class="btn btn-outline-success">
                         Ver Notificaciones
                     </a>
                 </div>

@@ -44,6 +44,22 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.rol})"
+    
+    @property
+    def tiene_interacciones(self):
+        """
+        Devuelve True si el usuario ya ha interactuado en el sistema
+        (pedidos, mensajes, notificaciones), False en caso contrario.
+        """
+
+        return (
+            self.pedidos_mesero.exists() or
+            self.pedidos_cajero.exists() or
+            self.pedidos_cliente.exists() or
+            self.mensajes_enviados.exists() or
+            self.mensajes_recibidos.exists() or
+            Notificacion.objects.filter(usuario_destino=self).exists()
+        )
 
 # ----------------------------
 # Mesa
@@ -75,9 +91,15 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     tipo = models.CharField(max_length=20, choices=TIPOS)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
+
+    @property
+    def tiene_pedidos(self):
+        # Usa el related_name por defecto del FK en DetallePedido
+        return self.detallepedido_set.exists()
 
 
 # ----------------------------
@@ -145,7 +167,6 @@ class Pedido(models.Model):
         blank=True
     )
 
-
     def calcular_totales(self):
 
         # Subtotal de productos
@@ -171,18 +192,27 @@ class Pedido(models.Model):
         self.total = self.subtotal + recargo_total
 
         self.save()
+    
+    @property
+    def total_recargos(self):
+        return self.detalles.aggregate(
+            total=Sum(
+                F('recargo') * F('cantidad'),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        )['total'] or 0
 
     def generar_codigo(self):
         ultimo = Pedido.objects.filter(
-            codigo_pedido__startswith="DOM-"
+            codigo_pedido__startswith="PCG-"
         ).aggregate(Max('codigo_pedido'))['codigo_pedido__max']
 
         if ultimo:
-            numero = int(ultimo.replace("DOM-", "")) + 1
+            numero = int(ultimo.replace("PCG-", "")) + 1
         else:
             numero = 1
 
-        return f"DOM-{numero:05d}"
+        return f"PCG-{numero:05d}"
     
     def save(self, *args, **kwargs):
         if not self.codigo_pedido:

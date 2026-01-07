@@ -1,7 +1,7 @@
 {% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br><br>
+<br>
 
 <style>
     :root {
@@ -94,6 +94,8 @@
         font-weight: bold;
         text-shadow: 1px 1px 2px #ffffff70;
         letter-spacing: 1px;
+        text-align: center;
+        margin-bottom: 25px;
     }
 
     .btn-success {
@@ -170,24 +172,23 @@
     }
 
     table {
-        min-width: 900px; /* Para que haya scroll en pantallas chicas */
+        min-width: 700px; /* como en el apartado de domicilio */
         overflow: hidden;
     }
 
-    .table-primary {
-        background-color: var(--cafe-claro) !important;
+    /* ESTILO DE CABECERA IGUAL AL APARTADO DE DOMICILIO */
+    #tbl_pedidos thead th {
+        background-color: var(--cafe-crema) !important;
         color: var(--texto-oscuro) !important;
         font-size: 15px;
         font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
     }
 
     .table-hover tbody tr:hover {
         background-color: var(--gris-suave) !important;
-    }
-
-    table.dataTable thead th {
-        background-color: var(--cafe-crema) !important;
-        color: #2B1A10 !important;           
     }
 
     .badge {
@@ -197,23 +198,21 @@
     }
 
     .badge.bg-primary {
-        background-color: var(--rojo-alerta) !important;
+        background-color: var(--azul-pizarra) !important;
     }
     .badge.bg-warning {
-        background-color: var(--naranja-tierra) !important;
+        background-color: var(--advertencia) !important;
     }
     .badge.bg-success {
         background-color: var(--exito) !important;
     }
-
 </style>
 
 <div class="main-content-wrapper">
     <div class="container mt-5">
         <div class="content-card">
 
-            <h1 class="text-center">Pedidos del Restaurante</h1>
-            <hr>
+            <h1>Pedidos del Restaurante</h1>
 
             <div class="text-end mb-3">
                 <a href="{% url 'crear_pedido' %}" class="btn btn-success">
@@ -223,9 +222,9 @@
 
             <div class="table-responsive">
                 <table id="tbl_pedidos" class="table table-bordered table-striped table-hover align-middle">
-                    <thead class="table-primary text-center">
+                    <thead>
                         <tr>
-                            <th>N°</th>
+                            <th>Código</th>  {# ANTES: N° #}
                             <th>Mesero</th>
                             <th>Mesa</th>
                             <th>Estado</th>
@@ -237,7 +236,8 @@
                     <tbody>
                         {% for pedido in pedidos %}
                         <tr>
-                            <td class="text-center">{{ pedido.id }}</td>
+                            {# AQUÍ MOSTRAMOS EL CÓDIGO DEL PEDIDO, NO EL ID #}
+                            <td class="text-center">{{ pedido.codigo_pedido }}</td>
                             <td class="text-center">{{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</td>
                             <td class="text-center">{{ pedido.mesa.numero }}</td>
 
@@ -252,8 +252,6 @@
                                     <span class="badge bg-primary">Finalizado</span>
                                 {% endif %}
                             </td>
-
-
 
                             <td class="text-center">${{ pedido.total }}</td>
 
@@ -284,7 +282,12 @@
                                         </button>
                                     </form>
                                 {% endif %}
-                
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No hay pedidos registrados.
                             </td>
                         </tr>
                         {% endfor %}
@@ -307,8 +310,11 @@ function confirmarEliminacion(id) {
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#C14949",
-        confirmButtonText: "Eliminar",
-        cancelButtonText: "Cancelar"
+        cancelButtonColor: '#4F6D7A',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: "Cancelar",
+        background: "#FFF7F0",
+        iconColor: "#D9A441"
     }).then((r) => {
 
         if (!r.isConfirmed) return;
@@ -320,28 +326,35 @@ function confirmarEliminacion(id) {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                Swal.fire("Eliminado", "Pedido eliminado", "success");
 
-                //QUITAR FILA DE LA TABLA
-                $(`.estado-pedido[data-id='${id}']`).closest("tr").remove();
+                Swal.fire({
+                    icon: "success",
+                    title: "Éxito",
+                    text: "Pedido eliminado correctamente.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F",
+                }).then(() => {
+                    // QUITAR FILA DE LA TABLA
+                    $(`.estado-pedido[data-id='${id}']`).closest("tr").remove();
+                });
 
             } else {
-                Swal.fire("Error", data.message, "error");
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "No se pudo eliminar el pedido.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949",
+                });
             }
         });
     });
 }
-
-
-$("#tbl_pedidos").DataTable({
-    dom: 'Bfrtip',
-    buttons: ["copy", "csv", "excel", "pdf", "print"],
-    language: {
-        url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
-    }
-});
 </script>
-
 
 <script>
 function actualizarEstados() {
@@ -354,7 +367,7 @@ function actualizarEstados() {
 
                 let fila = $(`.estado-pedido[data-id='${p.id}']`).closest("tr");
 
-                //ACTUALIZAR ESTADO (BADGE)
+                // ACTUALIZAR ESTADO (BADGE)
                 let celdaEstado = fila.find(".estado-pedido");
                 if (p.estado === "en preparacion") {
                     celdaEstado.html(`<span class="badge bg-warning">En preparación</span>`);
@@ -366,8 +379,7 @@ function actualizarEstados() {
                     celdaEstado.html(`<span class="badge bg-primary">Finalizado</span>`);
                 }
 
-
-                //ACTUALIZAR ACCIONES COMPLETAS (EDITAR, ELIMINAR, FINALIZAR)
+                // ACTUALIZAR ACCIONES COMPLETAS (EDITAR, ELIMINAR, FINALIZAR)
                 let celdaAcc = fila.find("td:last");
 
                 let acciones = `
@@ -399,14 +411,9 @@ function actualizarEstados() {
                     `;
                 }
 
-                if (p.estado === "finalizado") {
-
-                }
-
                 celdaAcc.html(acciones);
 
-
-                //ACTUALIZAR ESTADO DE LA MESA SIN RECARGAR
+                // ACTUALIZAR ESTADO DE LA MESA SIN RECARGAR
                 if (p.mesa_id) {
                     let filaMesa = $(`#tbl_mesas tbody tr`).filter(function() {
                         return $(this).find("td:first").text().trim() == p.mesa_id;
@@ -425,7 +432,6 @@ function actualizarEstados() {
 setInterval(actualizarEstados, 1000);
 </script>
 
-
 <script>
 function finalizarPedido(id) {
     Swal.fire({
@@ -433,10 +439,12 @@ function finalizarPedido(id) {
         text: "La mesa quedará libre automáticamente.",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: "#4F8A57",
-        cancelButtonColor: "#C14949",
+        confirmButtonColor: "#C14949",
+        cancelButtonColor: "#4F6D7A",
         confirmButtonText: "Sí, finalizar",
-        cancelButtonText: "Cancelar"
+        cancelButtonText: "Cancelar",
+        background: "#FFF7F0",
+        iconColor: "#D9A441"
     }).then((result) => {
         if (!result.isConfirmed) return;
 
@@ -452,9 +460,20 @@ function finalizarPedido(id) {
                 Swal.fire({
                     icon: "success",
                     title: "Pedido finalizado",
-                    text: data.message,
-                    timer: 1500,
-                    showConfirmButton: false
+                    background: "#FFF7F0",
+                    showConfirmButton: false,
+                    iconColor: "#3E7A3F",
+                    timer: 1800
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "No se pudo finalizar el pedido.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949",
                 });
             }
         });
@@ -462,7 +481,5 @@ function finalizarPedido(id) {
 }
 </script>
 
-
-
-<br><br><br>
+<br>
 {% endblock %}

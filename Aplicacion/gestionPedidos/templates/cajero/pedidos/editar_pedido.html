@@ -363,7 +363,8 @@ function agregarProducto(id) {
             icon: 'warning',
             title: 'Cantidad inválida',
             text: 'Ingrese una cantidad mayor a 0',
-            background: "#FFF7F0"
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
         });
         return;
     }
@@ -424,6 +425,16 @@ function agregarProducto(id) {
                 });
 
                 document.getElementById(`obs_${id}`).value = "";
+            }else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.mensaje || 'No se pudo agregar el producto.',
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949",
+                });
             }
         });
     });
@@ -455,6 +466,8 @@ function editarDetalleAjax(detalle_id, cantidad, observacion, recargo) {
         showCancelButton: true,
         confirmButtonText: "Actualizar",
         cancelButtonText: "Cancelar",
+        confirmButtonColor: "#4F6D7A",
+        cancelButtonColor: "#C14949",
         background: "#FFF7F0",
         preConfirm: () => ({
             cantidad: parseInt(document.getElementById("sw_cantidad").value),
@@ -485,6 +498,7 @@ function editarDetalleAjax(detalle_id, cantidad, observacion, recargo) {
                     timer: 1200,
                     background: "#FFF7F0",
                     showConfirmButton: false,
+                    iconColor: "#3E7A3F",
                     iconColor: "#3E7A3F"
                 });
             }
@@ -511,6 +525,7 @@ function eliminarDetalleAjax(detalle_id) {
         background: "#FFF7F0",
         confirmButtonColor: "#C14949",
         cancelButtonColor: '#4F6D7A',
+        iconColor: "#D9A441"
     }).then(result => {
 
         if (!result.isConfirmed) return;
@@ -531,6 +546,7 @@ function eliminarDetalleAjax(detalle_id) {
                     timer: 1200,
                     showConfirmButton: false,
                     background: "#FFF7F0",
+                    iconColor: "#3E7A3F",
                     iconColor: "#3E7A3F"
                 });
             }
@@ -580,6 +596,7 @@ document.getElementById("frm_editar_pedido").addEventListener("submit", function
                 title: "Error",
                 text: data.mensaje,
                 background: "#FFF7F0",
+                iconColor: "#C14949",
             });
         }
 

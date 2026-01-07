@@ -1,30 +1,259 @@
 {% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br>
+<br>
 
-<div class="container mt-5" style="max-width: 800px;">
-    <h2 class="text-center text-primary mb-4">Pedido #{{ pedido.id }}</h2>
+<style>
+/* ===========================
+   PALETA GENERAL
+=========================== */
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
 
-   <a href="{% url 'listar_pedidos' %}" class="btn btn-primary mt-3">
-    <i class="fa fa-arrow-left me-2"></i> Regresar
-</a>
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
 
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
 
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
 
-    <div class="card p-4 shadow rounded-4 mt-4">
-        <p><strong>Mesero:</strong> {{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</p>
-        <p><strong>N° de Mesa:</strong> {{ pedido.mesa.numero }} </p>
-        <p><strong>Estado del pedido:</strong> {{ pedido.estado }}</p>
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --naranja-tierra: #D98555;
+        --naranja-arcilla: #C66B3D;
+        --dorado-suave: #D9B77A;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+/* ===========================
+   TITULO
+=========================== */
+.titulo-pedido {
+    color: var(--cafe-oscuro);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* ===========================
+   BOTÓN REGRESAR
+=========================== */
+.btn-regresar {
+    background: var(--azul-pizarra);
+    color: white;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 10px 18px;
+    transition: .3s;
+}
+.btn-regresar:hover {
+    background: var(--gris-oscuro-calido);
+    color: white;
+}
+
+/* ===========================
+   RESUMEN DEL PEDIDO
+=========================== */
+.resumen-pedido {
+    background: var(--cafe-suave);
+    border-radius: 18px;
+    padding: 25px;
+    box-shadow: 0 10px 22px rgba(0,0,0,.08);
+    border: 1px solid var(--cafe-claro);
+}
+
+.resumen-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px dashed var(--cafe-medio);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.resumen-codigo {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--cafe-oscuro);
+}
+
+.resumen-total {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--exito);
+}
+
+.resumen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.resumen-item {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 16px;
+    border-left: 5px solid var(--cafe-medio);
+    box-shadow: 0 6px 14px rgba(0,0,0,.06);
+}
+
+.resumen-item small {
+    display: block;
+    font-weight: 700;
+    color: var(--gris-oscuro-calido);
+    margin-bottom: 4px;
+}
+
+.resumen-item span {
+    color: var(--texto-oscuro);
+    font-size: 15px;
+}
+
+/* ===========================
+   TABLA DETALLES
+=========================== */
+#tbl_detalles thead th {
+    background-color: var(--cafe-claro);
+    color: var(--texto-oscuro);
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 2px solid var(--cafe-medio);
+}
+
+#tbl_detalles tbody tr:hover {
+    background-color: var(--gris-suave);
+}
+
+#tbl_detalles tfoot .fila-subtotal {
+    background-color: var(--gris-suave);
+    font-weight: bold;
+}
+
+#tbl_detalles tfoot .fila-total {
+    background-color: var(--cafe-suave);
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-5">
+
+        <h2 class="titulo-pedido">
+            Pedido en Restaurante
+        </h2>
+
+        <div class="mb-3">
+            <a href="{% url 'listar_pedidos' %}" class="btn btn-regresar">
+                <i class="fas fa-arrow-left me-2"></i> Regresar
+            </a>
+        </div>
+
+        <!-- RESUMEN -->
+        <div class="resumen-pedido mb-4">
+
+            <div class="resumen-header">
+                <!-- Código del pedido -->
+                <div class="resumen-codigo">
+                    {{ pedido.codigo_pedido }}
+                </div>
+
+                <!-- Estado con badge -->
+                <div>
+                    {% if pedido.estado == 'en_creacion' %}
+                        <span class="badge bg-warning">En creación</span>
+                    {% elif pedido.estado == 'en preparacion' %}
+                        <span class="badge bg-warning">En preparación</span>
+                    {% elif pedido.estado == 'listo' %}
+                        <span class="badge bg-success">Listo</span>
+                    {% elif pedido.estado == 'finalizado' %}
+                        <span class="badge bg-primary">Finalizado</span>
+                    {% endif %}
+                </div>
+
+                <!-- Total -->
+                <div class="resumen-total">
+                    ${{ pedido.total|floatformat:2 }}
+                </div>
+            </div>
+
+            <div class="resumen-grid">
+                <div class="resumen-item">
+                    <small>Mesero</small>
+                    <span>{{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</span>
+                </div>
+
+                <div class="resumen-item">
+                    <small>Mesa</small>
+                    <span>{{ pedido.mesa.numero }}</span>
+                </div>
+
+                <div class="resumen-item">
+                    <small>Estado del pedido</small>
+                    <span>
+                        {% if pedido.estado == 'en_creacion' %}
+                            En creación
+                        {% elif pedido.estado == 'en preparacion' %}
+                            En preparación
+                        {% elif pedido.estado == 'listo' %}
+                            Listo
+                        {% elif pedido.estado == 'finalizado' %}
+                            Finalizado
+                        {% else %}
+                            {{ pedido.estado }}
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="resumen-item">
+                    <small>Tipo de pedido</small>
+                    <span>Consumo en mesa</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA DETALLES -->
+        <h4 class="mb-3" style="color: var(--cafe-oscuro); font-weight:700;">
+            Detalles del pedido
+        </h4>
+
+        <div id="tabla_detalles">
+            {% include 'mesero/pedidos/tabla_detalle_acciones.html' %}
+        </div>
+
     </div>
+</div>
 
-    <!-- Tabla de detalles -->
-    <h4 class="mt-4">Detalles del pedido:</h4>
-    <div id="tabla_detalles">
-        {% include 'mesero/pedidos/tabla_detalle_acciones.html' %}
-    </div>
-
-
-<br><br><br>
+<br>
 {% endblock %}

@@ -1,93 +1,435 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'cocinero/plantilla.html' %}
 {% load static %}
 
 {% block contenido %}
 
-<br><br><br>
+<br>
 
-<div class="container mt-4">
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
-    <!-- ======================================================= -->
-    <!--        SECCIÓN 1: PEDIDOS DEL RESTAURANTE              -->
-    <!-- ======================================================= -->
-    <h2 class="text-center text-primary mb-4">
-        Pedidos del restaurante (Meseros)
-    </h2>
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
 
-    <div id="pedidos-restaurante" class="row g-4">
-        {% for pedido in pedidos_restaurante %}
-        <div class="col-md-4" id="pedido-{{ pedido.id }}">
-            <div class="pedido-card card p-3 shadow-sm">
-                <h4>Pedido #{{ pedido.id }} — Mesa {{ pedido.mesa.numero }}</h4>
-                <p>Mesero: <strong>{{ pedido.mesero.nombre }}</strong></p>
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
 
-                <ul>
-                    {% for d in pedido.detalles.all %}
-                    <li>
-                        <strong>{{ d.cantidad }}x</strong> {{ d.producto.nombre }}<br>
-                        <small>{{ d.observacion|default:"Sin observación" }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
 
-                <button class="btn btn-success btn-marcar-listo"
-                        data-pedido-id="{{ pedido.id }}">
-                    Listo
-                </button>
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+        color: var(--texto-oscuro);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .main-content-wrapper {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+    }
+
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 25px 28px;
+        border-radius: 18px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.10);
+        border: 1px solid var(--cafe-suave);
+        margin-bottom: 30px;
+    }
+
+    .content-card h2 {
+        color: var(--cafe-profundo);
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 18px;
+        text-shadow: 1px 1px 2px #ffffff80;
+    }
+
+    .content-subtitle {
+        text-align: center;
+        color: var(--gris-oscuro-calido);
+        font-size: 0.95rem;
+        margin-bottom: 18px;
+    }
+
+    /* Tarjetas de pedidos */
+    .pedido-card {
+        background: var(--blanco-calido);
+        border-radius: 18px;
+        border: 1px solid var(--gris-suave);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10);
+        padding: 20px 22px 18px 22px;
+        transition: all 0.3s ease;
+        position: relative;
+        min-height: 230px;
+    }
+
+    .pedido-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+        border-color: var(--cafe-medio);
+        background: var(--crema-suave);
+    }
+
+    .pedido-restaurante {
+        border-left: 5px solid var(--verde-profundo);
+    }
+
+    .pedido-domicilio {
+        border-left: 5px solid var(--azul-pizarra);
+    }
+
+    /* Cabecera de la tarjeta */
+    .pedido-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .badge-codigo {
+        background: var(--cafe-profundo);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .badge-mesa {
+        background: var(--verde-profundo);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .pedido-domicilio .badge-mesa {
+        background: var(--azul-pizarra);
+    }
+
+    .texto-mesero {
+        margin-bottom: 10px;
+        color: var(--gris-oscuro-calido);
+    }
+
+    /* Lista de productos */
+    .lista-productos {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+    }
+
+    .lista-productos li {
+        margin-bottom: 8px;
+        border-bottom: 1px dashed var(--gris-suave);
+        padding-bottom: 6px;
+    }
+
+    .linea-producto {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .qty {
+        font-weight: 800;
+        font-size: 1rem;
+        color: var(--cafe-profundo);
+        min-width: 36px;
+        text-align: right;
+    }
+
+    .nombre {
+        font-weight: 600;
+        font-size: 0.98rem;
+    }
+
+    .nota {
+        font-size: 0.85rem;
+        color: var(--gris-oscuro-calido);
+        margin-left: 46px;
+    }
+
+    /* Botón Listo */
+    .btn-marcar-listo.btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+
+    .btn-marcar-listo.btn-success:hover {
+        background-color: var(--verde) !important;
+    }
+
+    /* Botón flotante */
+    .btn-flotante {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        background: var(--cafe-profundo);
+        color: white;
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        font-size: 30px;
+        border: none;
+        cursor: pointer;
+        z-index: 999;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.3s;
+    }
+
+    .btn-flotante:hover {
+        background: var(--cafe-oscuro);
+        transform: translateY(-3px);
+    }
+
+    /* Formulario flotante */
+    .form-flotante {
+        position: fixed;
+        bottom: 100px;
+        right: 30px;
+        width: 360px;
+        background: var(--blanco-calido);
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
+        z-index: 999;
+        transition: .3s;
+        border: 1px solid var(--cafe-avellana);
+    }
+
+    .form-flotante.oculto {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+    }
+
+    .form-flotante h4 {
+        color: var(--cafe-profundo);
+        font-weight: 700;
+    }
+
+    .form-flotante .form-label {
+        font-weight: 600;
+        color: var(--texto-oscuro);
+    }
+
+    .form-flotante .form-control {
+        border-radius: 10px;
+        border: 1px solid var(--gris-suave);
+    }
+
+    .form-flotante .btn-secondary {
+        background-color: var(--rojo-alerta);
+        border-color: var(--rojo-alerta);
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .form-flotante .btn-primary {
+        background-color: var(--verde-profundo);
+        border-color: var(--verde-profundo);
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .form-flotante .btn-primary:hover {
+        background-color: var(--verde);
+    }
+
+    /* Animación desaparecer tarjeta */
+    .pedido-fade-out {
+        animation: desaparecer .5s ease forwards;
+    }
+
+    @keyframes desaparecer {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+            height: 0;
+            padding: 0;
+            margin: 0;
+        }
+    }
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-4">
+
+        <!-- ========================= SECCIÓN RESTAURANTE ========================= -->
+        <div class="content-card">
+            <h2>Pedidos del restaurante</h2>
+            <p class="content-subtitle">
+                Aquí se muestran los pedidos realizados en mesas dentro del local.
+            </p>
+
+            <div id="pedidos-restaurante" class="row g-4">
+                {% for pedido in pedidos_restaurante %}
+                <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-{{ pedido.id }}">
+                    <div class="pedido-card pedido-restaurante card">
+                        <div class="pedido-header">
+                            <span class="badge-codigo">Código: {{ pedido.codigo_pedido }}</span>
+                            <span class="badge-mesa">Mesa {{ pedido.mesa.numero }}</span>
+                        </div>
+
+                        <p class="texto-mesero">
+                            Mesero: <strong>{{ pedido.mesero.nombre }}</strong>
+                        </p>
+
+                        <ul class="lista-productos">
+                            {% for d in pedido.detalles.all %}
+                            <li>
+                                <div class="linea-producto">
+                                    <span class="qty">{{ d.cantidad }}x</span>
+                                    <span class="nombre">{{ d.producto.nombre }}</span>
+                                </div>
+                                <div class="nota">
+                                    {{ d.observacion|default:"Sin observación" }}
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+
+                        <div class="text-end mt-2">
+                            <button class="btn btn-success btn-marcar-listo" data-pedido-id="{{ pedido.id }}">
+                                Listo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center text-muted">
+                </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
-    </div>
 
+        <!-- ========================= SECCIÓN DOMICILIO ========================= -->
+        <div class="content-card">
+            <h2>Pedidos a domicilio</h2>
+            <p class="content-subtitle">
+                Pedidos generados para envío a domicilio, listos para ser preparados.
+            </p>
 
-    <hr class="my-5">
+            <div id="pedidos-domicilio" class="row g-4">
+                {% for pedido in pedidos_domicilio %}
+                <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-{{ pedido.id }}">
+                    <div class="pedido-card pedido-domicilio card">
+                        <div class="pedido-header">
+                            <span class="badge-codigo">Código: {{ pedido.codigo_pedido }}</span>
+                            <span class="badge-mesa">Domicilio</span>
+                        </div>
 
+                        <p class="texto-mesero">
+                            Cajero: <strong>{{ pedido.cajero.nombre }}</strong>
+                        </p>
 
-    <!-- ======================================================= -->
-    <!--        SECCIÓN 2: PEDIDOS A DOMICILIO                  -->
-    <!-- ======================================================= -->
-    <h2 class="text-center text-success mb-4">
-        Pedidos a domicilio (Cajeros)
-    </h2>
+                        <ul class="lista-productos">
+                            {% for d in pedido.detalles.all %}
+                            <li>
+                                <div class="linea-producto">
+                                    <span class="qty">{{ d.cantidad }}x</span>
+                                    <span class="nombre">{{ d.producto.nombre }}</span>
+                                </div>
+                                <div class="nota">
+                                    {{ d.observacion|default:"Sin observación" }}
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
 
-    <div id="pedidos-domicilio" class="row g-4">
-        {% for pedido in pedidos_domicilio %}
-        <div class="col-md-4" id="pedido-{{ pedido.id }}">
-            <div class="pedido-card card p-3 shadow-sm">
-                <h4>Pedido #{{ pedido.id }} — Domicilio</h4>
-                <p>Cajero: <strong>{{ pedido.cajero.nombre }}</strong></p>
-
-                <ul>
-                    {% for d in pedido.detalles.all %}
-                    <li>
-                        <strong>{{ d.cantidad }}x</strong> {{ d.producto.nombre }}<br>
-                        <small>{{ d.observacion|default:"Sin observación" }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
-
-                <button class="btn btn-success btn-marcar-listo"
-                        data-pedido-id="{{ pedido.id }}">
-                    Listo
-                </button>
+                        <div class="text-end mt-2">
+                            <button class="btn btn-success btn-marcar-listo" data-pedido-id="{{ pedido.id }}">
+                                Listo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center text-muted">
+                </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
-    </div>
 
+    </div>
 </div>
 
-
-<!-- ======================================================= -->
-<!--                     BOTÓN FLOTANTE                      -->
-<!-- ======================================================= -->
+<!-- BOTÓN FLOTANTE -->
 <button id="btnAbrirMensaje" class="btn-flotante">
     <i class="fas fa-comments"></i>
 </button>
 
-<!-- ======================================================= -->
-<!--                 FORMULARIO FLOTANTE                     -->
-<!-- ======================================================= -->
+<!-- FORMULARIO FLOTANTE -->
 <div id="formMensaje" class="form-flotante oculto">
     <div class="form-contenido">
         <h4 class="mb-3">Enviar mensaje</h4>
@@ -114,171 +456,120 @@
 <!-- SELECTS OCULTOS SOLO PARA CARGAR OPCIONES -->
 <select id="meserosHidden" class="d-none">
     {% for m in meseros %}
-        <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
+    <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
     {% endfor %}
 </select>
 
 <select id="cajerosHidden" class="d-none">
     {% for c in cajeros %}
-        <option value="{{ c.id }}">{{ c.nombre }} {{ c.apellido }}</option>
+    <option value="{{ c.id }}">{{ c.nombre }} {{ c.apellido }}</option>
     {% endfor %}
 </select>
 
-
-
-
-<!-- ======================================================= -->
-<!--                        ESTILOS                          -->
-<!-- ======================================================= -->
-<style>
-    .pedido-card {
-        background: #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        padding: 20px;
-        border-left: 5px solid #007bff;
-        transition: all .3s ease;
-    }
-    .pedido-card:hover { transform: translateY(-5px); }
-
-    /* Botón flotante */
-    .btn-flotante {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        background: #0d6efd;
-        color: white;
-        width: 65px;
-        height: 65px;
-        border-radius: 50%;
-        font-size: 30px;
-        border: none;
-        cursor: pointer;
-        z-index: 999;
-        box-shadow: 0 4px 10px rgba(0,0,0,.3);
-    }
-
-    /* Formulario flotante */
-    .form-flotante {
-        position: fixed;
-        bottom: 100px;
-        right: 30px;
-        width: 350px;
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,.3);
-        z-index: 999;
-        transition: .3s;
-    }
-    .form-flotante.oculto {
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(20px);
-    }
-
-    /* Animación desaparecer */
-    .pedido-fade-out {
-        animation: desaparecer .5s ease forwards;
-    }
-    @keyframes desaparecer {
-        from { opacity: 1; }
-        to   { opacity: 0; transform: translateY(-20px); height: 0; padding: 0; margin: 0; }
-    }
-</style>
-
-
 <meta name="csrf-token" content="{{ csrf_token }}">
 
-
-<!-- ======================================================= -->
-<!--                    JAVASCRIPT COMPLETO                  -->
-<!-- ======================================================= -->
 <script>
-
     function getCSRFToken() {
         return document.querySelector('meta[name="csrf-token"]').content;
     }
 
-    // ---------------------------------------------------
-    // WEBSOCKET → NUEVOS PEDIDOS EN TIEMPO REAL
-    // ---------------------------------------------------
     const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
     const socket = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
 
     socket.onmessage = (e) => {
         const data = JSON.parse(e.data);
 
-        // NUEVO PEDIDO
+        // ========== NUEVO PEDIDO ==========
         if (data.type === "nuevo_pedido") {
-
             const html = generarCard(data.pedido);
 
-            // Si tiene mesa → restaurante
-            let contenedor =
-                data.pedido.mesa ?
-                document.getElementById("pedidos-restaurante") :
-                document.getElementById("pedidos-domicilio");
+            let contenedor = data.pedido.mesa
+                ? document.getElementById("pedidos-restaurante")
+                : document.getElementById("pedidos-domicilio");
 
             contenedor.insertAdjacentHTML("afterbegin", html);
         }
 
+        // ========== ACTUALIZAR PEDIDO ==========
         if (data.type === "actualizar_pedido") {
+            const p = data.pedido;
 
-            let id = data.pedido.id;
-
-            // BORRAR TARJETA ANTERIOR
-            document.querySelector(`#pedido-${id}`)?.remove();
-
-            // DETERMINAR CONTENEDOR SEGÚN TIPO DE PEDIDO
-            let contenedor;
-
-            if (data.pedido.tipo === "domicilio") {
-                contenedor = document.getElementById("pedidos-domicilio");
-            } else {
-                contenedor = document.getElementById("pedidos-restaurante");
+            // 1) quitar tarjeta anterior
+            const viejo = document.getElementById(`pedido-${p.id}`);
+            if (viejo) {
+                viejo.remove();
             }
 
-            // INSERCIÓN
-            contenedor.insertAdjacentHTML("afterbegin", generarCard(data.pedido));
+            // 2) insertar tarjeta actualizada
+            let contenedor = p.mesa
+                ? document.getElementById("pedidos-restaurante")
+                : document.getElementById("pedidos-domicilio");
+
+            contenedor.insertAdjacentHTML("afterbegin", generarCard(p));
         }
 
-
-        // ELIMINAR
+        // ========== ELIMINAR PEDIDO ==========
         if (data.type === "eliminar_pedido") {
-            let btn = document.querySelector(`[data-pedido-id="${data.pedido_id}"]`);
-            let card = btn?.closest(".pedido-card");
-
-            if (card) {
-                card.classList.add("pedido-fade-out");
-                setTimeout(() => card.parentElement.remove(), 500);
+            const col = document.getElementById(`pedido-${data.pedido_id}`);
+            if (col) {
+                const card = col.querySelector(".pedido-card");
+                if (card) {
+                    card.classList.add("pedido-fade-out");
+                    setTimeout(() => col.remove(), 500);
+                } else {
+                    col.remove();
+                }
             }
         }
     };
 
-    // Generar tarjeta
     function generarCard(p) {
+        const esRestaurante = !!p.mesa;
+        const claseTipo = esRestaurante ? "pedido-restaurante" : "pedido-domicilio";
+        const etiquetaTipo = esRestaurante ? `Mesa ${p.mesa}` : "Domicilio";
+        const textoAtendio = esRestaurante
+            ? `Mesero: <strong>${p.mesero}</strong>`
+            : `Cajero: <strong>${p.cajero || ""}</strong>`;
+
         return `
-            <div class="col-md-4" id="pedido-${p.id}">
-                <div class="pedido-card card p-3 shadow-sm">
-                    <h4>Pedido #${p.id} — ${p.mesa ? "Mesa " + p.mesa : "Domicilio"}</h4>
-                    <ul>
+            <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-${p.id}">
+                <div class="pedido-card ${claseTipo} card">
+                    <div class="pedido-header">
+                        <span class="badge-codigo">Código: ${p.codigo_pedido || p.id}</span>
+                        <span class="badge-mesa">${etiquetaTipo}</span>
+                    </div>
+
+                    <p class="texto-mesero">
+                        ${textoAtendio}
+                    </p>
+
+                    <ul class="lista-productos">
                         ${p.productos.map(x => `
-                            <li><strong>${x.cantidad}x</strong> ${x.nombre}
-                            <br><small>${x.observacion || "Sin observación"}</small></li>
+                            <li>
+                                <div class="linea-producto">
+                                    <span class="qty">${x.cantidad}x</span>
+                                    <span class="nombre">${x.nombre}</span>
+                                </div>
+                                <div class="nota">
+                                    ${x.observacion || "Sin observación"}
+                                </div>
+                            </li>
                         `).join("")}
                     </ul>
-                    <button class="btn btn-success btn-marcar-listo"
-                        data-pedido-id="${p.id}">Listo</button>
+
+                    <div class="text-end mt-2">
+                        <button class="btn btn-success btn-marcar-listo"
+                                data-pedido-id="${p.id}">
+                            Listo
+                        </button>
+                    </div>
                 </div>
-            </div>`;
+            </div>
+        `;
     }
 
 
-    // ---------------------------------------------------
-    // MARCAR PEDIDO COMO LISTO
-    // ---------------------------------------------------
-    document.addEventListener("click", function(e) {
+    document.addEventListener("click", function (e) {
         if (!e.target.classList.contains("btn-marcar-listo")) return;
 
         let btn = e.target;
@@ -294,26 +585,56 @@
                 "Content-Type": "application/json"
             }
         })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                btn.innerText = "Listo ✔️";
-                btn.classList.replace("btn-success", "btn-secondary");
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    btn.innerText = "Listo";
+                    btn.classList.replace("btn-success", "btn-secondary");
 
-                let card = btn.closest(".pedido-card");
-                card.classList.add("pedido-fade-out");
-                setTimeout(() => card.parentElement.remove(), 500);
+                    let card = btn.closest(".pedido-card");
+                    card.classList.add("pedido-fade-out");
+                    setTimeout(() => card.parentElement.remove(), 500);
 
-            } else {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Pedido listo",
+                        text: "El pedido fue marcado como listo.",
+                        timer: 1600,
+                        showConfirmButton: false,
+                        background: "#FFF7F0",
+                        iconColor: "#3E7A3F"
+                    });
+
+                } else {
+                    btn.disabled = false;
+                    btn.innerText = "Listo";
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "No se pudo actualizar",
+                        text: data.mensaje || "Ocurrió un error al marcar el pedido como listo.",
+                        background: "#FFF7F0",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#C14949"
+                    });
+                }
+            })
+            .catch(() => {
                 btn.disabled = false;
-                btn.innerText = "Error";
-            }
-        });
+                btn.innerText = "Listo";
+
+                Swal.fire({
+                    icon: "error",
+                    title: "Error de conexión",
+                    text: "No se pudo contactar con el servidor.",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949"
+                });
+            });
+
     });
 
-    // ---------------------------------------------------
-    // FORMULARIO DE MENSAJES (SE MANTIENE)
-    // ---------------------------------------------------
     const btnAbrirMensaje = document.getElementById("btnAbrirMensaje");
     const formMensaje = document.getElementById("formMensaje");
     const btnCerrarMensaje = document.getElementById("btnCerrarMensaje");
@@ -328,12 +649,20 @@
         const mensaje = document.getElementById("mensajeTexto").value.trim();
 
         if (!mensaje) {
-            Swal.fire("Escribe un mensaje.", "", "warning");
+            Swal.fire({
+                icon: "warning",
+                title: "Mensaje vacío",
+                text: "Escribe un mensaje antes de enviarlo.",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#D9A441"
+            });
             return;
         }
 
         fetch("/cocina/enviar-mensaje/", {
             method: "POST",
+            credentials: "same-origin",
             headers: {
                 "X-CSRFToken": getCSRFToken(),
                 "Content-Type": "application/json"
@@ -344,22 +673,51 @@
                 mensaje: mensaje
             })
         })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire("Mensaje enviado", "", "success");
-                document.getElementById("mensajeTexto").value = "";
-                formMensaje.classList.add("oculto");
-            }
-        });
+
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Mensaje enviado",
+                        text: "Tu mensaje fue enviado correctamente.",
+                        timer: 1600,
+                        showConfirmButton: false,
+                        background: "#FFF7F0",
+                        iconColor: "#3E7A3F"
+                    });
+
+                    document.getElementById("mensajeTexto").value = "";
+                    formMensaje.classList.add("oculto");
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error al enviar",
+                        text: data.mensaje || "No se pudo enviar el mensaje.",
+                        background: "#FFF7F0",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#C14949"
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error de conexión",
+                    text: "Ocurrió un problema al comunicarse con el servidor.",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949"
+                });
+            });
+
     };
 
-    const selectTipo     = document.getElementById("destinoTipo");
-    const selectUsuario  = document.getElementById("destinoUsuario");
-    const meserosHidden  = document.getElementById("meserosHidden");
-    const cajerosHidden  = document.getElementById("cajerosHidden");
+    const selectTipo = document.getElementById("destinoTipo");
+    const selectUsuario = document.getElementById("destinoUsuario");
+    const meserosHidden = document.getElementById("meserosHidden");
+    const cajerosHidden = document.getElementById("cajerosHidden");
 
-    // carga inicial: meseros
     cargarDestinatarios("mesero");
 
     selectTipo.addEventListener("change", function () {
@@ -368,11 +726,10 @@
 
     function cargarDestinatarios(tipo) {
         const source = (tipo === "mesero") ? meserosHidden : cajerosHidden;
-        // copiamos las opciones del select oculto al visible
         selectUsuario.innerHTML = source.innerHTML;
     }
-
-
 </script>
+
+<br>
 
 {% endblock %}

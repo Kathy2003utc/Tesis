@@ -58,8 +58,7 @@ urlpatterns = [
     path('reportes/unificado/pdf/',views.exportar_unificado_pdf,name='exportar_unificado_pdf'),
     path( 'reportes/unificado/excel/', views.exportar_unificado_excel, name='exportar_unificado_excel'),
 
-
-    # Pedidos
+    # Mesero - Pedidos
     path('mesero/api/pedidos/estados/', views.api_estados_pedidos, name='api_estados_pedidos'),
     path('pedidos/', views.listar_pedidos, name='listar_pedidos'),
     path('pedidos/crear/', views.crear_pedido, name='crear_pedido'),
@@ -83,6 +82,10 @@ urlpatterns = [
     path("notificaciones/", views.notificaciones_mesero, name="notificaciones_mesero"),
     path("notificaciones/obtener/", views.obtener_notificaciones, name="obtener_notificaciones"),
     path("notificaciones/eliminar/<int:notif_id>/", views.eliminar_notificacion, name="eliminar_notificacion"),
+
+    # PERFIL - MESERO
+    path("mesero/perfil/", views.perfil_mesero, name="perfil_mesero"),
+    path("mesero/perfil/editar/", views.editar_perfil_mesero, name="editar_perfil_mesero"),
 
     # CAJERO - PEDIDOS A DOMICILIO
     path('cajero/api/pedidos/estados/', views.cajero_api_estados_pedidos, name='cajero_api_estados_pedidos'),
@@ -111,7 +114,16 @@ urlpatterns = [
     path('cajero/domicilio/<int:pedido_id>/pagar/',views.cajero_domicilio_pagar,name='cajero_domicilio_pagar'),
     path("cajero/tabla-pedidos-pagados-domicilio/", views.tabla_pedidos_pagados_domicilio, name="tabla_pedidos_pagados_domicilio"),
 
-    
+    #Cajero - comprobante
     path("comprobante/<int:comp_id>/", views.ver_comprobante, name="ver_comprobante"),
+
+    #Cajero - reporte
+    path('cajero/reporte/unificado/',views.cajero_reporte_unificado,name='cajero_reporte_unificado'),
+    path('cajero/reporte/unificado/pdf/',views.cajero_exportar_unificado_pdf,name='cajero_exportar_unificado_pdf'),
+    path('cajero/reporte/unificado/excel/',views.cajero_exportar_unificado_excel,name='cajero_exportar_unificado_excel'),
+
+    #Cajero - Perfil
+    path('cajero/perfil/', views.perfil_cajero, name='perfil_cajero'),
+    path('cajero/perfil/editar/', views.editar_perfil_cajero, name='editar_perfil_cajero'),
 
 ]

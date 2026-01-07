@@ -21,6 +21,8 @@
 
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/localization/messages_es.min.js"></script>
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -375,6 +377,15 @@
           </a>
         </li>
 
+        <!-- REPORTES -->
+        <li>
+          <a href="{% url 'cajero_reporte_unificado' %}"
+            class="{% if 'cajero/reporte' in request.path or 'cajero_reporte_unificado' in request.path %}active{% endif %}">
+              <i class="fas fa-chart-line"></i> Reportes
+          </a>
+        </li>
+
+
         <!-- NOTIFICACIONES -->
         <li>
           <a href="{% url 'cajero_notificaciones' %}"
@@ -398,7 +409,7 @@
         <strong>Panel de Cajero</strong>
 
         <div class="d-flex align-items-center gap-3">
-          <a href="{% url 'perfil_admin' %}" class="text-dark">
+          <a href="{% url 'perfil_cajero' %}" class="text-dark">
             <i class="bi bi-person-circle fs-4"></i>
           </a>
           <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger">
@@ -538,20 +549,34 @@
     socketNotif.onmessage = function (e) {
       const data = JSON.parse(e.data);
 
+      // ================= PEDIDO LISTO =================
       if (data.tipo === "pedido_listo") {
+
+        // 👉 usar código; si no viene, usamos el id
+        const codigo = data.codigo_pedido && data.codigo_pedido !== ""
+          ? data.codigo_pedido
+          : `#${data.pedido}`;
+
+        // 👉 texto de mesa / domicilio
+        let mesaTexto = "";
+        if (data.mesa) {
+          mesaTexto = data.mesa === "Domicilio"
+            ? "Entregar al cliente"
+            : `Mesa ${data.mesa}`;
+        }
+
         Swal.fire({
           icon: "success",
-          title: "Pedido listo",
-          html: `<b>Pedido #${data.pedido} Listo</b><br>Entregar al cliente ${data.mesa ?? ''}`,
-
+          title: "Pedido a domicilio listo",
+          html: `<b>Pedido ${codigo}</b><br>Entregar al cliente `,
           confirmButtonColor: "#3E7A3F",
           background: "#FFF7F0",
           confirmButtonText: 'Aceptar',
           iconColor: "#3E7A3F"
-
         });
       }
 
+      // ================= MENSAJE DEL COCINERO =================
       if (data.tipo === "mensaje") {
         Swal.fire({
           title: "Nuevo mensaje del cocinero",
@@ -563,6 +588,7 @@
       }
     };
   </script>
+
 
 
 </body>

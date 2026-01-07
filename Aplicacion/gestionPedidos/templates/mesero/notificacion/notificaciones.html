@@ -1,29 +1,182 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'mesero/plantilla.html' %}
 {% load static %}
 
 {% block contenido %}
-
-<br><br><br>
-
-<div class="container mt-5">
-    <h2 class="text-center text-primary mb-4">Notificaciones del Mesero</h2>
-
-    <!-- Sección PEDIDOS LISTOS -->
-    <h4 class="text-success mt-4">Pedidos listos</h4>
-    <div id="noti-pedidos" class="mt-3"></div>
-
-    <!-- Sección MENSAJES -->
-    <h4 class="text-primary mt-5">Mensajes del cocinero</h4>
-    <div id="noti-mensajes" class="mt-3"></div>
-</div>
+<br>
 
 <style>
-.alert {
-    border-radius: 15px;
-    box-shadow: 0 3px 10px rgba(0,0,0,.1);
-}
+    /* ================= PALETA COMPLETA ================= */
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
+
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
+
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
+
+        --azul-pizarra: #4F6D7A;
+        --azul-gris: #7A8C99;
+
+        --exito: #4F8A57;
+        --exito-suave: #D9F2D6;
+        --info: #6A93B0;
+        --info-suave: #DDE9F2;
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+    }
+
+    /* ================ FONDO Y WRAPPER ================ */
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+    }
+
+    .main-content-wrapper {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+    }
+
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--cafe-suave);
+        max-width: 1200px;
+        margin: 40px auto 30px auto;
+    }
+
+    /* ================ TÍTULOS ================ */
+    h2.text-primary {
+        color: var(--cafe-profundo) !important;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 25px;
+        text-shadow: 1px 1px 2px #ffffff70;
+    }
+
+    h4.text-success {
+        color: var(--verde-profundo) !important;
+        font-weight: 600;
+    }
+
+    h4.text-primary {
+        color: var(--azul-pizarra) !important;
+        font-weight: 600;
+    }
+
+    /* ================ ALERTAS (NOTIFICACIONES) ================ */
+    .alert {
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+        border: 1px solid var(--gris-claro-calido);
+        background: var(--blanco-calido);
+        color: var(--texto-oscuro);
+    }
+
+    .alert-success {
+        background: var(--exito-suave);
+        border-left: 5px solid var(--exito);
+    }
+
+    .alert-info {
+        background: var(--info-suave);
+        border-left: 5px solid var(--info);
+    }
+
+    .alert strong {
+        color: var(--texto-oscuro);
+    }
+
+    .alert small {
+        color: var(--gris-oscuro-calido);
+    }
+
+    /* ================ BOTONES ================ */
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .btn-danger:hover {
+        background-color: var(--rojo-oscuro) !important;
+        border-color: var(--rojo-oscuro) !important;
+    }
+
+    @media (max-width: 576px) {
+        .content-card {
+            padding: 20px;
+            margin-top: 25px;
+        }
+    }
 </style>
 
+<div class="main-content-wrapper">
+    <div class="container">
+        <div class="content-card">
+
+            <h2 class="text-primary mb-4">Notificaciones del Mesero</h2>
+
+            <!-- Sección PEDIDOS LISTOS -->
+            <h4 class="text-success mt-2">Pedidos listos</h4>
+            <div id="noti-pedidos" class="mt-3"></div>
+
+            <!-- Sección MENSAJES -->
+            <h4 class="text-primary mt-5">Mensajes del cocinero</h4>
+            <div id="noti-mensajes" class="mt-3"></div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!--               SISTEMA AJAX PARA RECARGA MANUAL           -->
+<!-- ======================================================= -->
 <script>
 function cargarNotificaciones() {
     fetch("/notificaciones/obtener/")
@@ -40,20 +193,26 @@ function cargarNotificaciones() {
 
             // PEDIDO LISTO
             if (n.tipo === "pedido_listo") {
+
+                // Igual que cajero: si viene codigo_pedido, usarlo; si no, usar #id
+                const codigo = n.codigo_pedido && n.codigo_pedido !== ""
+                    ? n.codigo_pedido
+                    : `#${n.pedido}`;
+
                 pedidos.innerHTML += `
                     <div class="alert alert-success mt-3 d-flex justify-content-between align-items-start">
                         <div>
-                            <strong>Pedido #${n.pedido} — Mesa ${n.mesa || ''}</strong><br>
+                            <strong>Pedido ${codigo} — Mesa ${n.mesa || ''}</strong><br>
                             ${n.mensaje}<br>
                             <small>${n.fecha}</small>
                         </div>
 
-                        <button class="btn btn-sm btn-danger ms-3" onclick="eliminarNotificacion(${n.id})">
+                        <button class="btn btn-sm btn-danger ms-3"
+                                onclick="eliminarNotificacion(${n.id})">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
                 `;
-
             }
 
             // MENSAJE
@@ -66,18 +225,18 @@ function cargarNotificaciones() {
                             <small>${n.fecha}</small>
                         </div>
 
-                        <button class="btn btn-sm btn-danger ms-3" onclick="eliminarNotificacion(${n.id})">
+                        <button class="btn btn-sm btn-danger ms-3"
+                                onclick="eliminarNotificacion(${n.id})">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
                 `;
-
             }
         });
     });
 }
 
-setInterval(cargarNotificaciones, 7000); // refrescar cada 7 segundos
+setInterval(cargarNotificaciones, 7000);
 window.onload = cargarNotificaciones;
 
 function eliminarNotificacion(id) {
@@ -94,9 +253,11 @@ function eliminarNotificacion(id) {
         }
     });
 }
-
 </script>
 
+<!-- ======================================================= -->
+<!--        SISTEMA WEBSOCKET PARA NOTIFICACIONES LIVE        -->
+<!-- ======================================================= -->
 <script>
     const USER_ID = "{{ request.user.id }}";
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -107,28 +268,37 @@ function eliminarNotificacion(id) {
 
     socketNotif.onmessage = function(e) {
         const data = JSON.parse(e.data);
-
         console.log("WS recibido:", data);
 
-        //PEDIDO LISTO — INSTANTÁNEO
+        // PEDIDO LISTO — INSTANTÁNEO
         if (data.tipo === "pedido_listo") {
+
+            const codigo = data.codigo_pedido && data.codigo_pedido !== ""
+                ? data.codigo_pedido
+                : `#${data.pedido}`;
+
             Swal.fire({
                 icon: "success",
                 title: "Pedido listo",
-                html: `<b>Pedido #${data.pedido}</b><br>Mesa ${data.mesa ?? ''}`,
+                html: `<b>Pedido ${codigo}</b><br>Mesa ${data.mesa ?? ''}`,
+                confirmButtonColor: "#3E7A3F",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                iconColor: "#3E7A3F"
             });
 
-            // Refresca lista sin esperar 7 segundos
             cargarNotificaciones();
             return;
         }
 
-        //MENSAJE DEL COCINERO
+        // MENSAJE DEL COCINERO
         if (data.tipo === "mensaje") {
             Swal.fire({
-                icon: "info",
-                title: "Nuevo mensaje",
-                text: data.mensaje
+                title: "Nuevo mensaje del cocinero",
+                text: data.mensaje,
+                confirmButtonColor: "#3E7A3F",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar"
             });
 
             cargarNotificaciones();
@@ -139,5 +309,5 @@ function eliminarNotificacion(id) {
     socketNotif.onopen = () => console.log("WS mesero conectado:", USER_ID);
 </script>
 
-
+<br>
 {% endblock %}

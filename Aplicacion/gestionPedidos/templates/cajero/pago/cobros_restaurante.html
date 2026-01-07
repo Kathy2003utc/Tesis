@@ -96,8 +96,6 @@
     h2.text-primary {
         color: var(--cafe-profundo) !important;
         font-weight: bold;
-        text-align: center;
-        margin-bottom: 25px;
         text-shadow: 1px 1px 2px #ffffff70;
     }
 
@@ -260,7 +258,8 @@
     <div class="container mt-5">
         <div class="content-card">
 
-            <h2 class="text-primary">Cobros - Restaurante</h2>
+            <!-- TÍTULO IGUAL AL DE DOMICILIO -->
+            <h2 class="text-center text-primary mb-4">Cobros - Restaurante</h2>
 
             <!-- ========================================================= -->
             <!-- PEDIDOS A COBRAR -->
@@ -297,7 +296,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
+                        <tr id="fila-vacia-cobros">
                             <td colspan="6" class="text-center text-muted py-3">
                                 No hay pedidos pendientes
                             </td>
@@ -312,9 +311,9 @@
             <!-- ========================================================= -->
             <!-- PEDIDOS PAGADOS -->
             <!-- ========================================================= -->
-            <h4 class="text-success mb-3 mt-4">Pedidos Pagados</h4>
+            <h4 class="text-success mt-4 mb-3">Pedidos Pagados</h4>
 
-            <div class="table-responsive shadow-sm rounded-3">
+            <div class="table-responsive shadow-sm rounded-3" id="contenedor-tabla-pagados">
                 <table class="table table-hover align-middle" id="tabla-pagados">
                     <thead class="text-center">
                         <tr>
@@ -360,7 +359,14 @@
                             </td>
                             <td>{{ p.pago_confirmado.fecha_hora|date:"d/m/Y H:i" }}</td>
                         </tr>
+                        {% empty %}
+                        <tr id="fila-vacia-pagados">
+                            <td colspan="7" class="text-center text-muted py-3">
+                                No hay pagos registrados
+                            </td>
+                        </tr>
                         {% endfor %}
+
                     </tbody>
                 </table>
             </div>
@@ -472,7 +478,7 @@
     });
 
     // ====================================================
-    // CONFIRMAR COBRO (con mismos estilos de SweetAlert)
+    // CONFIRMAR COBRO
     // ====================================================
     function confirmarCobro() {
         const id = document.getElementById("pedido_id").value;
@@ -623,10 +629,14 @@
         let data = JSON.parse(e.data);
         console.log("EVENTO WS:", data);
 
-        if (data.type === "nuevo_cobro") {
+        if (data.type === "nuevo_cobro" && data.origen === "restaurante") {
+
             if (document.getElementById("fila-" + data.pedido_id)) {
                 return;
             }
+
+            const filaVacia = document.getElementById("fila-vacia-cobros");
+            if (filaVacia) filaVacia.remove();
 
             let codigo = data.codigo_pedido ? data.codigo_pedido : data.pedido_id;
 
@@ -656,21 +666,25 @@
                 .insertAdjacentHTML("afterbegin", fila);
         }
 
-        if (data.type === "eliminar_pedido") {
+        if (data.type === "eliminar_pedido" && data.origen === "restaurante") {
             let fila = document.getElementById("fila-" + data.pedido_id);
             if (fila) fila.remove();
         }
 
-        if (data.type === "nuevo_pagado") {
-            // FORMATO CORRECTO DEL TOTAL: 1.5 → 1,50
+        if (data.type === "nuevo_pagado" && data.origen === "restaurante") {
+
+            //  Eliminar la fila "No hay pagos registrados" si existe
+            const filaVaciaPagados = document.getElementById("fila-vacia-pagados");
+            if (filaVaciaPagados) {
+                filaVaciaPagados.remove();
+            }
+
             let totalFormateado = parseFloat(data.total)
                 .toFixed(2)
                 .replace('.', ',');
 
-            // Código del pedido
             let codigo = data.codigo_pedido ? data.codigo_pedido : data.pedido_id;
 
-            // HTML del comprobante
             let comprobanteHtml = data.comprobante_url
                 ? `<a href="${data.comprobante_url}" target="_blank" class="btn btn-sm btn-danger">Ver PDF</a>`
                 : `<span class="text-muted">No disponible</span>`;

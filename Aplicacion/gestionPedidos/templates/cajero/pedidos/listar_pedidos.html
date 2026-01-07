@@ -323,7 +323,8 @@
             cancelButtonColor: '#4F6D7A',
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: "Cancelar",
-            background: "#FFF7F0"
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
         }).then((r) => {
 
             if (!r.isConfirmed) return;
@@ -358,7 +359,8 @@
                             text: data.message || "No se pudo eliminar el pedido.",
                             confirmButtonText: "Aceptar",
                             confirmButtonColor: "#C14949",
-                            background: "#FFF7F0"
+                            background: "#FFF7F0",
+                            iconColor: "#C14949",
                         });
                     }
                 });
@@ -376,7 +378,8 @@
             cancelButtonColor: "#4F6D7A",
             confirmButtonText: "Sí, finalizar",
             cancelButtonText: "Cancelar",
-            background: "#FFF7F0"
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
         }).then((result) => {
             if (!result.isConfirmed) return;
 
@@ -394,10 +397,19 @@
                             title: "Pedido finalizado",
                             text: data.message,
                             timer: 1500,
-                            showConfirmButton: false
+                            showConfirmButton: false,
+                            iconColor: "#3E7A3F"
                         });
                     } else {
-                        Swal.fire("Error", data.message || "No se pudo finalizar", "error");
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error",
+                            text: data.message || "No se pudo finalizar el pedido.",
+                            confirmButtonText: "Aceptar",
+                            confirmButtonColor: "#C14949",
+                            background: "#FFF7F0",
+                            iconColor: "#C14949",
+                        });
                     }
                 });
         });

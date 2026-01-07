@@ -52,15 +52,14 @@
     }
 
     /* Fondo general */
-    html, body {
+    html,
+    body {
         height: 100%;
         margin: 0;
-        background: linear-gradient(
-            135deg,
-            var(--crema-suave),
-            var(--cafe-suave) 45%,
-            var(--blanco-calido)
-        );
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
     }
 
     /* PADDING RESPONSIVO COMO EL EJEMPLO */
@@ -124,7 +123,8 @@
 
     /* Tabla */
     table {
-        min-width: 900px; /* Para que haya scroll en pantallas chicas */
+        min-width: 900px;
+        /* Para que haya scroll en pantallas chicas */
         overflow: hidden;
     }
 
@@ -147,6 +147,7 @@
         border-radius: 8px;
         transition: 0.3s;
     }
+
     .btn-warning:hover {
         background-color: var(--advertencia) !important;
         color: var(--texto-oscuro) !important;
@@ -160,6 +161,7 @@
         border-radius: 8px;
         transition: 0.3s;
     }
+
     .btn-danger:hover {
         background-color: var(--rojo-claro) !important;
         color: var(--texto-oscuro) !important;
@@ -175,16 +177,20 @@
     .badge.bg-primary {
         background-color: var(--azul-pizarra) !important;
     }
+
     .badge.bg-warning {
         background-color: var(--naranja-tierra) !important;
     }
+
     .badge.bg-success {
         background-color: var(--exito) !important;
     }
 
     table.dataTable thead th {
-        background-color: var(--cafe-crema) !important; /* Color cálido tipo beige */
-        color: #2B1A10 !important;            /* Texto oscuro del tema */
+        background-color: var(--cafe-crema) !important;
+        /* Color cálido tipo beige */
+        color: #2B1A10 !important;
+        /* Texto oscuro del tema */
     }
 
 
@@ -205,10 +211,14 @@
 
         /* OCULTAR columnas no esenciales */
         #tbl_trabajadores th:nth-child(4),
-        #tbl_trabajadores td:nth-child(4), /* Correo */
+        #tbl_trabajadores td:nth-child(4),
+        /* Correo */
 
         #tbl_trabajadores th:nth-child(6),
-        #tbl_trabajadores td:nth-child(6)  /* Dirección */ {
+        #tbl_trabajadores td:nth-child(6)
+
+        /* Dirección */
+            {
             display: none;
         }
 
@@ -270,9 +280,6 @@
     #tbl_trabajadores tbody tr:hover {
         background-color: var(--gris-suave);
     }
-
-
-
 </style>
 
 <div class="main-content-wrapper">
@@ -283,7 +290,8 @@
             <hr>
 
             <div class="mb-3 text-end">
-                <a href="{% url 'crear_trabajador' %}" class="btn btn-success"> <i class="fas fa-plus"></i> Nuevo Trabajador</a>
+                <a href="{% url 'crear_trabajador' %}" class="btn btn-success"> <i class="fas fa-plus"></i> Nuevo
+                    Trabajador</a>
             </div>
 
             <!-- SCROLL RESPONSIVO AQUÍ -->
@@ -298,6 +306,7 @@
                             <th>Teléfono</th>
                             <th>Dirección</th>
                             <th>Rol</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -312,27 +321,43 @@
                             <td>{{ trabajador.direccion|default:"—" }}</td>
                             <td>
                                 {% if trabajador.rol == 'mesero' %}
-                                    <span class="badge bg-primary">Mesero</span>
+                                <span class="badge bg-primary">Mesero</span>
                                 {% elif trabajador.rol == 'cocinero' %}
-                                    <span class="badge bg-warning">Cocinero</span>
+                                <span class="badge bg-warning">Cocinero</span>
                                 {% elif trabajador.rol == 'cajero' %}
-                                    <span class="badge bg-success">Cajero</span>
+                                <span class="badge bg-success">Cajero</span>
                                 {% endif %}
                             </td>
+
                             <td>
-                                <a href="{% url 'editar_trabajador' trabajador.id %}" 
-                                class="btn btn-warning btn-sm w-100 mb-2">
+                                {% if trabajador.is_active %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <a href="{% url 'editar_trabajador' trabajador.id %}"
+                                    class="btn btn-warning btn-sm w-100 mb-2">
                                     <i class="fa fa-pen"></i> Editar
                                 </a>
 
                                 <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-danger btn-sm w-100"
-                                        onclick="return confirmarEliminacion(event);">
-                                        <i class="fa fa-trash"></i> Eliminar
+                                        data-modo="{% if trabajador.tiene_interacciones %}desactivar{% else %}eliminar{% endif %}"
+                                        onclick="return confirmarAccionTrabajador(event);">
+                                        <i class="fa fa-trash"></i>
+                                        {% if trabajador.tiene_interacciones %}
+                                        Desactivar
+                                        {% else %}
+                                        Eliminar
+                                        {% endif %}
                                     </button>
                                 </form>
                             </td>
+
 
 
                         </tr>
@@ -346,27 +371,42 @@
 </div>
 
 <script>
-function confirmarEliminacion(e) {
-    e.preventDefault();
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: "Esta acción no se puede deshacer.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#C14949',
-        cancelButtonColor: '#4F6D7A',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-        background: "#FFF7F0"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            e.target.closest("form").submit();
+    function confirmarAccionTrabajador(e) {
+        e.preventDefault();
+
+        const button = e.target.closest('button');
+        const modo = button.dataset.modo || 'eliminar';
+
+        let title, text, confirmText;
+
+        if (modo === 'desactivar') {
+            title = '¿Desactivar trabajador?';
+            text = 'El trabajador no podrá iniciar sesión, pero sus registros se mantendrán en el sistema.';
+            confirmText = 'Sí, desactivar';
+        } else {
+            title = '¿Eliminar trabajador?';
+            text = 'Este trabajador no tiene registros asociados. Se eliminará definitivamente.';
+            confirmText = 'Sí, eliminar';
         }
-    });
-}
 
-
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#C14949',
+            cancelButtonColor: '#4F6D7A',
+            confirmButtonText: confirmText,
+            cancelButtonText: 'Cancelar',
+            background: "#FFF7F0"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                button.closest("form").submit();
+            }
+        });
+    }
 </script>
+
 
 <br>
 {% endblock %}

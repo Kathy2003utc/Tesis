@@ -106,8 +106,13 @@ class NotificacionesConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "tipo": event.get("tipo"),
             "mensaje": event.get("mensaje"),
+
             "pedido": event.get("pedido"),
+
+            "codigo_pedido": event.get("codigo_pedido"),
+
             "mesa": event.get("mesa"),
+
             "id": event.get("id"),
             "fecha": event.get("fecha"),
         }))

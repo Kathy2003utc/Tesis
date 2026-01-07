@@ -4,210 +4,248 @@
 <br>
 
 <style>
-/* ================= PALETA COMPLETA ================= */
-:root {
-    --cafe-oscuro: #b4764f;
-    --cafe-medio: #cd966c;
-    --cafe-claro: #D7B999;
-    --cafe-suave: #EEDDC6;
+    /* ================= PALETA COMPLETA ================= */
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
 
-    --verde: #3E7A3F;
-    --verde-claro: #7FBF6A;
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
 
-    --blanco-calido: #F8F5F2;
-    --gris-suave: #E2DED8;
-    --texto-oscuro: #2B1A10;
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
 
-    --rojo-alerta: #C14949;
-    --rojo-oscuro: #8C2F39;
-    --rojo-claro: #EA9A9A;
+        --rojo-alerta: #C14949;
+        --rojo-oscuro: #8C2F39;
+        --rojo-claro: #EA9A9A;
 
-    --cafe-profundo: #8A5A3C;
-    --cafe-tostado: #A66E4A;
-    --cafe-avellana: #C8A784;
-    --cafe-crema: #F0E1CA;
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+        --cafe-avellana: #C8A784;
+        --cafe-crema: #F0E1CA;
 
-    --verde-profundo: #2E5F32;
-    --verde-oliva: #5E7A43;
-    --verde-menta: #A6D5A1;
-    --verde-musgo: #507B4C;
+        --verde-profundo: #2E5F32;
+        --verde-oliva: #5E7A43;
+        --verde-menta: #A6D5A1;
+        --verde-musgo: #507B4C;
 
-    --crema-suave: #FAF4EC;
-    --gris-claro-calido: #D8D3CC;
-    --gris-medio-calido: #B8B1A8;
-    --gris-oscuro-calido: #4A3F38;
+        --crema-suave: #FAF4EC;
+        --gris-claro-calido: #D8D3CC;
+        --gris-medio-calido: #B8B1A8;
+        --gris-oscuro-calido: #4A3F38;
 
-    --exito: #4F8A57;
-    --info: #6A93B0;
-    --advertencia: #D9A441;
-    --naranja-tierra: #D98555;
-    --azul-pizarra: #4F6D7A;
-}
+        --exito: #4F8A57;
+        --info: #6A93B0;
+        --advertencia: #D9A441;
+        --naranja-tierra: #D98555;
+        --azul-pizarra: #4F6D7A;
+    }
 
-/* ================= BASE ================= */
-html, body {
-    margin: 0;
-    overflow-x: hidden;
-    background: linear-gradient(
-        135deg,
-        var(--crema-suave),
-        var(--cafe-suave) 45%,
-        var(--blanco-calido)
-    );
-}
+    /* ================= BASE ================= */
+    html,
+    body {
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+    }
 
-.main-content-wrapper {
-    padding: 15px !important;
-}
-@media (min-width: 768px) {
-    .main-content-wrapper { padding: 40px !important; }
-}
-@media (min-width: 1200px) {
-    .main-content-wrapper { padding: 80px !important; }
-}
+    .main-content-wrapper {
+        padding: 15px !important;
+    }
 
-/* ================= CONTENEDOR ================= */
-.menu-page .container {
-    max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding: 40px !important;
+        }
+    }
 
-.content-card {
-    background: var(--crema-suave);
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.1);
-    border: 1px solid var(--cafe-suave);
-    max-width: 1200px;
-    margin: auto;
-}
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding: 80px !important;
+        }
+    }
 
-@media (min-width: 1400px) {
-    .content-card { max-width: 1400px; }
-}
-
-/* ================= TITULO ================= */
-h2 {
-    color: var(--cafe-profundo);
-    font-weight: bold;
-    text-shadow: 1px 1px 2px #ffffff70;
-}
-
-/* ================= BOTONES ================= */
-.btn-success {
-    background-color: var(--verde-profundo) !important;
-    border-color: var(--verde-profundo) !important;
-    border-radius: 10px;
-    font-weight: bold;
-}
-.btn-warning {
-    background-color: var(--advertencia) !important;
-    border-color: var(--advertencia) !important;
-    color: white !important;
-}
-.btn-danger {
-    background-color: var(--rojo-alerta) !important;
-    border-color: var(--rojo-alerta) !important;
-}
-
-/* ================= FILTRO (SE MANTIENE) ================= */
-.categoria-menu {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-.categoria-menu::-webkit-scrollbar { display: none; }
-
-.categoria-menu a {
-    text-decoration: none;
-    text-align: center;
-    font-weight: 600;
-    color: var(--gris-medio-calido);
-    padding: 10px 15px;
-    border-radius: 10px;
-}
-.categoria-menu a i {
-    display: block;
-    font-size: 26px;
-}
-.categoria-item.active {
-    color: var(--cafe-profundo) !important;
-    border-bottom: 3px solid var(--cafe-profundo);
-}
-
-/* ================= GRID ================= */
-.menu-page .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    justify-content: center;
-}
-.menu-page .row > [class^="col-"] {
-    padding: 12px;
-}
-
-/* ================= TARJETAS (MISMO DISEÑO) ================= */
-.card-producto {
-    background: var(--blanco-calido);
-    border-radius: 15px;
-    border: 1px solid var(--cafe-avellana);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
-    min-height: 250px;
-    transition: .3s;
-}
-.card-producto:hover {
-    transform: translateY(-5px);
-}
-
-/* ================= BADGES ================= */
-.badge {
-    font-size: 13px;
-    padding: 6px 10px;
-    border-radius: 10px;
-}
-.badge-desayuno { background: var(--cafe-medio); color: white; }
-.badge-almuerzo { background: var(--verde); color: white; }
-.badge-merienda { background: var(--naranja-tierra); color: white; }
-.badge-especial { background: var(--azul-pizarra); color: white; }
-.badge-bebida { background: var(--info); color: white; }
-
-/* ================= FIX CLAVE EN CELULAR ================= */
-@media (max-width: 576px) {
-
-    /* 1 tarjeta por fila */
-    .menu-page .row > .col-sm-6,
-    .menu-page .row > .col-md-6,
-    .menu-page .row > .col-lg-4,
-    .menu-page .row > .col-xl-3 {
-        flex: 0 0 100% !important;
+    /* ================= CONTENEDOR ================= */
+    .menu-page .container {
         max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
-    /* Card centrada real */
-    .menu-page .card-producto {
-        max-width: 420px;
-        margin-left: auto !important;
-        margin-right: auto !important;
+    .content-card {
+        background: var(--crema-suave);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--cafe-suave);
+        max-width: 1200px;
+        margin: auto;
     }
-}
 
-/* ===== FIX VISIBILIDAD COMPLETA DEL FILTRO EN CELULAR ===== */
-@media (max-width: 576px) {
+    @media (min-width: 1400px) {
+        .content-card {
+            max-width: 1400px;
+        }
+    }
 
+    /* ================= TITULO ================= */
+    h2 {
+        color: var(--cafe-profundo);
+        font-weight: bold;
+        text-shadow: 1px 1px 2px #ffffff70;
+    }
+
+    /* ================= BOTONES ================= */
+    .btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        border-radius: 10px;
+        font-weight: bold;
+    }
+
+    .btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: white !important;
+    }
+
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+    }
+
+    /* ================= FILTRO (SE MANTIENE) ================= */
     .categoria-menu {
-        justify-content: flex-start !important; /* CLAVE */
-        padding-left: 12px;
-        padding-right: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .categoria-menu::-webkit-scrollbar {
+        display: none;
     }
 
     .categoria-menu a {
-        min-width: 80px;   /* evita que se aplasten */
-        flex-shrink: 0;    /* no se encogen */
+        text-decoration: none;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gris-medio-calido);
+        padding: 10px 15px;
+        border-radius: 10px;
     }
-}
 
+    .categoria-menu a i {
+        display: block;
+        font-size: 26px;
+    }
+
+    .categoria-item.active {
+        color: var(--cafe-profundo) !important;
+        border-bottom: 3px solid var(--cafe-profundo);
+    }
+
+    /* ================= GRID ================= */
+    .menu-page .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        justify-content: center;
+    }
+
+    .menu-page .row>[class^="col-"] {
+        padding: 12px;
+    }
+
+    /* ================= TARJETAS (MISMO DISEÑO) ================= */
+    .card-producto {
+        background: var(--blanco-calido);
+        border-radius: 15px;
+        border: 1px solid var(--cafe-avellana);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        min-height: 250px;
+        transition: .3s;
+    }
+
+    .card-producto:hover {
+        transform: translateY(-5px);
+    }
+
+    /* ================= BADGES ================= */
+    .badge {
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 10px;
+    }
+
+    .badge-desayuno {
+        background: var(--cafe-medio);
+        color: white;
+    }
+
+    .badge-almuerzo {
+        background: var(--verde);
+        color: white;
+    }
+
+    .badge-merienda {
+        background: var(--naranja-tierra);
+        color: white;
+    }
+
+    .badge-especial {
+        background: var(--azul-pizarra);
+        color: white;
+    }
+
+    .badge-bebida {
+        background: var(--info);
+        color: white;
+    }
+
+    /* ================= FIX CLAVE EN CELULAR ================= */
+    @media (max-width: 576px) {
+
+        /* 1 tarjeta por fila */
+        .menu-page .row>.col-sm-6,
+        .menu-page .row>.col-md-6,
+        .menu-page .row>.col-lg-4,
+        .menu-page .row>.col-xl-3 {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* Card centrada real */
+        .menu-page .card-producto {
+            max-width: 420px;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+    }
+
+    /* ===== FIX VISIBILIDAD COMPLETA DEL FILTRO EN CELULAR ===== */
+    @media (max-width: 576px) {
+
+        .categoria-menu {
+            justify-content: flex-start !important;
+            /* CLAVE */
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+
+        .categoria-menu a {
+            min-width: 80px;
+            /* evita que se aplasten */
+            flex-shrink: 0;
+            /* no se encogen */
+        }
+    }
 </style>
 
 
@@ -231,19 +269,23 @@ h2 {
                     <i class="fas fa-utensils"></i><br>Todos
                 </a>
 
-                <a href="?tipo=desayuno" class="categoria-item {% if request.GET.tipo == 'desayuno' %}active{% endif %}">
+                <a href="?tipo=desayuno"
+                    class="categoria-item {% if request.GET.tipo == 'desayuno' %}active{% endif %}">
                     <i class="fas fa-coffee"></i><br>Desayuno
                 </a>
 
-                <a href="?tipo=almuerzo" class="categoria-item {% if request.GET.tipo == 'almuerzo' %}active{% endif %}">
+                <a href="?tipo=almuerzo"
+                    class="categoria-item {% if request.GET.tipo == 'almuerzo' %}active{% endif %}">
                     <i class="fas fa-drumstick-bite"></i><br>Almuerzo
                 </a>
 
-                <a href="?tipo=merienda" class="categoria-item {% if request.GET.tipo == 'merienda' %}active{% endif %}">
+                <a href="?tipo=merienda"
+                    class="categoria-item {% if request.GET.tipo == 'merienda' %}active{% endif %}">
                     <i class="fas fa-bread-slice"></i><br>Merienda
                 </a>
 
-                <a href="?tipo=especial" class="categoria-item {% if request.GET.tipo == 'especial' %}active{% endif %}">
+                <a href="?tipo=especial"
+                    class="categoria-item {% if request.GET.tipo == 'especial' %}active{% endif %}">
                     <i class="fas fa-star"></i><br>Especial
                 </a>
 
@@ -289,23 +331,43 @@ h2 {
                             </span>
                         </div>
 
-                        <div class="d-flex justify-content-center gap-2 mt-auto">
+                        <div class="d-flex flex-column align-items-center gap-2 mt-auto">
 
-                            <a href="{% url 'editar_menu' p.id %}" 
-                               class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i> Editar
-                            </a>
+                            <!-- ESTADO -->
+                            <div>
+                                {% if p.activo %}
+                                <span class="badge bg-success">Disponible</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </div>
 
-                            <form action="{% url 'eliminar_menu' p.id %}" method="post" class="form-eliminar">
-                                {% csrf_token %}
-                                <button type="submit" 
-                                    class="btn btn-danger btn-sm btn-eliminar">
-                                    <i class="fas fa-trash"></i> Eliminar
-                                </button>
-                            </form>
+                            <!-- BOTONES -->
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{% url 'editar_menu' p.id %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
 
+                                <form action="{% url 'eliminar_menu' p.id %}" method="post" class="form-eliminar">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm btn-eliminar"
+                                        data-modo="{% if p.tiene_pedidos %}{% if p.activo %}desactivar{% else %}nada{% endif %}{% else %}eliminar{% endif %}">
+                                        <i class="fas fa-trash"></i>
+                                        {% if p.tiene_pedidos %}
+                                        {% if p.activo %}
+                                        Desactivar
+                                        {% else %}
+                                        Inactivo
+                                        {% endif %}
+                                        {% else %}
+                                        Eliminar
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </div>
 
                         </div>
+
 
                     </div>
                 </div>
@@ -321,29 +383,54 @@ h2 {
 </div>
 
 <script>
-document.querySelectorAll(".form-eliminar").forEach(form => {
-    form.addEventListener("submit", function(e) {
-        e.preventDefault();
+    document.querySelectorAll(".form-eliminar").forEach(form => {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
 
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: "Este producto será eliminado permanentemente.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#C14949',
-            cancelButtonColor: '#4F6D7A',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: "#FFF7F0"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
+            const button = form.querySelector(".btn-eliminar");
+            const modo = button.dataset.modo || "eliminar";
+
+            let title, text, confirmText;
+
+            if (modo === "desactivar") {
+                title = "¿Desactivar producto?";
+                text = "El producto ya no aparecerá en el menú ni para nuevos pedidos, pero se mantendrá en el historial.";
+                confirmText = "Sí, desactivar";
+            } else if (modo === "eliminar") {
+                title = "¿Eliminar producto?";
+                text = "Este producto no tiene pedidos asociados y será eliminado permanentemente.";
+                confirmText = "Sí, eliminar";
+            } else {
+                // Si está inactivo y no hay nada más que hacer:
+                Swal.fire({
+                    icon: "info",
+                    title: "Producto inactivo",
+                    text: "Este producto ya está desactivado.",
+                    confirmButtonText: "Aceptar",
+                    background: "#FFF7F0"
+                });
+                return;
             }
+
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#C14949',
+                cancelButtonColor: '#4F6D7A',
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Cancelar',
+                background: "#FFF7F0"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
         });
     });
-});
-
 </script>
+
 
 
 

@@ -60,28 +60,17 @@
             </tr>
         </thead>
 
+        {% with lista_detalles=detalles|default:pedido.detalles.all %}
         <tbody>
-        {% for det in pedido.detalles.all %}
+            {% for det in lista_detalles %}
             <tr>
                 <td>{{ det.producto.nombre }}</td>
-
                 <td class="text-center">{{ det.cantidad }}</td>
+                <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
+                <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
 
-                <td class="text-center">
-                    ${{ det.precio_unitario|floatformat:2 }}
-                </td>
-
-                <td class="text-center">
-                    ${{ det.subtotal|floatformat:2 }}
-                </td>
-
-                <td class="text-center">
-                    ${{ det.recargo|floatformat:2 }}
-                </td>
-
-                <td class="text-center">
-                    ${{ det.recargo_total|floatformat:2 }}
-                </td>
+                <td class="text-center">${{ det.recargo|floatformat:2 }}</td>
+                <td class="text-center">${{ det.recargo_total|floatformat:2 }}</td>
 
                 <td>{{ det.observacion }}</td>
 
@@ -103,16 +92,17 @@
                         </button>
                     </div>
                 </td>
-
             </tr>
-        {% empty %}
+            {% empty %}
             <tr>
                 <td colspan="8" class="text-center text-muted py-4">
                     Aún no hay productos agregados.
                 </td>
             </tr>
-        {% endfor %}
+            {% endfor %}
         </tbody>
+        {% endwith %}
+
 
         {% if pedido.detalles.all %}
         <tfoot>
@@ -122,7 +112,7 @@
 
                 <td class="text-end">Total recargo:</td>
                 <td class="text-center">
-                    ${{ total_recargos|floatformat:2 }}
+                    ${{ pedido.total_recargos|floatformat:2 }}
                 </td>
 
                 <td colspan="2"></td>

@@ -1,10 +1,11 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'cajero/plantilla.html' %}
 {% load static %}
+
 {% block contenido %}
 <br>
 
 <style>
-    /* --- Tus colores originales --- */
+    /* --- Colores café del sistema --- */
     :root {
         --cafe-oscuro: #b4764f;
         --cafe-medio: #cd966c;
@@ -27,6 +28,9 @@
 
         --advertencia: #D9A441;
         --advertencia-suave: #FFF5DA;
+
+        /* faltaba esta en el original */
+        --crema-suave: #FAF4EC;
     }
 
     /* Fondo */
@@ -103,6 +107,7 @@
         border: none;
         width: 100%;
         transition: 0.3s;
+        margin-top: 10px;
     }
 
     .btn-guardar:hover {
@@ -120,6 +125,9 @@
         font-weight: bold;
         margin-top: 10px;
         width: 100%;
+        text-align: center;
+        display: inline-block;
+        text-decoration: none;
     }
 
     .btn-cancelar:hover {
@@ -130,12 +138,11 @@
 
 <div class="form-container">
 
-    <!-- Tarjeta -->
     <div class="card-form">
-        <form id="frm_admin" method="post" novalidate>
+        <form id="frm_cajero" method="post" novalidate>
             {% csrf_token %}
 
-            <h2 class="titulo-form">Editar Perfil del Administrador</h2>
+            <h2 class="titulo-form">Editar Perfil del Cajero</h2>
 
             <div class="mb-3">
                 <label>Nombre:</label>
@@ -162,29 +169,24 @@
                 <textarea name="direccion" class="form-control" rows="2" required>{{ usuario.direccion }}</textarea>
             </div>
 
-            <!-- El rol NO se puede editar -->
-            <div class="mb-3">
-                <label>Rol:</label>
-                <input type="text" class="form-control" value="{{ usuario.get_rol_display }}" disabled>
-            </div>
-
             <hr>
 
-            <p class="text-muted">Si deseas cambiar la contraseña, completa los siguientes campos.</p>
+            <p class="text-muted">
+                Si no deseas cambiar la contraseña, deja estos campos vacíos.
+            </p>
 
             <div class="mb-3">
-                <label>Nueva Contraseña:</label>
+                <label>Nueva contraseña:</label>
                 <input type="password" name="password" class="form-control">
             </div>
 
             <div class="mb-3">
-                <label>Confirmar Contraseña:</label>
+                <label>Confirmar contraseña:</label>
                 <input type="password" name="password2" class="form-control">
             </div>
 
-            <button type="submit" class="btn btn-guardar">Guardar Cambios</button>
-
-            <a href="{% url 'perfil_admin' %}" class="btn btn-cancelar">Cancelar</a>
+            <button type="submit" class="btn btn-guardar">Guardar cambios</button>
+            <a href="{% url 'perfil_cajero' %}" class="btn btn-cancelar">Cancelar</a>
 
         </form>
     </div>
@@ -202,7 +204,7 @@
     // ------------------------------
     // VALIDACIÓN DEL FORMULARIO
     // ------------------------------
-    $("#frm_admin").validate({
+    $("#frm_cajero").validate({
         rules: {
             nombre: {
                 required: true,
@@ -219,6 +221,7 @@
                 email: true
             },
             telefono: {
+                required: true,
                 digits: true,
                 minlength: 10,
                 maxlength: 10
@@ -247,6 +250,7 @@
                 email: "Correo no válido"
             },
             telefono: {
+                required: "Campo obligatorio",
                 digits: "Solo números",
                 minlength: "Debe tener 10 dígitos",
                 maxlength: "Debe tener 10 dígitos"
@@ -261,7 +265,6 @@
         }
     });
 </script>
-
 
 <br>
 {% endblock %}

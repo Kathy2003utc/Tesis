@@ -1,10 +1,10 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'mesero/plantilla.html' %}
 {% load static %}
+
 {% block contenido %}
 <br>
 
 <style>
-    /* --- Tus colores originales --- */
     :root {
         --cafe-oscuro: #b4764f;
         --cafe-medio: #cd966c;
@@ -27,11 +27,11 @@
 
         --advertencia: #D9A441;
         --advertencia-suave: #FFF5DA;
+
+        --crema-suave: #FAF4EC;
     }
 
-    /* Fondo */
-    html,
-    body {
+    html, body {
         background: linear-gradient(135deg,
                 var(--crema-suave),
                 var(--cafe-suave) 45%,
@@ -39,14 +39,12 @@
         overflow-x: hidden;
     }
 
-    /* Contenedor */
     .form-container {
         max-width: 650px;
         margin: auto;
         padding: 20px;
     }
 
-    /* Tarjeta */
     .card-form {
         background: var(--blanco-calido);
         border: 1px solid var(--cafe-avellana);
@@ -57,18 +55,10 @@
     }
 
     @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Título */
     .titulo-form {
         color: var(--cafe-profundo);
         font-weight: 800;
@@ -77,9 +67,7 @@
         margin-bottom: 25px;
     }
 
-    /* Inputs */
-    .form-control,
-    .form-select {
+    .form-control, .form-select {
         background: var(--blanco-calido);
         border: 1px solid var(--cafe-claro);
         border-radius: 12px;
@@ -93,7 +81,6 @@
         box-shadow: 0 0 6px rgba(62, 122, 63, 0.4);
     }
 
-    /* Botón Guardar */
     .btn-guardar {
         background: var(--verde);
         color: white;
@@ -103,6 +90,7 @@
         border: none;
         width: 100%;
         transition: 0.3s;
+        margin-top: 10px;
     }
 
     .btn-guardar:hover {
@@ -111,7 +99,6 @@
         transform: translateY(-3px);
     }
 
-    /* Botón Cancelar */
     .btn-cancelar {
         background: var(--rojo-alerta);
         color: white;
@@ -120,6 +107,9 @@
         font-weight: bold;
         margin-top: 10px;
         width: 100%;
+        text-align: center;
+        display: inline-block;
+        text-decoration: none;
     }
 
     .btn-cancelar:hover {
@@ -129,13 +119,12 @@
 </style>
 
 <div class="form-container">
-
-    <!-- Tarjeta -->
     <div class="card-form">
-        <form id="frm_admin" method="post" novalidate>
+
+        <form id="frm_mesero" method="post" novalidate>
             {% csrf_token %}
 
-            <h2 class="titulo-form">Editar Perfil del Administrador</h2>
+            <h2 class="titulo-form">Editar Perfil del Mesero</h2>
 
             <div class="mb-3">
                 <label>Nombre:</label>
@@ -162,106 +151,54 @@
                 <textarea name="direccion" class="form-control" rows="2" required>{{ usuario.direccion }}</textarea>
             </div>
 
-            <!-- El rol NO se puede editar -->
-            <div class="mb-3">
-                <label>Rol:</label>
-                <input type="text" class="form-control" value="{{ usuario.get_rol_display }}" disabled>
-            </div>
-
             <hr>
 
-            <p class="text-muted">Si deseas cambiar la contraseña, completa los siguientes campos.</p>
+            <p class="text-muted">
+                Si no deseas cambiar la contraseña, deja estos campos vacíos.
+            </p>
 
             <div class="mb-3">
-                <label>Nueva Contraseña:</label>
+                <label>Nueva contraseña:</label>
                 <input type="password" name="password" class="form-control">
             </div>
 
             <div class="mb-3">
-                <label>Confirmar Contraseña:</label>
+                <label>Confirmar contraseña:</label>
                 <input type="password" name="password2" class="form-control">
             </div>
 
-            <button type="submit" class="btn btn-guardar">Guardar Cambios</button>
-
-            <a href="{% url 'perfil_admin' %}" class="btn btn-cancelar">Cancelar</a>
+            <button type="submit" class="btn btn-guardar">Guardar cambios</button>
+            <a href="{% url 'perfil_mesero' %}" class="btn btn-cancelar">Cancelar</a>
 
         </form>
-    </div>
 
+    </div>
 </div>
 
 <script>
-    // ------------------------------
-    // MÉTODO: Solo letras y espacios
-    // ------------------------------
     jQuery.validator.addMethod("lettersonly", function (value, element) {
         return this.optional(element) || /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(value);
     }, "Solo se permiten letras");
 
-    // ------------------------------
-    // VALIDACIÓN DEL FORMULARIO
-    // ------------------------------
-    $("#frm_admin").validate({
+    $("#frm_mesero").validate({
         rules: {
-            nombre: {
-                required: true,
-                minlength: 2,
-                lettersonly: true
-            },
-            apellido: {
-                required: true,
-                minlength: 2,
-                lettersonly: true
-            },
-            correo: {
-                required: true,
-                email: true
-            },
-            telefono: {
-                digits: true,
-                minlength: 10,
-                maxlength: 10
-            },
-            password: {
-                minlength: 6
-            },
-            password2: {
-                minlength: 6,
-                equalTo: "[name='password']"
-            }
+            nombre: { required: true, minlength: 2, lettersonly: true },
+            apellido: { required: true, minlength: 2, lettersonly: true },
+            correo: { required: true, email: true },
+            telefono: { required: true, digits: true, minlength: 10, maxlength: 10 },
+            password: { minlength: 6 },
+            password2: { minlength: 6, equalTo: "[name='password']" }
         },
         messages: {
-            nombre: {
-                required: "Campo obligatorio",
-                minlength: "Mínimo 2 letras",
-                lettersonly: "Solo letras"
-            },
-            apellido: {
-                required: "Campo obligatorio",
-                minlength: "Mínimo 2 letras",
-                lettersonly: "Solo letras"
-            },
-            correo: {
-                required: "Campo obligatorio",
-                email: "Correo no válido"
-            },
-            telefono: {
-                digits: "Solo números",
-                minlength: "Debe tener 10 dígitos",
-                maxlength: "Debe tener 10 dígitos"
-            },
-            password: {
-                minlength: "Mínimo 6 caracteres"
-            },
-            password2: {
-                minlength: "Mínimo 6 caracteres",
-                equalTo: "Las contraseñas no coinciden"
-            }
+            nombre: { required: "Campo obligatorio", minlength: "Mínimo 2 letras", lettersonly: "Solo letras" },
+            apellido: { required: "Campo obligatorio", minlength: "Mínimo 2 letras", lettersonly: "Solo letras" },
+            correo: { required: "Campo obligatorio", email: "Correo no válido" },
+            telefono: { required: "Campo obligatorio", digits: "Solo números", minlength: "Debe tener 10 dígitos", maxlength: "Debe tener 10 dígitos" },
+            password: { minlength: "Mínimo 6 caracteres" },
+            password2: { minlength: "Mínimo 6 caracteres", equalTo: "Las contraseñas no coinciden" }
         }
     });
 </script>
-
 
 <br>
 {% endblock %}

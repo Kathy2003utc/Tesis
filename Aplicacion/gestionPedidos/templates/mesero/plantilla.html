@@ -1,478 +1,516 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Artistico</title>
-    <meta
-      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-      name="viewport"
-    />
-    <!--PASO 1 jQuery-->
-    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <!--PASO 2 jQuery validacion-->
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.js"></script>
-    
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <link
-      rel="icon"
-      href="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/favicon.ico'}"
-      type="image/x-icon"
-    />
+<head>
+  <meta charset="UTF-8">
+  <title>Café Restaurante Productos Carlos Gerardo · Administración</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!--Importando sweetalert2-->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- BOOTSTRAP JS (OBLIGATORIO PARA MODALES) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- DataTables 1.13.x -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Botones para exportar -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <!-- FontAwesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 
-    <!-- Librerías necesarias para exportar -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/localization/messages_es.min.js"></script>
 
-    <!-- ImpoRTANDO FILE INPUT-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/js/fileinput.min.js" integrity="sha512-0wQvB58Ha5coWmcgtg4f11CTSSxfrfLClUp9Vy0qhzYzCZDSnoB4Vhu5JXJFs7rU24LE6JsH+6hpP7vQ22lk5w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.4/css/fileinput.min.css" integrity="sha512-yDVMONIXJPPAoULZ92Ygngsn8ZUGB4ejm6fCc6q9ZvdH8blFAOgg75XZSEaAJ5m4E/yPI1BAi5fF2axMHVuZ5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        
-    <!--Idioma español para agregar la imagen-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.5.0/js/locales/es.min.js"></script>
-    
-    <!--IMportacion de boostrap-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js" integrity="sha512-ykZ1QQr0Jy/4ZkvKuqWn4iF3lqPZyij9iRv6sGqLRdTPkY69YX6+7wvVGmsdBbiIfN/8OdsI7HABjvEok6ZopQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!--Importando Css de Boostrap-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" integrity="sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!--Importando iconos de fint awasome-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Bootstrap Icons CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    <!-- Fonts and icons -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/webfont/webfont.min.js' %}"></script>
-    <script>
-      WebFont.load({
-        google: { families: ["Public Sans:300,400,500,600,700"] },
-        custom: {
-          families: [
-            "Font Awesome 5 Solid",
-            "Font Awesome 5 Regular",
-            "Font Awesome 5 Brands",
-            "simple-line-icons",
-          ],
-          urls: ["{% static 'plantilla/kaiadmin/assets/css/fonts.min.css' %}"],
-        },
-        active: function () {
-          sessionStorage.fonts = true;
-        },
-      });
-    </script>
+  <!-- DataTables Buttons -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/bootstrap.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/plugins.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/kaiadmin.min.css' %}" />
+  <style>
+    /* ================= PALETA (MISMA DEL SIDEBAR ORIGINAL) ================= */
+    :root {
+      --cafe-profundo: #8A5A3C;
+      --cafe-tostado: #A66E4A;
+      --verde: #3E7A3F;
+      --blanco-calido: #F8F5F2;
+      --crema-suave: #FAF4EC;
+      --gris-suave: #E2DED8;
+      --texto-oscuro: #2B1A10;
+      --rojo-alerta: #C14949;
+    }
 
-    <!-- CSS Just for demo purpose, don't include it in your project -->
-    <link rel="stylesheet" href="{% static 'plantilla/kaiadmin/assets/css/demo.css' %}" />
+    /* ================= BASE ================= */
+    body {
+      margin: 0;
+      background: var(--blanco-calido);
+      color: var(--texto-oscuro);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
 
-    <style>
-      .main-panel > footer {
-          margin-top: auto;
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ================= OVERLAY ================= */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .35);
+      display: none;
+      z-index: 1040;
+    }
+
+    .overlay.show {
+      display: block;
+    }
+
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, var(--cafe-profundo), var(--cafe-tostado));
+      color: white;
+      position: fixed;
+      top: 0;
+      left: -260px;
+      height: 100%;
+      transition: .3s ease;
+      z-index: 1050;
+    }
+
+    .sidebar.show {
+      left: 0;
+    }
+
+    .sidebar-header {
+      padding: 18px 14px;
+      text-align: center;
+      background: rgba(0, 0, 0, .18);
+    }
+
+    .sidebar-header img {
+      width: 102px;
+      height: 102px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      background: transparent;
+    }
+
+    .sidebar-header strong {
+      display: block;
+      font-size: .95rem;
+    }
+
+    /* ================= MENU ================= */
+    .menu {
+      list-style: none;
+      padding: 8px 0;
+      margin: 0;
+    }
+
+    .menu li {
+      margin: 10px 0;
+    }
+
+    .menu li a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 22px;
+      color: #f7f3ee;
+      text-decoration: none;
+      font-size: .95rem;
+      border-left: 4px solid transparent;
+    }
+
+    .menu li a i {
+      width: 20px;
+    }
+
+    .menu li a:hover {
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .menu li a.active {
+      background: rgba(255, 255, 255, .18);
+      border-left-color: var(--verde);
+      font-weight: 600;
+    }
+
+    /* ================= MAIN ================= */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ================= TOPBAR ================= */
+    .topbar {
+      height: 56px;
+      background: var(--crema-suave);
+      border-bottom: 1px solid var(--gris-suave);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .menu-btn {
+      background: none;
+      border: none;
+      font-size: 1.6rem;
+      color: var(--texto-oscuro);
+    }
+
+    /* ================= CONTENT ================= */
+    .content {
+      padding: 20px;
+      flex: 1;
+      min-width: 0;
+      overflow-x: visible;
+    }
+
+    /* ================= FOOTER ================= */
+    footer {
+      background: var(--crema-suave);
+      border-top: 1px solid var(--gris-suave);
+      font-size: 13px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    /* ================= FORM ERRORS ================= */
+    .error {
+      color: var(--rojo-alerta);
+      font-weight: 600;
+      font-size: .85rem;
+    }
+
+    .form-control.error {
+      border: 1px solid var(--rojo-alerta);
+    }
+
+    /* ================= DESKTOP ================= */
+    @media(min-width:992px) {
+      .sidebar {
+        left: 0;
       }
-      
+
+      .main {
+        margin-left: 260px;
+      }
+
+      .menu-btn {
+        display: inline-flex;
+      }
+
+      .overlay {
+        display: none !important;
+      }
+
+      /* SIDEBAR COLAPSADO (SOLO ICONOS) */
+      .sidebar.collapsed {
+        width: 74px;
+      }
+
+      .main.collapsed {
+        margin-left: 74px;
+      }
+
+      .sidebar.collapsed:hover {
+        width: 260px;
+      }
+
+      .sidebar.collapsed .sidebar-header strong {
+        opacity: 0;
+        height: 0;
+        overflow: hidden;
+        display: block;
+        transition: .2s ease;
+      }
+
+      .sidebar.collapsed .menu li a {
+        justify-content: center;
+        padding: 13px 0;
+        gap: 0;
+      }
+
+      .sidebar.collapsed .menu li a i {
+        width: auto;
+        font-size: 1.05rem;
+      }
+
+      .sidebar.collapsed .menu li a {
+        font-size: 0;
+      }
+
+      .sidebar.collapsed:hover .sidebar-header strong {
+        opacity: 1;
+        height: auto;
+        overflow: visible;
+      }
+
+      .sidebar.collapsed:hover .menu li a {
+        justify-content: flex-start;
+        padding: 13px 22px;
+        gap: 12px;
+        font-size: .95rem;
+      }
+
+      .sidebar.collapsed:hover .menu li a i {
+        width: 20px;
+      }
+
+      .sidebar.collapsed .sidebar-header img {
+        width: 46px;
+        height: 46px;
+        margin-bottom: 0;
+        transition: .2s ease;
+      }
+
+      .sidebar.collapsed:hover .sidebar-header img {
+        width: 102px;
+        height: 102px;
+        margin-bottom: 10px;
+      }
+    }
+
+    .form-control.is-invalid,
+    textarea.is-invalid {
+      border-color: var(--rojo-alerta);
+      box-shadow: 0 0 6px rgba(193, 73, 73, 0.35);
+    }
+
+    .error-text {
+      color: var(--rojo-alerta);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
   </style>
+</head>
 
-  </head>
-  <body>
-    <div class="wrapper">
-      <!-- Sidebar -->
-      <div class="sidebar" data-background-color="dark">
-        <div class="sidebar-logo">
-          <!-- Logo Header -->
-          <div class="logo-header" data-background-color="dark">
-            <a href="" class="logo">
-              <img
-                src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
-                alt="navbar brand"
-                class="navbar-brand"
-                height="20"
-              />
-            </a>
-            <div class="nav-toggle">
-              <button class="btn btn-toggle toggle-sidebar">
-                <i class="gg-menu-right"></i>
-              </button>
-              <button class="btn btn-toggle sidenav-toggler">
-                <i class="gg-menu-left"></i>
-              </button>
-            </div>
-            <button class="topbar-toggler more">
-              <i class="gg-more-vertical-alt"></i>
-            </button>
-          </div>
-          <!-- End Logo Header -->
-        </div>
-          
-        <div class="sidebar-wrapper scrollbar scrollbar-inner">
-        <div class="sidebar-content">
-            <ul class="nav nav-secondary">
-            <li class="nav-section">
-                <span class="sidebar-mini-icon">
-                <i class="fa fa-ellipsis-h"></i>
-                </span>
-                <h4 class="text-section">Contratación de artistas</h4>
-            </li>
+<body>
 
-            <li class="nav-item">
-                <a href="{% url 'dashboard_admin' %}">
-                <i class="fas fa-home"></i>
-                <p>Inicio</p>
-                </a>
-            </li>
+  <div class="overlay" id="overlay"></div>
 
-            <li class="nav-item">
-                <a href="{}">
-                <i class="fas fa-calendar-alt"></i>
-                <p>Lista de eventos</p>
-                </a>
-            </li>
+  <div class="app">
 
-            <li class="nav-item">
-                <a href="{}">
-                <i class="fas fa-file-signature"></i>
-                <p>Lista de contratos</p>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-palette"></i>
-                <p>Lista de artistas</p>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-users"></i>
-                <p>Lista de clientes</p>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-money-check-alt"></i>
-                <p>Lista de pagos</p>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-star"></i>
-                <p>Reseñas</p>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="">
-                <i class="fas fa-envelope"></i>
-                <p>Mensajes</p>
-                </a>
-            </li>
-            </ul>
-        </div>
-        </div>
-
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="{% get_media_prefix %}logo/logo.jpeg" alt="Logo">
+        <strong>Café Restaurante<br>Mesero</strong>
       </div>
-      <!-- End Sidebar -->
 
-      <div class="main-panel">
-        <div class="main-header">
-          <div class="main-header-logo">
-            <!-- Logo Header -->
-            <div class="logo-header" data-background-color="dark">
-              <a href="index.html" class="logo">
-                <img
-                  src="{% static 'plantilla/kaiadmin/assets/img/kaiadmin/logo_light.svg' %}"
-                  alt="navbar brand"
-                  class="navbar-brand"
-                  height="20"
-                />
-              </a>
-              <div class="nav-toggle">
-                <button class="btn btn-toggle toggle-sidebar">
-                  <i class="gg-menu-right"></i>
-                </button>
-                <button class="btn btn-toggle sidenav-toggler">
-                  <i class="gg-menu-left"></i>
-                </button>
-              </div>
-              <button class="topbar-toggler more">
-                <i class="gg-more-vertical-alt"></i>
-              </button>
-            </div>
-            <!-- End Logo Header -->
-          </div>
-          <!-- Navbar Header -->
-          <nav
-            class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom"
-          >
-            <div class="container-fluid">
-              <nav
-                class="navbar navbar-header-left navbar-expand-lg navbar-form nav-search p-0 d-none d-lg-flex"
-              >
-                  <a class="navbar-brand" href="#">Sistema - Administrador</a>
-              </nav>
+      <ul class="menu">
+        <!-- INICIO -->
+        <li>
+          <a href="{% url 'dashboard_mesero' %}"
+             class="{% if request.resolver_match.url_name == 'dashboard_mesero' %}active{% endif %}">
+            <i class="fas fa-home"></i> Inicio
+          </a>
+        </li>
 
-              <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
+        <!-- PEDIDOS -->
+        <li>
+          <a href="{% url 'listar_pedidos' %}"
+             class="{% if '/mesero/pedidos/' in request.path or '/pedidos/' in request.path %}active{% endif %}">
+            <i class="fas fa-receipt"></i> Pedidos
+          </a>
+        </li>
 
-                <div class="container-fluid">
+        <!-- NOTIFICACIONES -->
+        <li>
+          <a href="{% url 'notificaciones_mesero' %}"
+             class="{% if '/mesero/notificaciones/' in request.path %}active{% endif %}">
+            <i class="fas fa-bell"></i> Notificaciones
+          </a>
+        </li>
+      </ul>
+    </aside>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCliente" aria-controls="navbarCliente" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+    <!-- ================= MAIN ================= -->
+    <div class="main" id="main">
 
-            <div class="collapse navbar-collapse" id="navbarCliente">
+      <div class="topbar">
+        <button class="menu-btn" id="btnMenu">
+          <i class="bi bi-list" id="btnMenuIcon"></i>
+        </button>
 
-                <div class="d-flex align-items-center">
-                <a href="{% url 'perfil_admin' %}" class="btn btn-light btn-sm me-2">
-                    <i class="bi bi-person-circle me-1"></i> Ver mi perfil
-                </a>
-                <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">
-                    <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
-                </a>
+        <strong>Panel de Mesero</strong>
 
-                </div>
-            </div>
-            </div>
-              </ul>
-            </div>
-          </nav>
-          <!-- End Navbar -->
+        <div class="d-flex align-items-center gap-3">
+          <a href="{% url 'perfil_mesero' %}" class="text-dark">
+            <i class="bi bi-person-circle fs-4"></i>
+          </a>
+          <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger">
+            Cerrar Sesión
+          </a>
         </div>
+      </div>
 
-    {% block contenido %}
-    {% endblock %}
+      <main class="content">
+        {% block contenido %}{% endblock %}
+      </main>
 
+      <footer>
+        <strong>Katherin Pico</strong> · kathy.jim06.cc@gmail.com · 0958615103
+      </footer>
 
-        <footer>
-          <div class="row" style="padding: 30px; color:#2B1A10; background-color:white;">
-            <div class="text-center">
-              <h4 class="text-center">Desarrollado por Katherin Pico</h4>
-              <h5 class="text-center">kathy.jim06.cc@gmail.com</h5>
-              <h5 class="text-center">0958615103</h5>
-            </div>
-          </div>
-        </footer>
-    <!--   Core JS Files   -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/jquery-3.7.1.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/bootstrap.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/core/popper.min.js' %}"></script>
+    </div>
+  </div>
 
-    <!-- jQuery Scrollbar -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js' %}"></script>
+  <script>
+    const btnMenu = document.getElementById("btnMenu");
+    const btnMenuIcon = document.getElementById("btnMenuIcon");
+    const sidebar = document.getElementById("sidebar");
+    const main = document.getElementById("main");
+    const overlay = document.getElementById("overlay");
 
-    <!-- Chart JS -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart.js/chart.min.js' %}"></script>
+    function isDesktop() {
+      return window.matchMedia("(min-width: 992px)").matches;
+    }
 
-    <!-- jQuery Sparkline -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jquery.sparkline/jquery.sparkline.min.js' %}"></script>
+    function setBtnIconCollapsed(isCollapsed) {
+      if (!btnMenuIcon) return;
+      btnMenuIcon.classList.remove("bi-list", "bi-three-dots-vertical");
+      btnMenuIcon.classList.add(isCollapsed ? "bi-three-dots-vertical" : "bi-list");
+    }
 
-    <!-- Chart Circle -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/chart-circle/circles.min.js' %}"></script>
+    btnMenu.onclick = () => {
+      if (isDesktop()) {
+        const willCollapse = !sidebar.classList.contains("collapsed");
+        sidebar.classList.toggle("collapsed", willCollapse);
+        main.classList.toggle("collapsed", willCollapse);
+        setBtnIconCollapsed(willCollapse);
 
-    <!-- Datatables -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/datatables/datatables.min.js' %}"></script>
-
-    <!-- jQuery Vector Maps -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/jsvectormap.min.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/jsvectormap/world.js' %}"></script>
-
-    <!-- Sweet Alert -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/plugin/sweetalert/sweetalert.min.js' %}"></script>
-
-    <!-- Kaiadmin JS -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/kaiadmin.min.js' %}"></script>
-
-    <!-- Kaiadmin DEMO methods, don't include it in your project! -->
-    <script src="{% static 'plantilla/kaiadmin/assets/js/setting-demo.js' %}"></script>
-    <script src="{% static 'plantilla/kaiadmin/assets/js/demo.js' %}"></script>
-    <script>
-      $("#lineChart").sparkline([102, 109, 120, 99, 110, 105, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#177dff",
-        fillColor: "rgba(23, 125, 255, 0.14)",
-      });
-
-      $("#lineChart2").sparkline([99, 125, 122, 105, 110, 124, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#f3545d",
-        fillColor: "rgba(243, 84, 93, .14)",
-      });
-
-      $("#lineChart3").sparkline([105, 103, 123, 100, 95, 105, 115], {
-        type: "line",
-        height: "70",
-        width: "100%",
-        lineWidth: "2",
-        lineColor: "#ffa534",
-        fillColor: "rgba(255, 165, 52, .14)",
-      });
-    </script>
-
-    {% if messages %}
-      {% for mensaje in messages %}
-        <script>
-            Swal.fire({
-              title: "CONFIRMACIÓN",
-              text: "{{ mensaje }}",
-              icon: "success",
-              showConfirmButton: false,
-              timer: 1500
-            });
-        </script>
-      {% endfor %}
-    {% endif %}
-
-    <style>
-      .error{
-      color:#8C2F39;
-      font-weight: bold;
+        overlay.classList.remove("show");
+        sidebar.classList.remove("show");
+        return;
       }
 
-      .form-control.error{
-      border: 1px solid #C14949;
+      sidebar.classList.toggle("show");
+      overlay.classList.toggle("show");
+    };
+
+    overlay.onclick = () => {
+      sidebar.classList.remove("show");
+      overlay.classList.remove("show");
+    };
+
+    window.addEventListener("resize", () => {
+      if (isDesktop()) {
+        overlay.classList.remove("show");
+        sidebar.classList.remove("show");
+      } else {
+        sidebar.classList.remove("collapsed");
+        main.classList.remove("collapsed");
+        setBtnIconCollapsed(false);
       }
-    </style>
+    });
+  </script>
 
+  {% if messages %}
+    {% for message in messages %}
+      <div class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}"></div>
+    {% endfor %}
+  {% endif %}
 
-    {% if request.user.rol == 'mesero' %}
-    <audio id="sndPedido" src="{% static 'sonidos/pedido_listo.mp3' %}" preload="auto"></audio>
-    <audio id="sndMensaje" src="{% static 'sonidos/mensaje.mp3' %}" preload="auto"></audio>
-    {% endif %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      document.querySelectorAll(".django-message").forEach(msg => {
+        const type = msg.dataset.type;
+        const text = msg.dataset.text;
 
-
-    {% if request.user.rol == 'mesero' %}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        const protocolNotif = window.location.protocol === "https:" ? "wss://" : "ws://";
-        const userIdNotif = "{{ request.user.id }}";
-
-        const socketMesero = new WebSocket(
-            protocolNotif + window.location.host + `/ws/notificaciones/${userIdNotif}/`
-        );
-
-        // Desbloquear sonido después de un clic obligatorio
-        document.addEventListener('click', () => {
-            const s1 = document.getElementById("sndPedido");
-            const s2 = document.getElementById("sndMensaje");
-            if (s1) s1.muted = false;
-            if (s2) s2.muted = false;
-        }, { once: true });
-
-        socketMesero.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            const tipo = data.tipo;
-            const mensaje = data.mensaje;
-            const mesa = data.mesa;
-            const pedidoId = data.pedido;
-
-            if (tipo === "pedido_listo") {
-            const sndPedido = document.getElementById("sndPedido");
-            if (sndPedido) sndPedido.play();
-
-            Swal.fire({
-                html: `
-                    <div style="
-                        padding: 10px 5px;
-                    ">
-                        <div style="font-size:70px; color:#4BB543; margin-bottom:10px;">
-                        </div>
-
-                        <h2 style="
-                            margin:0;
-                            font-weight:700;
-                            color:#333;
-                        ">
-                            Notificación
-                        </h2>
-
-                        <hr style="margin:12px auto; width:40%; border:1px solid #e5e5e5;">
-
-                        <h3 style="
-                            margin:0;
-                            font-weight:600;
-                            color:#0d6efd;
-                        ">Mesa ${mesa}</h3>
-
-                        <h1 style="
-                            margin-top:8px;
-                            font-size:26px;
-                            font-weight:700;
-                            color:#444;
-                        ">
-                            Pedido #${pedidoId} listo
-                        </h1>
-
-                        <p style="
-                            margin-top:10px;
-                            font-size:17px;
-                            color:#555;
-                        ">
-                            Ya puedes entregar el pedido
-                        </p>
-                    </div>
-                `,
-                width: "600px",
-                showConfirmButton: true,
-                confirmButtonText: "Aceptar",
-                confirmButtonColor: "#4b7bec",
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-            });
-
-            cargarNotificaciones();
-            return;
-        }
-
-            /// MENSAJE (toast elegante)
-            if (tipo === "mensaje") {
-
-                const sndMensaje = document.getElementById("sndMensaje");
-                if (sndMensaje) sndMensaje.play();
-
-                Swal.fire({
-                    icon: "info",
-                    title: "Nuevo mensaje del cocinero",
-                    text: mensaje,
-                    confirmButtonColor: "#3085d6"
-                });
-
-                cargarNotificaciones();
-            }
+        const config = {
+          success: { icon: "success", title: "Éxito", color: "#4F8A57" },
+          error:   { icon: "error",   title: "Error", color: "#C14949" },
+          warning: { icon: "warning", title: "Advertencia", color: "#D9A441" }
         };
 
-    </script>
-    {% endif %}
+        const cfg = config[type] || config.success;
 
-  </body>
+        Swal.fire({
+          icon: cfg.icon,
+          title: cfg.title,
+          text: text,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: cfg.color,
+          iconColor: cfg.color,
+          background: "#FFF7F0"
+        });
+
+        msg.remove();
+      });
+    });
+  </script>
+
+  <script>
+    const USER_ID = "{{ request.user.id }}";
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+
+    const socketNotif = new WebSocket(
+      ws_scheme + '://' + window.location.host + '/ws/notificaciones/' + USER_ID + '/'
+    );
+
+    socketNotif.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+
+      // PEDIDO LISTO
+      if (data.tipo === "pedido_listo") {
+        const codigo = data.codigo_pedido && data.codigo_pedido !== ""
+          ? data.codigo_pedido
+          : `#${data.pedido}`;
+
+        let textoLugar = "";
+        if (data.mesa) {
+          textoLugar = data.mesa === "Domicilio"
+            ? "Pedido a domicilio"
+            : `Mesa ${data.mesa}`;
+        }
+
+        Swal.fire({
+          icon: "success",
+          title: "Pedido listo",
+          html: `<b>Pedido ${codigo}</b><br>Entregar a la ${textoLugar}`,
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0",
+          confirmButtonText: 'Aceptar',
+          iconColor: "#3E7A3F"
+        });
+      }
+
+      // MENSAJE DEL COCINERO
+      if (data.tipo === "mensaje") {
+        Swal.fire({
+          title: "Nuevo mensaje del cocinero",
+          text: data.mensaje,
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0",
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    };
+  </script>
+
+</body>
 </html>

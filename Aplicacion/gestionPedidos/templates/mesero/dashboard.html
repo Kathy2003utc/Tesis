@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block contenido %}
-<br><br><br>
+<br>
 
 <style>
     :root {
@@ -51,22 +51,21 @@
         --advertencia-suave: #FFF5DA;
     }
 
-    html, body {
+    html,
+    body {
         height: 100%;
         margin: 0;
         overflow-x: hidden !important;
-        background: linear-gradient(
-            135deg,
-            var(--crema-suave),
-            var(--cafe-suave) 45%,
-            var(--blanco-calido)
-        );
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
         color: var(--texto-oscuro);
         font-family: 'Segoe UI', sans-serif;
     }
 
     .main-content-wrapper {
-        padding-left: 10px !important; 
+        padding-left: 10px !important;
         padding-right: 10px !important;
     }
 
@@ -83,13 +82,13 @@
         background: var(--blanco-calido);
         border: 1px solid var(--gris-claro-calido);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         height: 100%;
     }
 
     .card:hover {
         transform: translateY(-6px);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
         border-color: var(--cafe-medio);
         background: var(--crema-suave);
     }
@@ -106,7 +105,7 @@
     }
 
     h1.display-5 {
-        text-shadow: 0px 1px 3px rgba(0,0,0,0.15);
+        text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
     }
 </style>
 
@@ -132,42 +131,17 @@
                 </div>
             </div>
 
-            <!-- Registrar Pedido -->
-            <div class="col-md-6">
-                <div class="card text-center shadow-lg border-0">
-                    <div class="card-body">
-                        <i class="bi bi-basket2 icono"></i>
-                        <h5 class="card-title mt-3 fw-bold">Registrar Pedido</h5>
-                        <p class="text-muted">Toma nuevos pedidos y asígnalos a una mesa.</p>
-                        <a href="{% url 'crear_pedido' %}" class="btn btn-outline-success">Registrar</a>
-                    </div>
-                </div>
-            </div>
-
             <!-- Notificaciones -->
             <div class="col-md-6">
                 <div class="card text-center shadow-lg border-0">
                     <div class="card-body">
                         <i class="bi bi-bell-fill icono"></i>
                         <h5 class="card-title mt-3 fw-bold">Notificaciones</h5>
-                        <p class="text-muted">Recibe alertas de cocina sobre el estado de los pedidos.</p>
-                        <a href="#" class="btn btn-outline-success">Ver Notificaciones</a>
+                        <p class="text-muted">Recibe alertas Y mensajes desde cocina sobre el menú</p>
+                        <a href="{% url 'notificaciones_mesero' %}" class="btn btn-outline-success">Ver Notificaciones</a>
                     </div>
                 </div>
             </div>
-
-            <!-- Mensajes -->
-            <div class="col-md-6">
-                <div class="card text-center shadow-lg border-0">
-                    <div class="card-body">
-                        <i class="bi bi-chat-dots-fill icono"></i>
-                        <h5 class="card-title mt-3 fw-bold">Mensajes</h5>
-                        <p class="text-muted">Mensajes desde cocina sobre disponibilidad del menú.</p>
-                        <a href="#" class="btn btn-outline-success">Ver Mensajes</a>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>

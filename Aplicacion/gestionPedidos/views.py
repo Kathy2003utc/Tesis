@@ -41,7 +41,7 @@ from weasyprint import HTML
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 import tempfile
-
+from django.views.decorators.http import require_POST
 
 # ----------------------------
 # Login (pantalla)
@@ -77,7 +77,7 @@ def iniciar_sesion(request):
             elif usuario.rol == 'mesero':
                 return redirect('dashboard_mesero')
             elif usuario.rol == 'cocinero':
-                return redirect('dashboard_cocinero')
+                return redirect('vista_cocina')
             elif usuario.rol == 'cajero':
                 return redirect('dashboard_cajero')
             else:
@@ -115,6 +115,7 @@ def cambiar_password_primera_vez(request):
             messages.error(request, "Las contraseñas no coinciden.")
 
     return render(request, 'login/cambiar_password_primera_vez.html')
+
 # ----------------------------
 # Dashboards protegidos por rol
 # ----------------------------
@@ -125,7 +126,6 @@ def dashboard_admin(request):
         return redirect('login')
     return render(request, 'administrador/dashboard.html')
 
-
 @login_required(login_url='login')
 def dashboard_mesero(request):
     if request.user.rol != 'mesero':
@@ -133,14 +133,12 @@ def dashboard_mesero(request):
         return redirect('login')
     return render(request, 'mesero/dashboard.html')
 
-
 @login_required(login_url='login')
 def dashboard_cocinero(request):
     if request.user.rol != 'cocinero':
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('login')
     return render(request, 'cocinero/dashboard.html')
-
 
 @login_required(login_url='login')
 def dashboard_cajero(request):
@@ -152,7 +150,6 @@ def dashboard_cajero(request):
 # ----------------------------
 # Admin-Perfil
 # ----------------------------
-
 @login_required(login_url='login')
 @rol_requerido('admin')
 def perfil_admin(request):
@@ -200,19 +197,32 @@ def editar_perfil_admin(request):
             messages.error(request, "Ya existe un usuario con ese correo.")
             return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
 
-        # Teléfono opcional, pero si existe debe tener 10 dígitos
-        if telefono:
-            if not telefono.isdigit():
-                messages.error(request, "El teléfono solo debe contener números.")
-                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+        # -----------------------------
+        # Teléfono obligatorio + validación
+        # -----------------------------
+        if not telefono:
+            messages.error(request, "El teléfono es obligatorio.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
 
-            if len(telefono) != 10:
-                messages.error(request, "El teléfono debe tener 10 dígitos.")
-                return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+        if not telefono.isdigit():
+            messages.error(request, "El teléfono solo debe contener números.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
 
-        # Contraseñas
+        if len(telefono) != 10:
+            messages.error(request, "El teléfono debe tener 10 dígitos.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # -----------------------------
+        # Dirección obligatoria
+        # -----------------------------
+        if not direccion:
+            messages.error(request, "La dirección es obligatoria.")
+            return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
+
+        # -----------------------------
+        # Contraseñas (opcionales)
+        # -----------------------------
         if password or password2:
-            # Mínimo 6 caracteres
             if len(password) < 6:
                 messages.error(request, "La contraseña debe tener mínimo 6 caracteres.")
                 return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
@@ -222,10 +232,14 @@ def editar_perfil_admin(request):
                 return render(request, "administrador/editar_perfil_admin.html", {"usuario": usuario})
 
             usuario.password = make_password(password)
+
+        # -----------------------------
+        # Guardar cambios
+        # -----------------------------
         usuario.nombre = nombre
         usuario.apellido = apellido
         usuario.correo = correo
-        usuario.username = correo 
+        usuario.username = correo
         usuario.telefono = telefono
         usuario.direccion = direccion
         usuario.save()
@@ -238,7 +252,6 @@ def editar_perfil_admin(request):
 # ----------------------------
 # Admin-Gestion de trabajadores
 # ----------------------------
-
 @login_required(login_url='login')
 @rol_requerido('admin')
 def listar_trabajadores(request):
@@ -390,28 +403,54 @@ def editar_trabajador(request, trabajador_id):
 
     return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
 
-
 @login_required(login_url='login')
 @rol_requerido('admin')
 def eliminar_trabajador(request, trabajador_id):
-    "Elimina un trabajador por su ID"
+    """
+    Si el trabajador nunca ha interactuado en el sistema, se elimina.
+    Si ya tiene interacciones (pedidos, mensajes, notificaciones),
+    solo se desactiva (is_active = False).
+    """
     if request.method == 'POST':
         trabajador = get_object_or_404(Usuario, id=trabajador_id)
         nombre_trabajador = f"{trabajador.nombre} {trabajador.apellido}"
-        
-        # Solo eliminar si no es administrador ni cliente
-        if trabajador.rol in ['mesero', 'cocinero', 'cajero']:
-            trabajador.delete()
-            messages.success(request, f"Trabajador {nombre_trabajador} eliminado correctamente.")
-        else:
+
+        # Solo aplicar a roles de trabajador
+        if trabajador.rol not in ['mesero', 'cocinero', 'cajero']:
             messages.error(request, "No se puede eliminar este usuario.")
+            return redirect('listar_trabajadores')
+
+        # Usamos la propiedad del modelo
+        tiene_interacciones = trabajador.tiene_interacciones
+
+        if tiene_interacciones:
+            # NO se elimina, solo se desactiva
+            if trabajador.is_active:
+                trabajador.is_active = False
+                trabajador.save()
+                messages.warning(
+                    request,
+                    f"El trabajador {nombre_trabajador} tiene registros asociados, "
+                    "por lo que no se eliminó. Se desactivó su cuenta."
+                )
+            else:
+                messages.info(
+                    request,
+                    f"El trabajador {nombre_trabajador} ya estaba desactivado."
+                )
+        else:
+            # Sin interacciones → se puede eliminar físicamente
+            trabajador.delete()
+            messages.success(
+                request,
+                f"Trabajador {nombre_trabajador} eliminado correctamente."
+            )
 
     return redirect('listar_trabajadores')
 
 # ----------------------------
 # Admin - Gestión de Mesas
 # ----------------------------
-
 # Listar mesas
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -532,6 +571,22 @@ def eliminar_mesa(request, mesa_id):
     mesa = get_object_or_404(Mesa, id=mesa_id)
 
     if request.method == 'POST':
+        # ====== VALIDAR SI LA MESA ESTÁ OCUPADA ======
+        # pedidos que aún no han terminado
+        pedidos_activos = Pedido.objects.filter(
+            mesa=mesa
+        ).exclude(
+            estado__in=['finalizado', 'cancelado']  # <-- ajusta a tus estados reales
+        ).exists()
+
+        if pedidos_activos:
+            messages.error(
+                request,
+                f"No puedes eliminar la mesa {mesa.numero} porque tiene pedidos activos (mesa ocupada)."
+            )
+            return redirect('listar_mesas')
+
+        # Si no tiene pedidos activos, se puede eliminar
         numero = mesa.numero
         mesa.delete()
         messages.success(request, f"Mesa {numero} eliminada correctamente.")
@@ -543,7 +598,6 @@ def eliminar_mesa(request, mesa_id):
 # ----------------------------
 # Admin - Gestión de Menú / Productos
 # ----------------------------
-
 # Listar productos
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -699,13 +753,37 @@ def editar_menu(request, producto_id):
 def eliminar_menu(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id)
 
-    if request.method == 'POST':
-        nombre = producto.nombre
-        producto.delete()
-        messages.success(request, f"Producto {nombre} eliminado correctamente.")
+    # Solo debería llegar por POST desde el formulario con SweetAlert
+    if request.method != 'POST':
         return redirect('listar_menu')
 
-    return render(request, 'administrador/menu/confirmar_eliminar.html', {'producto': producto})
+    # Verificar si el producto tiene detalles de pedido asociados
+    tiene_pedidos = producto.tiene_pedidos
+
+    if tiene_pedidos:
+        # No eliminar, solo desactivar
+        if producto.activo:
+            producto.activo = False
+            producto.save()
+            messages.warning(
+                request,
+                f"El producto {producto.nombre} tiene pedidos asociados, "
+                "por lo que no se eliminó. Se desactivó del menú."
+            )
+        else:
+            messages.info(
+                request,
+                f"El producto {producto.nombre} ya estaba desactivado."
+            )
+    else:
+        nombre = producto.nombre
+        producto.delete()
+        messages.success(
+            request,
+            f"Producto '{nombre}' eliminado correctamente."
+        )
+
+    return redirect('listar_menu')
 
 # ----------------------------
 # Mesero-Pedidos
@@ -775,31 +853,33 @@ def crear_pedido(request):
         'user': request.user
     })
 
-
 # Ver pedido
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def ver_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        mesero=request.user,
+        tipo_pedido='restaurante'
+    )
 
     # Validación: no permitir ver pedido sin productos
     if not pedido.detalles.exists():
         messages.error(request, "Debe agregar al menos un producto antes de finalizar.")
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
-    # --- Enviar a cocina ---
+    # SOLO la primera vez (cuando aún es en_creacion) se manda a cocina
     if pedido.estado == 'en_creacion':
-        # Primera vez que se envía
         pedido.estado = 'en preparacion'
         pedido.save()
-        enviar_pedido_cocina(pedido)          # ← SOLO AQUÍ SE ENVÍA nuevo_pedido
-    else:
-        # Pedido ya fue enviado antes: solo actualizar
-        pedido.refresh_from_db()
-        enviar_actualizacion_cocina(pedido)   # ← ACTUALIZA sin duplicar
+        enviar_pedido_cocina(pedido)
 
+    # IMPORTANTE: NO mandar actualizar aquí
+    # (porque "Ver" se abre muchas veces y eso genera duplicados)
 
     return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
+
 
 # Editar pedido
 @login_required(login_url='login')
@@ -850,7 +930,8 @@ def editar_pedido(request, pedido_id):
 
     # SOLO MESAS LIBRES + LA MESA ACTUAL
     mesas = Mesa.objects.filter(estado="libre") | Mesa.objects.filter(id=pedido.mesa_id)
-    productos = Producto.objects.all()
+    productos = Producto.objects.filter(activo=True)
+
 
     return render(request, 'mesero/pedidos/editar_pedido.html', {
         'pedido': pedido,
@@ -888,7 +969,6 @@ def enviar_actualizacion_cocina(pedido):
             }
         }
     )
-
 
 # Eliminar pedido
 @login_required(login_url='login')
@@ -948,18 +1028,22 @@ def finalizar_pedido(request, pedido_id):
         "message": f"El pedido #{pedido.id} ha sido finalizado y la mesa está libre."
     })
 
-
 # ----------------------------
 # Detalles con AJAX
 # ----------------------------
-
 # Agregar detalles con AJAX
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def agregar_detalles(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
-    productos = Producto.objects.all()
-    return render(request, 'mesero/pedidos/agregar_detalles.html', {'pedido': pedido, 'productos': productos})
+    
+    # SOLO productos activos
+    productos = Producto.objects.filter(activo=True)
+
+    return render(request, 'mesero/pedidos/agregar_detalles.html', {
+        'pedido': pedido,
+        'productos': productos
+    })
 
 @login_required(login_url='login')
 @rol_requerido('mesero')
@@ -972,25 +1056,38 @@ def agregar_detalle_ajax(request, pedido_id):
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
 
-        # Crear o actualizar detalle (SIN RECARGOS)
-        detalle, creado = DetallePedido.objects.get_or_create(
+        # 🔹 1) VERIFICAR SI YA EXISTE ESE PRODUCTO EN EL PEDIDO
+        if DetallePedido.objects.filter(pedido_id=pedido_id, producto_id=producto_id).exists():
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Este producto ya fue agregado al pedido. Edítelo en la tabla.'
+            })
+
+        # 🔹 2) CREAR DETALLE (SIN RECARGOS)
+        detalle = DetallePedido.objects.create(
             pedido_id=pedido_id,
             producto_id=producto_id,
-            defaults={'cantidad': cantidad, 'observacion': observacion}
+            cantidad=cantidad,
+            observacion=observacion
         )
 
-        if not creado:
-            detalle.cantidad += cantidad
-            detalle.observacion = observacion
-            detalle.save()
-
-        # Actualizar totales
+        # 🔹 3) ACTUALIZAR TOTALES
         pedido = get_object_or_404(Pedido, id=pedido_id)
         pedido.calcular_totales()
 
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+        # 🔹 4) ORDENAR DETALLES POR ORDEN DE REGISTRO
+        detalles = pedido.detalles.order_by('id')
 
-        return JsonResponse({'success': True, 'mensaje': 'Producto agregado.', 'tabla': tabla_html})
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
+            'pedido': pedido,
+            'detalles': detalles
+        })
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Producto agregado.',
+            'tabla': tabla_html
+        })
 
     return JsonResponse({'success': False, 'mensaje': 'Error al agregar producto'})
 
@@ -1007,12 +1104,24 @@ def editar_detalle_ajax(request, detalle_id):
         detalle.cantidad = int(data.get("cantidad", detalle.cantidad))
         detalle.observacion = data.get("observacion", detalle.observacion)
 
-        # SIN RECARGO, NO VALIDACIÓN DE TIPO
         detalle.save()
 
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+        # 🔹 RECALCULAR TOTALES
+        pedido.calcular_totales()
 
-        return JsonResponse({'success': True, 'mensaje': 'Detalle actualizado correctamente.', 'tabla': tabla_html})
+        # 🔹 ORDENAR DETALLES POR ID (ORDEN DE REGISTRO)
+        detalles = pedido.detalles.order_by('id')
+
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
+            'pedido': pedido,
+            'detalles': detalles
+        })
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Detalle actualizado correctamente.',
+            'tabla': tabla_html
+        })
 
     return JsonResponse({'success': False, 'mensaje': 'Error al actualizar detalle.'})
 
@@ -1025,38 +1134,58 @@ def eliminar_detalle_ajax(request, detalle_id):
     if request.method == 'POST':
         detalle.delete()
 
-        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {'pedido': pedido})
+        # 🔹 RECALCULAR TOTALES
+        pedido.calcular_totales()
 
-        return JsonResponse({'success': True, 'mensaje': 'Producto eliminado correctamente.', 'tabla': tabla_html})
+        # 🔹 ORDENAR DETALLES POR ID
+        detalles = pedido.detalles.order_by('id')
+
+        tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
+            'pedido': pedido,
+            'detalles': detalles
+        })
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Producto eliminado correctamente.',
+            'tabla': tabla_html
+        })
 
     return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
-
 
 # ----------------------------
 # Cocinero marca pedido como listo
 # ----------------------------
 
+@login_required(login_url='login')
+@rol_requerido('cocinero')
 def vista_cocina(request):
-
     hoy = timezone.localdate()
 
-    pedidos = Pedido.objects.filter(
+    pedidos_restaurante = Pedido.objects.filter(
         estado='en preparacion',
         tipo_pedido='restaurante',
+        fecha_hora__date=hoy
+    ).order_by('id')
+
+    pedidos_domicilio = Pedido.objects.filter(
+        estado='en preparacion',
+        tipo_pedido='domicilio',
         fecha_hora__date=hoy
     ).order_by('id')
 
     meseros = Usuario.objects.filter(rol='mesero')
     cajeros = Usuario.objects.filter(rol='cajero')
 
-
     return render(request, 'cocinero/pedido.html', {
-        'pedidos_restaurante': pedidos,
+        'pedidos_restaurante': pedidos_restaurante,
+        'pedidos_domicilio': pedidos_domicilio, 
         'meseros': meseros,
-        'cajeros': cajeros
+        'cajeros': cajeros,
     })
 
-
+@login_required(login_url='login')
+@rol_requerido('cocinero')
 @csrf_protect
 def marcar_pedido_listo(request, pedido_id):
     if request.method == "POST":
@@ -1071,7 +1200,7 @@ def marcar_pedido_listo(request, pedido_id):
         notif = Notificacion.objects.create(
             usuario_destino=destinatario,
             tipo="pedido_listo",
-            mensaje=f"El pedido #{pedido.id} está listo.",
+            mensaje=f"El pedido {pedido.codigo_pedido} está listo.",
             pedido=pedido
         )
 
@@ -1084,9 +1213,11 @@ def marcar_pedido_listo(request, pedido_id):
             {
                 "type": "enviar_notificacion",
                 "tipo": "pedido_listo",
-                "mensaje": f"El pedido #{pedido.id} está listo.",
+                "mensaje": f"El pedido {pedido.codigo_pedido} está listo.",
                 "mesa": pedido.mesa.numero if pedido.mesa else None,
                 "pedido": pedido.id,
+                # 👇 NUEVO: mandamos también el código
+                "codigo_pedido": pedido.codigo_pedido,
                 "id": notif.id,
                 "fecha": localtime(notif.fecha_hora).strftime("%d/%m/%Y %H:%M"),
             }
@@ -1114,6 +1245,8 @@ def marcar_pedido_listo(request, pedido_id):
                 "type": "nuevo_cobro",
                 "origen": "domicilio" if pedido.tipo_pedido == "domicilio" else "restaurante",
                 "pedido_id": pedido.id,
+                # también aquí mandamos el código
+                "codigo_pedido": pedido.codigo_pedido,
                 "mesa": mesa_texto,
                 "mesero": nombre_atendio,
                 "total": float(pedido.total),
@@ -1123,76 +1256,92 @@ def marcar_pedido_listo(request, pedido_id):
 
         return JsonResponse({"success": True})
 
+
+def _payload_pedido_cocina(pedido):
+    return {
+        "id": pedido.id,
+        "codigo_pedido": pedido.codigo_pedido,
+        "tipo": pedido.tipo_pedido,
+        "mesa": pedido.mesa.numero if pedido.mesa else None,
+        "mesero": pedido.mesero.nombre if pedido.mesero else None,
+        "cajero": pedido.cajero.nombre if pedido.cajero else None,
+        "productos": [
+            {
+                "nombre": d.producto.nombre,
+                "cantidad": d.cantidad,
+                "observacion": d.observacion or ""
+            }
+            for d in pedido.detalles.all()
+        ]
+    }
+
 def enviar_pedido_cocina(pedido):
     channel_layer = get_channel_layer()
-
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
         {
             "type": "nuevo_pedido",
-            "pedido": {
-                "id": pedido.id,
-                "mesa": pedido.mesa.numero if pedido.mesa else None,
-                "mesero": (
-                    pedido.mesero.nombre 
-                    if pedido.mesero 
-                    else f"Cajero: {pedido.cajero.nombre}"
-                ),
-                "productos": [
-                    {
-                        "nombre": d.producto.nombre,
-                        "cantidad": d.cantidad,
-                        "observacion": d.observacion
-                    }
-                    for d in pedido.detalles.all()
-                ]
-            }
+            "pedido": _payload_pedido_cocina(pedido),
         }
     )
 
-@csrf_exempt
+def enviar_actualizacion_cocina(pedido):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "actualizar_pedido",
+            "pedido": _payload_pedido_cocina(pedido),
+        }
+    )
+
+@login_required(login_url='login')
+@rol_requerido('cocinero')
+@require_POST
+@csrf_protect
 def enviar_mensaje_mesero(request):
-    if request.method == "POST":
-        import json
-        data = json.loads(request.body)
+    data = json.loads(request.body)
 
-        usuario_id = data.get("usuario_id")
-        mensaje = data.get("mensaje")
+    usuario_id = data.get("usuario_id")
+    mensaje = (data.get("mensaje") or "").strip()
 
-        destinatario = get_object_or_404(Usuario, id=usuario_id)
+    if not usuario_id or not mensaje:
+        return JsonResponse({"success": False, "mensaje": "Datos incompletos."}, status=400)
 
-        # Guardar mensaje
-        msg = Mensaje.objects.create(
-            remitente=request.user,
-            destinatario=destinatario,
-            contenido=mensaje
-        )
+    destinatario = get_object_or_404(Usuario, id=usuario_id)
 
-        # Crear notificación
-        notif = Notificacion.objects.create(
-            usuario_destino=destinatario,
-            tipo="mensaje",
-            mensaje=mensaje
-        )
+    # ahora request.user SIEMPRE será Usuario (porque login_required)
+    msg = Mensaje.objects.create(
+        remitente=request.user,
+        destinatario=destinatario,
+        contenido=mensaje
+    )
 
-        # Enviar websocket
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"notificaciones_{destinatario.id}",
-            {
-                "type": "enviar_notificacion",
-                "tipo": "mensaje",
-                "mensaje": mensaje,
-                "id": notif.id,
-                "fecha": notif.fecha_hora.strftime("%d/%m/%Y %H:%M"),
-                "pedido": None,
-                "mesa": None,
-            }
-        )
+    notif = Notificacion.objects.create(
+        usuario_destino=destinatario,
+        tipo="mensaje",
+        mensaje=mensaje
+    )
 
-        return JsonResponse({"success": True})
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"notificaciones_{destinatario.id}",
+        {
+            "type": "enviar_notificacion",
+            "tipo": "mensaje",
+            "mensaje": mensaje,
+            "id": notif.id,
+            "fecha": notif.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+            "pedido": None,
+            "mesa": None,
+        }
+    )
 
-    return JsonResponse({"success": False}, status=400)
+    return JsonResponse({"success": True})
+
+#-------------------------------------
+# MESERO - MODULO NOTIFICACIONES
+#-------------------------------------
 
 def notificaciones_mesero(request):
     notificaciones = Notificacion.objects.filter(
@@ -1245,7 +1394,6 @@ def cajero_listar_pedidos(request):
         'pedidos': pedidos
     })
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_crear_pedido(request):
@@ -1285,7 +1433,6 @@ def cajero_crear_pedido(request):
         'user': request.user
     })
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_agregar_detalles(request, pedido_id):
@@ -1297,9 +1444,9 @@ def cajero_agregar_detalles(request, pedido_id):
         cajero=request.user,
         estado__in=['borrador', 'en_creacion']
     )
-    productos = Producto.objects.all()
-
-    # CALCULAR RECARGOS AQUÍ ✔️✔️✔️
+    productos = Producto.objects.filter(activo=True)
+    
+    # CALCULAR RECARGOS AQUi
     total_recargos = pedido.detalles.aggregate(
         total=Sum(F('recargo') * F('cantidad'))
     )['total'] or 0
@@ -1310,14 +1457,12 @@ def cajero_agregar_detalles(request, pedido_id):
         'total_recargos': total_recargos
     })
 
-
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_agregar_detalle_ajax(request, pedido_id):
     """
     Agrega productos al pedido a domicilio.
-    Ahora recibe recargo unitario desde el front (SweetAlert).
+    VALIDACIÓN: si el producto ya existe en el pedido, NO se vuelve a agregar.
     """
     if request.method == 'POST':
         import json
@@ -1327,26 +1472,24 @@ def cajero_agregar_detalle_ajax(request, pedido_id):
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
 
-        # Nuevos campos desde JS:
         recargo_unitario = float(data.get("recargo_unitario", 0))
-        recargo_total = float(data.get("recargo_total", 0))
+        recargo_total = float(data.get("recargo_total", 0))  # (no es necesario guardarlo)
 
-        detalle, creado = DetallePedido.objects.get_or_create(
+        # VALIDAR DUPLICADO
+        if DetallePedido.objects.filter(pedido_id=pedido_id, producto_id=producto_id).exists():
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Este producto ya fue agregado al pedido. Edítelo en la tabla.'
+            })
+
+        # CREAR DETALLE (SIN DUPLICAR)
+        DetallePedido.objects.create(
             pedido_id=pedido_id,
             producto_id=producto_id,
-            defaults={
-                'cantidad': cantidad,
-                'observacion': observacion,
-                'recargo': recargo_unitario,
-            }
+            cantidad=cantidad,
+            observacion=observacion,
+            recargo=recargo_unitario
         )
-
-        if not creado:
-            detalle.cantidad += cantidad
-            # Si vuelve a agregar, sumamos recargo_total también
-            detalle.recargo = recargo_unitario
-            detalle.observacion = observacion
-            detalle.save()
 
         pedido = get_object_or_404(Pedido, id=pedido_id)
         pedido.calcular_totales()
@@ -1355,9 +1498,13 @@ def cajero_agregar_detalle_ajax(request, pedido_id):
             total=Sum(F('recargo') * F('cantidad'))
         )['total'] or 0
 
+        # ORDEN ORIGINAL (por id ascendente)
+        detalles = pedido.detalles.order_by('id')
+
         tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
             'pedido': pedido,
-            'total_recargos': total_recargos
+            'total_recargos': total_recargos,
+            'detalles': detalles
         })
 
         return JsonResponse({
@@ -1368,17 +1515,12 @@ def cajero_agregar_detalle_ajax(request, pedido_id):
 
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_editar_detalle_ajax(request, detalle_id):
-    """
-    Editar cantidad, observación y recargo unitario de un detalle de pedido.
-    """
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
 
-    # Evitar que editen pedidos de otros cajeros
     if pedido.tipo_pedido != 'domicilio' or pedido.cajero != request.user:
         return JsonResponse({'success': False, 'mensaje': 'No autorizado.'}, status=403)
 
@@ -1386,23 +1528,26 @@ def cajero_editar_detalle_ajax(request, detalle_id):
         import json
         data = json.loads(request.body)
 
-        # Actualizar los valores
         detalle.cantidad = int(data.get("cantidad", detalle.cantidad))
         detalle.observacion = data.get("observacion", detalle.observacion)
         detalle.recargo = float(data.get("recargo", detalle.recargo))
+        detalle.save()
 
-        detalle.save()  # recalcula subtotal y pedido.total
+        # recalcular totales del pedido
+        pedido.calcular_totales()
 
-        # Renderizar tabla actualizada
         total_recargos = pedido.detalles.aggregate(
             total=Sum(F('recargo') * F('cantidad'))
         )['total'] or 0
 
+        # ORDEN ORIGINAL
+        detalles = pedido.detalles.order_by('id')
+
         tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
             'pedido': pedido,
-            'total_recargos': total_recargos
+            'total_recargos': total_recargos,
+            'detalles': detalles
         })
-
 
         return JsonResponse({
             'success': True,
@@ -1412,13 +1557,9 @@ def cajero_editar_detalle_ajax(request, detalle_id):
 
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_eliminar_detalle_ajax(request, detalle_id):
-    """
-    Eliminar un detalle de pedido a domicilio.
-    """
     detalle = get_object_or_404(DetallePedido, id=detalle_id)
     pedido = detalle.pedido
 
@@ -1428,15 +1569,21 @@ def cajero_eliminar_detalle_ajax(request, detalle_id):
     if request.method == 'POST':
         detalle.delete()
 
+        #  recalcular totales
+        pedido.calcular_totales()
+
         total_recargos = pedido.detalles.aggregate(
             total=Sum(F('recargo') * F('cantidad'))
         )['total'] or 0
 
+        #  ORDEN ORIGINAL
+        detalles = pedido.detalles.order_by('id')
+
         tabla_html = render_to_string('cajero/pedidos/tabla_detalles_acciones.html', {
             'pedido': pedido,
-            'total_recargos': total_recargos
+            'total_recargos': total_recargos,
+            'detalles': detalles
         })
-
 
         return JsonResponse({
             'success': True,
@@ -1445,7 +1592,6 @@ def cajero_eliminar_detalle_ajax(request, detalle_id):
         })
 
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
-
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -1465,15 +1611,16 @@ def cajero_ver_pedido(request, pedido_id):
         )
         return redirect('cajero_agregar_detalles', pedido_id=pedido.id)
 
-    pedido.estado = 'en preparacion'
-    pedido.save()
-
-    enviar_pedido_cocina(pedido)
+    # Solo la PRIMERA vez lo mando a cocina
+    if pedido.estado in ['borrador', 'en_creacion']:
+        pedido.estado = 'en preparacion'
+        pedido.save()
+        enviar_pedido_cocina(pedido)   # solo una vez
+    # si ya está en preparación/listo/finalizado, NO lo vuelves a mandar
 
     return render(request, 'cajero/pedidos/ver_pedido.html', {
         'pedido': pedido
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -1563,7 +1710,7 @@ def cajero_editar_pedido(request, pedido_id):
     )
 
     # NECESARIOS PARA QUE SE VEAN LOS PRODUCTOS Y DETALLES
-    productos = Producto.objects.all()
+    productos = Producto.objects.filter(activo=True)
     detalles = pedido.detalles.all()
 
     if request.method == "POST":
@@ -1629,7 +1776,6 @@ def cajero_cancelar_pedido(request, pedido_id):
     messages.info(request, "Pedido cancelado correctamente.")
     return redirect('cajero_listar_pedidos')
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_notificaciones(request):
@@ -1640,7 +1786,6 @@ def cajero_notificaciones(request):
     return render(request, "cajero/notificaciones/listar.html", {
         "notificaciones": notificaciones
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -1692,7 +1837,6 @@ def cajero_restaurante_cobros(request):
         "pedidos_cobrar": pedidos_cobrar,
         "pedidos_pagados": pedidos_pagados
     })
-
 
 # ============================================================
 #                    REGISTRAR PAGO DEL PEDIDO
@@ -1833,7 +1977,6 @@ def cajero_restaurante_pagar(request, pedido_id):
         "codigo_pedido": pedido.codigo_pedido           # opcional pero útil en el JS del front
     })
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_domicilio_cobros(request):
@@ -1856,7 +1999,7 @@ def cajero_domicilio_cobros(request):
         tiene_pago=Exists(pagos_confirmados)
     ).filter(tiene_pago=False).order_by('-id')
 
-    # 🔴 AQUÍ ESTABA EL PROBLEMA:
+    # AQUÍ ESTABA EL PROBLEMA:
     # antes solo hacías un filter simple.
     # Usa la MISMA lógica que en tabla_pedidos_pagados_domicilio:
 
@@ -1997,7 +2140,6 @@ def cajero_domicilio_pagar(request, pedido_id):
         "comprobante_url": comprobante.archivo_pdf.url
     })
 
-
 @login_required(login_url='login')
 def ver_comprobante(request, comp_id):
 
@@ -2046,10 +2188,9 @@ def generar_comprobante_pdf(comprobante):
         save=True
     )
 
-#----------------
+#-----------------------------
 # Reportes
-#----------------
-
+#-----------------------------
 def reportes_general(request):
     return render(request, 'administrador/reportes/reportes_general.html')
 
@@ -2124,7 +2265,6 @@ def reporte_pagos_domicilio(request):
         "total_recaudado": total_recaudado,
         "cajeros": cajeros,
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -2209,7 +2349,9 @@ def obtener_logo():
         return Image(logo_path, width=110, height=100)
     return None
 
+#-----------------------------
 #Exportar en pdf
+#-----------------------------
 @login_required
 @rol_requerido('admin')
 def exportar_pedidos_restaurante_pdf(request):
@@ -2281,7 +2423,7 @@ def exportar_pedidos_restaurante_pdf(request):
 
     for p in pedidos:
         data.append([
-            f"#{p.id}",
+            p.codigo_pedido,
             p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
             p.mesa.numero if p.mesa else "—",
             p.mesero.nombre if p.mesero else "",
@@ -2385,7 +2527,7 @@ def exportar_pedidos_domicilio_pdf(request):
 
     for p in pedidos:
         data.append([
-            f"#{p.id}",
+            p.codigo_pedido,
             p.nombre_cliente,
             p.cajero.nombre if p.cajero else "",
             p.estado.capitalize(),
@@ -2417,7 +2559,6 @@ def exportar_pedidos_domicilio_pdf(request):
 
     doc.build(elementos)
     return response
-
 
 @login_required
 @rol_requerido('admin')
@@ -2489,7 +2630,7 @@ def exportar_cobros_domicilio_pdf(request):
 
     for p in pagos:
         data.append([
-            f"#{p.pedido.id}",
+            p.pedido.codigo_pedido,
             p.pedido.nombre_cliente,
             p.pedido.cajero.nombre if p.pedido.cajero else "",
             p.metodo_pago.capitalize(),
@@ -2607,7 +2748,7 @@ def exportar_cobros_restaurante_pdf(request):
 
     for p in pagos:
         data.append([
-            f"#{p.pedido.id}",
+            p.pedido.codigo_pedido,
             p.pedido.mesa.numero if p.pedido.mesa else "—",
             p.pedido.mesero.nombre if p.pedido.mesero else "",
             p.metodo_pago.capitalize(),
@@ -2642,9 +2783,9 @@ def exportar_cobros_restaurante_pdf(request):
     doc.build(elementos)
     return response
 
-
-
+#---------------------------
 #exportar en excel
+#---------------------------
 def estilos_tabla():
     header_fill = PatternFill("solid", fgColor="CD966C")
     header_font = Font(bold=True, color="FFFFFF")
@@ -2700,7 +2841,7 @@ def exportar_pedidos_restaurante_excel(request):
     ws["A4"].alignment = center
 
     # -------- ENCABEZADOS --------
-    headers = ["ID", "Fecha", "Mesa", "Mesero", "Estado", "Total"]
+    headers = ["Código", "Fecha", "Mesa", "Mesero", "Estado", "Total"]
     ws.append([])
     ws.append(headers)
 
@@ -2714,7 +2855,7 @@ def exportar_pedidos_restaurante_excel(request):
     # -------- DATOS --------
     for p in pedidos:
         ws.append([
-            p.id,
+            p.codigo_pedido,
             p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
             p.mesa.numero if p.mesa else "",
             p.mesero.nombre if p.mesero else "",
@@ -2737,7 +2878,6 @@ def exportar_pedidos_restaurante_excel(request):
     response["Content-Disposition"] = 'attachment; filename="pedidos_restaurante.xlsx"'
     wb.save(response)
     return response
-
 
 @login_required
 @rol_requerido('admin')
@@ -2782,7 +2922,7 @@ def exportar_pedidos_domicilio_excel(request):
     ws["A4"].alignment = center
 
     # -------- ENCABEZADOS --------
-    headers = ["ID", "Fecha", "Cliente", "Dirección", "Cajero", "Estado", "Total"]
+    headers = ["Código", "Fecha", "Cliente", "Dirección", "Cajero", "Estado", "Total"]
     ws.append([])
     ws.append(headers)
 
@@ -2796,7 +2936,7 @@ def exportar_pedidos_domicilio_excel(request):
     # -------- DATOS --------
     for p in pedidos:
         ws.append([
-            p.id,
+            p.codigo_pedido,
             p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
             p.nombre_cliente,
             p.direccion_entrega,
@@ -2820,7 +2960,6 @@ def exportar_pedidos_domicilio_excel(request):
     response["Content-Disposition"] = 'attachment; filename="pedidos_domicilio.xlsx"'
     wb.save(response)
     return response
-
 
 @login_required
 @rol_requerido('admin')
@@ -2885,7 +3024,7 @@ def exportar_cobros_restaurante_excel(request):
     # -------- DATOS --------
     for p in pagos:
         ws.append([
-            f"#{p.pedido.id}",
+            p.pedido.codigo_pedido,
             p.pedido.mesa.numero if p.pedido.mesa else "",
             p.pedido.mesero.nombre if p.pedido.mesero else "",
             p.metodo_pago.capitalize(),
@@ -2978,7 +3117,7 @@ def exportar_cobros_domicilio_excel(request):
     # -------- DATOS --------
     for p in pagos:
         ws.append([
-            f"#{p.pedido.id}",
+            p.pedido.codigo_pedido,
             p.pedido.nombre_cliente,
             p.pedido.cajero.nombre if p.pedido.cajero else "",
             p.metodo_pago.capitalize(),
@@ -3008,7 +3147,7 @@ def exportar_cobros_domicilio_excel(request):
     return response
 
 @login_required
-@rol_requerido('admin')
+@rol_requerido('admin', 'cajero')
 def reporte_unificado(request):
 
     pagos = Pago.objects.filter(
@@ -3044,9 +3183,8 @@ def reporte_unificado(request):
         }
     )
 
-
 @login_required
-@rol_requerido('admin')
+@rol_requerido('admin', 'cajero')
 def exportar_unificado_pdf(request):
 
     pagos = Pago.objects.filter(
@@ -3137,13 +3275,30 @@ def exportar_unificado_pdf(request):
     ]]
 
     for p in pagos:
+        pedido = p.pedido
+        if not pedido:
+            continue  # por si acaso
+
+        # --- Cliente / Mesa ---
+        if pedido.tipo_pedido == 'domicilio':
+            cliente_mesa = pedido.nombre_cliente or "Domicilio"
+        else:
+            if pedido.mesa:
+                cliente_mesa = f"Mesa {pedido.mesa.numero}"
+            else:
+                cliente_mesa = "Sin mesa"
+
+        # --- Responsable ---
+        if pedido.tipo_pedido == 'domicilio':
+            responsable = pedido.cajero.nombre if pedido.cajero else "Cajero no asignado"
+        else:
+            responsable = pedido.mesero.nombre if pedido.mesero else "Mesero no asignado"
+
         data.append([
-            f"#{p.pedido.id}",
-            p.pedido.tipo_pedido.capitalize(),
-            p.pedido.nombre_cliente if p.pedido.tipo_pedido == 'domicilio'
-            else f"Mesa {p.pedido.mesa.numero}",
-            p.pedido.cajero.nombre if p.pedido.tipo_pedido == 'domicilio'
-            else p.pedido.mesero.nombre,
+            pedido.codigo_pedido,
+            pedido.tipo_pedido.capitalize(),
+            cliente_mesa,
+            responsable,
             f"$ {p.total:.2f}",
             p.metodo_pago.capitalize(),
             p.fecha_hora.strftime("%d/%m/%Y %H:%M")
@@ -3177,7 +3332,7 @@ def exportar_unificado_pdf(request):
     return response
 
 @login_required
-@rol_requerido('admin')
+@rol_requerido('admin', 'cajero')
 def exportar_unificado_excel(request):
 
     pagos = Pago.objects.filter(
@@ -3208,6 +3363,9 @@ def exportar_unificado_excel(request):
     ws = wb.active
     ws.title = "Reporte Unificado"
 
+    # ===== ESTILOS (IGUAL QUE OTROS REPORTES) =====
+    header_fill, header_font, center, border = estilos_tabla()
+
     # -------- LOGO --------
     logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
     if os.path.exists(logo_path):
@@ -3216,43 +3374,74 @@ def exportar_unificado_excel(request):
         img.height = 100
         ws.add_image(img, "A1")
 
-    # -------- TITULOS --------
+    # -------- TÍTULOS --------
     ws.merge_cells("A3:G3")
     ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
     ws["A3"].font = Font(bold=True, size=14)
-    ws["A3"].alignment = Alignment(horizontal="center")
+    ws["A3"].alignment = center
 
     ws.merge_cells("A4:G4")
     ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
-    ws["A4"].alignment = Alignment(horizontal="center")
+    ws["A4"].alignment = center
 
     # -------- ENCABEZADOS --------
-    ws.append([])
-    ws.append([
+    headers = [
         "Pedido", "Tipo", "Cliente / Mesa",
         "Responsable", "Total", "Método", "Fecha"
-    ])
+    ]
+    ws.append([])              # fila vacía
+    ws.append(headers)         # encabezados
+    header_row = ws.max_row    # normalmente será 6
 
-    header_row = ws.max_row
-    for cell in ws[header_row]:
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center")
+    # Aplicar estilo de encabezado (como en cobros domicilio)
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=header_row, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
 
     # -------- DATOS --------
+    data_start_row = header_row + 1
+
     for p in pagos:
+        pedido = p.pedido
+        if not pedido:
+            continue  # por seguridad
+
+        # ------ Cliente / Mesa ------
+        if pedido.tipo_pedido == 'domicilio':
+            cliente_mesa = pedido.nombre_cliente or "Domicilio"
+        else:
+            if pedido.mesa:
+                cliente_mesa = f"Mesa {pedido.mesa.numero}"
+            else:
+                cliente_mesa = "Sin mesa"
+
+        # ------ Responsable ------
+        if pedido.tipo_pedido == 'domicilio':
+            responsable = pedido.cajero.nombre if pedido.cajero else "Cajero no asignado"
+        else:
+            responsable = pedido.mesero.nombre if pedido.mesero else "Mesero no asignado"
+
+        # Fecha sin tz para Excel
         fecha_excel = timezone.localtime(p.fecha_hora).replace(tzinfo=None)
 
         ws.append([
-            f"#{p.pedido.id}",
-            p.pedido.tipo_pedido.capitalize(),
-            p.pedido.nombre_cliente if p.pedido.tipo_pedido == 'domicilio'
-            else f"Mesa {p.pedido.mesa.numero}",
-            p.pedido.cajero.nombre if p.pedido.tipo_pedido == 'domicilio'
-            else p.pedido.mesero.nombre,
+            pedido.codigo_pedido,
+            pedido.tipo_pedido.capitalize(),
+            cliente_mesa,
+            responsable,
             float(p.total),
             p.metodo_pago.capitalize(),
             fecha_excel
         ])
+
+    # Aplicar bordes y centrado a TODA la tabla de datos
+    for row in ws.iter_rows(min_row=data_start_row, max_row=ws.max_row, max_col=7):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
 
     # -------- TOTAL --------
     ws.append([])
@@ -3270,7 +3459,327 @@ def exportar_unificado_excel(request):
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = 'attachment; filename="reporte_unificado.xlsx"'
+    response["Content-Disposition"] = 'attachment; filename=\"reporte_unificado.xlsx\"'
+    wb.save(response)
+    return response
+
+# ======================= REPORTE UNIFICADO CAJERO (WEB) =======================
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_reporte_unificado(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+
+    if request.GET.get('tipo') and request.GET['tipo'] != 'todos':
+        pagos = pagos.filter(pedido__tipo_pedido=request.GET['tipo'])
+
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    return render(
+        request,
+        'cajero/reporte/reporte_general.html',
+        {
+            'pagos': pagos,
+            'total_recaudado': total_recaudado
+        }
+    )
+
+# ======================= REPORTE UNIFICADO CAJERO (PDF) =======================
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_exportar_unificado_pdf(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # ================= FILTROS =================
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    tipo = request.GET.get("tipo")
+    metodo = request.GET.get("metodo")
+
+    if inicio:
+        pagos = pagos.filter(fecha_hora__date__gte=inicio)
+
+    if fin:
+        pagos = pagos.filter(fecha_hora__date__lte=fin)
+
+    if tipo and tipo != "todos":
+        pagos = pagos.filter(pedido__tipo_pedido=tipo)
+
+    if metodo and metodo != "todos":
+        pagos = pagos.filter(metodo_pago=metodo)
+
+    # ================= TOTALES =================
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")
+
+    # ================= PDF =================
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_unificado_cajero.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    # ================= LOGO =================
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        elementos.append(Image(logo_path, width=110, height=70))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= NOMBRE LOCAL =================
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 6))
+
+    elementos.append(Table(
+        [[f"Fecha de reporte: {fecha_reporte}"]],
+        colWidths=[480],
+        style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= TITULO =================
+    elementos.append(Table(
+        [["REPORTE UNIFICADO - PEDIDOS Y COBROS"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    # ================= TABLA =================
+    data = [[
+        "Pedido", "Tipo", "Cliente / Mesa",
+        "Responsable", "Total", "Método", "Fecha"
+    ]]
+
+    for p in pagos:
+        pedido = p.pedido
+        if not pedido:
+            continue  # por si acaso
+
+        # --- Cliente / Mesa ---
+        if pedido.tipo_pedido == 'domicilio':
+            cliente_mesa = pedido.nombre_cliente or "Domicilio"
+        else:
+            if pedido.mesa:
+                cliente_mesa = f"Mesa {pedido.mesa.numero}"
+            else:
+                cliente_mesa = "Sin mesa"
+
+        # --- Responsable ---
+        if pedido.tipo_pedido == 'domicilio':
+            responsable = pedido.cajero.nombre if pedido.cajero else "Cajero no asignado"
+        else:
+            responsable = pedido.mesero.nombre if pedido.mesero else "Mesero no asignado"
+
+        data.append([
+            pedido.codigo_pedido,
+            pedido.tipo_pedido.capitalize(),
+            cliente_mesa,
+            responsable,
+            f"$ {p.total:.2f}",
+            p.metodo_pago.capitalize(),
+            timezone.localtime(p.fecha_hora).strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[55, 65, 90, 90, 60, 65, 80])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
+
+    # ================= TOTAL =================
+    elementos.append(Table(
+        [["TOTAL RECAUDADO", f"$ {total_recaudado:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+# ======================= REPORTE UNIFICADO CAJERO (EXCEL) =======================
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_exportar_unificado_excel(request):
+
+    pagos = Pago.objects.filter(
+        estado_pago='confirmado'
+    ).select_related(
+        'pedido',
+        'pedido__mesa',
+        'pedido__mesero',
+        'pedido__cajero'
+    )
+
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pagos = pagos.filter(fecha_hora__date__gte=request.GET['inicio'])
+
+    if request.GET.get('fin'):
+        pagos = pagos.filter(fecha_hora__date__lte=request.GET['fin'])
+
+    if request.GET.get('tipo') and request.GET['tipo'] != 'todos':
+        pagos = pagos.filter(pedido__tipo_pedido=request.GET['tipo'])
+
+    if request.GET.get('metodo') and request.GET['metodo'] != 'todos':
+        pagos = pagos.filter(metodo_pago=request.GET['metodo'])
+
+    total_recaudado = pagos.aggregate(total=Sum('total'))['total'] or 0
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Reporte Unificado"
+
+    # ===== ESTILOS (IGUAL QUE OTROS REPORTES) =====
+    header_fill, header_font, center, border = estilos_tabla()
+
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        img = ExcelImage(logo_path)
+        img.width = 110
+        img.height = 100
+        ws.add_image(img, "A1")
+
+    # -------- TÍTULOS --------
+    ws.merge_cells("A3:G3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
+
+    ws.merge_cells("A4:G4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
+
+    # -------- ENCABEZADOS --------
+    headers = [
+        "Pedido", "Tipo", "Cliente / Mesa",
+        "Responsable", "Total", "Método", "Fecha"
+    ]
+    ws.append([])              # fila vacía
+    ws.append(headers)         # encabezados
+    header_row = ws.max_row    # normalmente será 6
+
+    # Aplicar estilo de encabezado (como en cobros domicilio)
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=header_row, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+
+    # -------- DATOS --------
+    data_start_row = header_row + 1
+
+    for p in pagos:
+        pedido = p.pedido
+        if not pedido:
+            continue  # por seguridad
+
+        # ------ Cliente / Mesa ------
+        if pedido.tipo_pedido == 'domicilio':
+            cliente_mesa = pedido.nombre_cliente or "Domicilio"
+        else:
+            if pedido.mesa:
+                cliente_mesa = f"Mesa {pedido.mesa.numero}"
+            else:
+                cliente_mesa = "Sin mesa"
+
+        # ------ Responsable ------
+        if pedido.tipo_pedido == 'domicilio':
+            responsable = pedido.cajero.nombre if pedido.cajero else "Cajero no asignado"
+        else:
+            responsable = pedido.mesero.nombre if pedido.mesero else "Mesero no asignado"
+
+        # Fecha sin tz para Excel
+        fecha_excel = timezone.localtime(p.fecha_hora).replace(tzinfo=None)
+
+        ws.append([
+            pedido.codigo_pedido,
+            pedido.tipo_pedido.capitalize(),
+            cliente_mesa,
+            responsable,
+            float(p.total),
+            p.metodo_pago.capitalize(),
+            fecha_excel
+        ])
+
+    # Aplicar bordes y centrado a TODA la tabla de datos
+    for row in ws.iter_rows(min_row=data_start_row, max_row=ws.max_row, max_col=7):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
+
+    # -------- TOTAL --------
+    ws.append([])
+    ws.append(["", "", "", "TOTAL RECAUDADO", float(total_recaudado), "", ""])
+    ws[f"E{ws.max_row}"].font = Font(bold=True)
+
+    # -------- FORMATO FECHA --------
+    for cell in ws["G"]:
+        cell.number_format = "DD/MM/YYYY HH:MM"
+
+    # -------- ANCHO COLUMNAS --------
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename=\"reporte_unificado_cajero.xlsx\"'
     wb.save(response)
     return response
 
@@ -3309,3 +3818,153 @@ def tabla_pedidos_pagados_domicilio(request):
     )
 
     return JsonResponse({"html": html})
+
+# ----------------------------
+# Cajero - Perfil
+# ----------------------------
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def perfil_cajero(request):
+    usuario = request.user   # cajero logueado
+    return render(request, "cajero/perfil.html", {"usuario": usuario})
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def editar_perfil_cajero(request):
+    usuario = request.user  # cajero logueado
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        correo = request.POST.get("correo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        direccion = request.POST.get("direccion", "").strip()
+        password = request.POST.get("password", "")
+        password2 = request.POST.get("password2", "")
+
+        # -----------------------------
+        # VALIDACIONES BACKEND
+        # -----------------------------
+
+        # Nombre y apellido: solo letras
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$', apellido):
+            messages.error(request, "El apellido solo debe contener letras.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        # Correo obligatorio + válido
+        if not correo:
+            messages.error(request, "El correo es obligatorio.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", correo):
+            messages.error(request, "El formato del correo no es válido.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        # Validar correo no repetido (excepto el mismo usuario)
+        if Usuario.objects.exclude(id=usuario.id).filter(correo=correo).exists():
+            messages.error(request, "Ya existe un usuario con ese correo.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        # Teléfono obligatorio
+        if not telefono:
+            messages.error(request, "El teléfono es obligatorio.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        # Teléfono válido
+        if not telefono.isdigit():
+            messages.error(request, "El teléfono solo debe contener números.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        if len(telefono) != 10:
+            messages.error(request, "El teléfono debe tener 10 dígitos.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+        # Dirección obligatoria
+        if not direccion:
+            messages.error(request, "La dirección es obligatoria.")
+            return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+        
+        # Contraseñas
+        if password or password2:
+            # Mínimo 6 caracteres
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener mínimo 6 caracteres.")
+                return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+            if password != password2:
+                messages.error(request, "Las contraseñas no coinciden.")
+                return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+            usuario.password = make_password(password)
+
+        # Guardar datos generales
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.correo = correo
+        usuario.username = correo
+        usuario.telefono = telefono
+        usuario.direccion = direccion
+        usuario.save()
+
+        # Actualizar nombre en la sesión (opcional pero recomendable)
+        request.session['usuario_nombre'] = f"{usuario.nombre} {usuario.apellido}"
+
+        messages.success(request, "Perfil actualizado correctamente.")
+        return redirect("perfil_cajero")
+
+    return render(request, "cajero/editar_perfil.html", {"usuario": usuario})
+
+#-----------------------------
+#PERFIL - MESERO
+#-----------------------------
+@login_required
+@rol_requerido('mesero')
+def perfil_mesero(request):
+    usuario = request.user  # si tu auth usa tu modelo Usuario como user
+    return render(request, "mesero/perfil_mesero.html", {"usuario": usuario})
+
+
+@login_required
+@rol_requerido('mesero')
+def editar_perfil_mesero(request):
+    usuario = request.user
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        correo = request.POST.get("correo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        direccion = request.POST.get("direccion", "").strip()
+
+        password = request.POST.get("password", "").strip()
+        password2 = request.POST.get("password2", "").strip()
+
+        # Actualizar datos
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.correo = correo
+        usuario.telefono = telefono
+        usuario.direccion = direccion
+
+        # Cambiar contraseña (solo si llenó)
+        if password or password2:
+            if password != password2:
+                messages.error(request, "Las contraseñas no coinciden.")
+                return redirect("editar_perfil_mesero")
+
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener mínimo 6 caracteres.")
+                return redirect("editar_perfil_mesero")
+
+            usuario.password = make_password(password)
+
+        usuario.save()
+        messages.success(request, "Perfil actualizado correctamente.")
+        return redirect("perfil_mesero")
+
+    return render(request, "mesero/editar_perfil_mesero.html", {"usuario": usuario})
+

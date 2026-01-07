@@ -1,55 +1,103 @@
-<div class="table-responsive shadow rounded-4 mt-3">
-    <table class="table table-bordered table-hover align-middle" style="border-radius:12px; overflow:hidden;">
-        <thead class="text-center" style="background: var(--cafe-medio); color: white;">
-            <tr>
-                <th>Producto</th>
-                <th>Valor unitario</th>
-                <th>Cantidad</th>
-                <th>Subtotal</th>
-                <th>Observación</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for det in pedido.detalles.all %}
-            <tr style="transition:0.3s;">
-                <td>{{ det.producto.nombre }}</td>
-                <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
-                <td class="text-center">{{ det.cantidad }}</td>
-                <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
-                <td class="text-center">{{ det.observacion }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center text-muted py-4">
-                    Aún no hay productos agregados.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
 <style>
-    /* Hover en filas */
-    .table-hover tbody tr:hover {
-        background: rgba(0,0,0,0.04);
+    /* ===============================
+    TABLA DETALLES – MISMO ESTILO
+    ================================ */
+
+    #tbl_detalles {
+        min-width: 900px;
     }
 
-    /* Tabla responsiva y bordes redondeados */
-    .table-responsive table {
-        border-radius: 12px;
-        overflow: hidden;
+    #tbl_detalles thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
     }
 
-    /* Encabezado */
-    .table-responsive thead {
-        background: var(--cafe-medio);
-        color: white;
-    }
-
-    /* Texto centrado en celdas si quieres */
-    .table-responsive td, 
-    .table-responsive th {
+    #tbl_detalles tbody td {
+        text-align: center;
         vertical-align: middle;
     }
+
+    #tbl_detalles tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    #tbl_detalles td:last-child {
+        white-space: nowrap;
+    }
+
+    /* Subtotales (por si después agregas) */
+    #tbl_detalles tfoot .fila-subtotal {
+        background-color: var(--gris-suave);
+        font-weight: bold;
+    }
+
+    /* Total final */
+    #tbl_detalles tfoot .fila-total {
+        background-color: var(--cafe-suave);
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
 </style>
+
+<div id="tabla_detalles">
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover align-middle" id="tbl_detalles">
+            
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Valor unitario</th>
+                    <th>Subtotal</th>
+                    <th>Observación</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% with lista_detalles=detalles|default:pedido.detalles.all %}
+                {% for det in lista_detalles %}
+                <tr data-producto-id="{{ det.producto.id }}">
+                    <td>{{ det.producto.nombre }}</td>
+
+                    <td class="text-center">{{ det.cantidad }}</td>
+
+                    <td class="text-center">
+                        ${{ det.precio_unitario|floatformat:2 }}
+                    </td>
+
+                    <td class="text-center">
+                        ${{ det.subtotal|floatformat:2 }}
+                    </td>
+
+                    <td>{{ det.observacion }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        Aún no hay productos agregados.
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endwith %}
+            </tbody>
+
+            {% if pedido.detalles.all %}
+            <tfoot>
+                <tr class="fila-total">
+                    <td colspan="3" class="text-end">TOTAL FINAL:</td>
+                    <td class="text-center text-success">
+                        ${{ pedido.total|floatformat:2 }}
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+
+        </table>
+    </div>
+</div>

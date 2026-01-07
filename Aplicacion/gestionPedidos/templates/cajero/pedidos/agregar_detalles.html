@@ -391,7 +391,14 @@
 
                         document.getElementById(`obs_${id}`).value = "";
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje });
+                        Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje,
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#C14949",
+                        background: "#FFF7F0"
+                    });
                     }
                 });
         });

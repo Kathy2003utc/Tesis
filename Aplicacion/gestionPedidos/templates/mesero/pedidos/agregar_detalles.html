@@ -1,7 +1,7 @@
 {% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br><br><br>
+<br>
 
 <style>
 
@@ -48,175 +48,204 @@
         --azul-pizarra: #4F6D7A;
     }
 
-/* Fondo general */
-html, body {
-    background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 45%, var(--blanco-calido));
-    overflow-x: hidden;
-}
+    /* Fondo general */
+    html, body {
+        background: linear-gradient(135deg, var(--crema-suave), var(--cafe-suave) 45%, var(--blanco-calido));
+        overflow-x: hidden;
+    }
 
-/* Contenedor principal */
-.container {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 30px;
-    margin: auto;
-    border-radius: 20px;
-}
+    /* Contenedor principal */
+    .container {
+        background: rgba(255, 255, 255, 0.3);
+        padding: 30px;
+        margin: auto;
+        border-radius: 20px;
+    }
 
-/* Título */
-.titulo-pedido {
-    color: var(--cafe-profundo);
-    font-weight: 800;
-    text-shadow: 1px 1px 2px #ffffff70;
-}
+    /* Título */
+    .titulo-pedido {
+        color: var(--cafe-profundo);
+        font-weight: 800;
+        text-shadow: 1px 1px 2px #ffffff70;
+    }
 
-/* Tarjetas de producto */
-.card-producto {
-    background: var(--blanco-calido);
-    border-radius: 15px;
-    border: 1px solid var(--cafe-avellana);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
-    transition: 0.3s;
-}
+    /* Tarjetas de producto */
+    .card-producto {
+        background: var(--blanco-calido);
+        border-radius: 15px;
+        border: 1px solid var(--cafe-avellana);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+        transition: 0.3s;
+    }
 
-.card-producto:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
-}
+    .card-producto:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+    }
 
-/* Inputs */
-.form-control {
-    background: var(--blanco-calido);
-    border: 1px solid var(--cafe-claro);
-    border-radius: 12px;
-    padding: 10px;
-    color: var(--texto-oscuro);
-}
+    /* Inputs */
+    .form-control {
+        background: var(--blanco-calido);
+        border: 1px solid var(--cafe-claro);
+        border-radius: 12px;
+        padding: 10px;
+        color: var(--texto-oscuro);
+    }
 
-/* Botón agregar */
-.btn-agregar {
-    background: var(--verde);
-    color: white;
-    border-radius: 12px;
-    padding: 10px;
-    font-weight: bold;
-}
+    /* Botón agregar */
+    .btn-agregar {
+        background: var(--verde);
+        color: white;
+        border-radius: 12px;
+        padding: 10px;
+        font-weight: bold;
+    }
 
-.btn-agregar:hover {
-    background: var(--verde-claro);
-    color: var(--texto-oscuro);
-}
+    .btn-agregar:hover {
+        background: var(--verde-claro);
+        color: var(--texto-oscuro);
+    }
 
-/* Tabla */
-table {
-    border-radius: 12px !important;
-    overflow: hidden;
-}
+    /* Botones de tabla */
+    .btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
 
-thead {
-    background: var(--cafe-medio) !important;
-    color: white;
-}
+    .btn-warning:hover { 
+        background-color: var(--advertencia) !important; 
+        color: var(--texto-oscuro) !important; 
+    }
 
-tbody tr:hover {
-    background: rgba(0,0,0,0.04);
-}
-
-/* Botones de tabla */
-.btn-warning {
-    background-color: var(--advertencia) !important;
-    border-color: var(--advertencia) !important;
-    color: white !important;
-    font-weight: bold;
-    border-radius: 8px;
-    transition: 0.3s;
-}
-
-.btn-warning:hover { background-color: var(--advertencia) !important; color: var(--texto-oscuro) !important; }
-
-
-.btn-danger {
+    .btn-danger {
         background-color: var(--rojo-alerta) !important;
         border-color: var(--rojo-alerta) !important;
         font-weight: bold;
         border-radius: 8px;
         transition: 0.3s;
+        color: white !important;
     }
-.btn-danger:hover { background-color: var(--rojo-claro) !important; color: var(--texto-oscuro) !important }
 
+    .btn-danger:hover { 
+        background-color: var(--rojo-claro) !important; 
+        color: var(--texto-oscuro) !important; 
+    }
 
-/* Botón Finalizar */
-.btn-finalizar {
-    background: var(--verde);
-    color: white;
-    padding: 15px;
-    font-size: 18px;
-    border-radius: 15px;
-    font-weight: bold;
-    transition: 0.3s;
-}
+    /* Botón Finalizar */
+    .btn-finalizar {
+        background: var(--verde);
+        color: white;
+        padding: 15px;
+        font-size: 18px;
+        border-radius: 15px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
 
-.btn-finalizar:hover {
-    background: var(--verde-claro);
-    color: var(--texto-oscuro);
-}
+    .btn-finalizar:hover {
+        background: var(--verde-claro);
+        color: var(--texto-oscuro);
+    }
 
-.main-content-wrapper {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
-}
-
-@media (min-width: 768px) {
     .main-content-wrapper {
-        padding-left: 40px !important;
-        padding-right: 40px !important;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
     }
-}
 
-@media (min-width: 1200px) {
-    .main-content-wrapper {
-        padding-left: 20px !important;
-        padding-right: 20px !important;
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px !important;
+            padding-right: 40px !important;
+        }
     }
-}
 
-.content-card {
-    background: var(--crema-suave);
-    padding: 10px;
-    border-radius: 18px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-    border: 1px solid var(--cafe-suave);
-}
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        }
+    }
 
-.menu-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-}
+    .content-card {
+        background: var(--crema-suave);
+        padding: 10px;
+        border-radius: 18px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+        border: 1px solid var(--cafe-suave);
+    }
 
-/* Responsivo */
-@media (max-width: 1200px) {
     .menu-grid {
+        display: grid;
         grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
     }
-}
 
-@media (max-width: 992px) {
-    .menu-grid {
-        grid-template-columns: repeat(3, 1fr);
+    /* Responsivo */
+    @media (max-width: 1200px) {
+        .menu-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
     }
-}
 
-@media (max-width: 768px) {
-    .menu-grid {
-        grid-template-columns: repeat(2, 1fr);
+    @media (max-width: 992px) {
+        .menu-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
-}
 
-@media (max-width: 480px) {
-    .menu-grid {
-        grid-template-columns: repeat(1, 1fr);
+    @media (max-width: 768px) {
+        .menu-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
-}
+
+    @media (max-width: 480px) {
+        .menu-grid {
+            grid-template-columns: repeat(1, 1fr);
+        }
+    }
+
+    /* ===============================
+       TABLA DETALLES – MISMO ESTILO
+       ================================ */
+
+    #tbl_detalles {
+        min-width: 900px;
+    }
+
+    #tbl_detalles thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    #tbl_detalles tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #tbl_detalles tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    #tbl_detalles td:last-child {
+        white-space: nowrap;
+    }
+
+    #tbl_detalles tfoot .fila-total {
+        background-color: var(--cafe-suave);
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
 </style>
 
 
@@ -224,7 +253,7 @@ tbody tr:hover {
     <div class="container mt-5 content-card">
 
         <h2 class="text-center titulo-pedido mb-4">
-            Agregar Productos al Pedido #{{ pedido.id }}
+            Agregar Productos al Pedido #{{ pedido.codigo_pedido }}
         </h2>
 
         <div class="menu-grid">
@@ -262,9 +291,9 @@ tbody tr:hover {
         <!-- TABLA -->
         <h4 class="mt-5 text-center titulo-pedido">Detalles del Pedido</h4>
 
-        <div id="tabla_detalles" class="table-responsive shadow rounded-4 mt-3">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="text-center">
+        <div id="tabla_detalles" class="table-responsive mt-3">
+            <table class="table table-bordered table-hover align-middle" id="tbl_detalles">
+                <thead>
                     <tr>
                         <th>Producto</th>
                         <th>Cantidad</th>
@@ -281,30 +310,40 @@ tbody tr:hover {
                         <td>{{ det.producto.nombre }}</td>
                         <td class="text-center">{{ det.cantidad }}</td>
                         <td class="text-center">${{ det.precio_unitario|floatformat:2 }}</td>
-                        <td class="text-center">${{ det.subtotal }}</td>
+                        <td class="text-center">${{ det.subtotal|floatformat:2 }}</td>
                         <td>{{ det.observacion }}</td>
                         <td class="text-center">
                             <button class="btn btn-warning btn-sm me-1"
                                 onclick="editarDetalleAjax('{{ det.id }}', '{{ det.cantidad }}', '{{ det.observacion|default_if_none:''|escapejs }}')">
-                                <i class="fas fa-edit"></i> Editar
+                                <i class="fas fa-edit"></i>
                             </button>
 
-                            <br><br>
-
-                            <button class="btn btn-danger btn-sm"
+                            <button class="btn btn-danger btn-sm mt-2"
                                 onclick="eliminarDetalleAjax('{{ det.id }}')">
-                                <i class="fas fa-trash"></i> Eliminar
+                                <i class="fas fa-trash"></i>
                             </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-6">
+                        <td colspan="6" class="text-center text-muted py-4">
                             Aún no hay productos agregados.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
+
+                {% if pedido.detalles.all %}
+                <tfoot>
+                    <tr class="fila-total">
+                        <td colspan="3" class="text-end">TOTAL FINAL:</td>
+                        <td class="text-center text-success">
+                            ${{ pedido.total|floatformat:2 }}
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
             </table>
         </div>
 
@@ -349,15 +388,20 @@ function agregarProducto(id) {
                 icon: 'success',
                 title: 'Producto agregado',
                 text: data.mensaje,
-                timer: 1000,
-                showConfirmButton: false
+                timer: 1200,
+                showConfirmButton: false,
+                background: "#FFF7F0",
+                iconColor: "#3E7A3F"
             });
             document.getElementById(`obs_${id}`).value = "";
         } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: data.mensaje
+                text: data.mensaje,
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0"
             });
         }
     });
@@ -383,9 +427,12 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
                        class="form-control">
             </div>
         `,
+        background: "#FFF7F0",
         showCancelButton: true,
         confirmButtonText: "Actualizar",
         cancelButtonText: "Cancelar",
+        confirmButtonColor: "#3E7A3F",
+        cancelButtonColor: "#C14949",
         preConfirm: () => {
             return {
                 cantidad: parseInt(document.getElementById('swal_cantidad').value),
@@ -413,7 +460,18 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
                     title: 'Detalle actualizado',
                     text: data.mensaje,
                     timer: 1400,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo actualizar el detalle.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0"
                 });
             }
         });
@@ -427,9 +485,14 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
 function eliminarDetalleAjax(detalle_id) {
     Swal.fire({
         title: "¿Eliminar producto?",
+        text: "Este producto será eliminado del pedido.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#C14949",
+        cancelButtonColor: "#4F6D7A",
+        background: "#FFF7F0"
     }).then((result) => {
         if (!result.isConfirmed) return;
 
@@ -449,7 +512,18 @@ function eliminarDetalleAjax(detalle_id) {
                     title: 'Eliminado',
                     text: data.mensaje,
                     timer: 1500,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo eliminar el producto.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0"
                 });
             }
         });
@@ -468,6 +542,9 @@ function validarProductos() {
             icon: 'warning',
             title: 'Sin productos',
             text: 'Debe agregar al menos un producto antes de finalizar.',
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#D9A441",
+            background: "#FFF7F0"
         });
         return false;
     }
@@ -488,7 +565,9 @@ document.getElementById("btn_finalizar").addEventListener("click", function(even
         title: "Pedido registrado correctamente",
         text: "Redirigiendo...",
         timer: 1500,
-        showConfirmButton: false
+        showConfirmButton: false,
+        background: "#FFF7F0",
+        iconColor: "#3E7A3F"
     });
 
     setTimeout(() => {
@@ -497,5 +576,5 @@ document.getElementById("btn_finalizar").addEventListener("click", function(even
 });
 </script>
 
-<br><br><br>
+<br>
 {% endblock %}
