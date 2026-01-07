@@ -43,6 +43,11 @@ from django.core.files.base import ContentFile
 import tempfile
 from django.views.decorators.http import require_POST
 
+
+from django.http import FileResponse, HttpResponseNotFound
+from django.conf import settings
+from pathlib import Path
+
 # ----------------------------
 # Login (pantalla)
 # ----------------------------
@@ -67,7 +72,7 @@ def iniciar_sesion(request):
             request.session['usuario_rol'] = usuario.rol
             request.session['usuario_nombre'] = f"{usuario.nombre} {usuario.apellido}"
 
-            # 👇 Si es su primer ingreso, debe cambiar su contraseña
+            # Si es su primer ingreso, debe cambiar su contraseña
             if not usuario.cambio_password:
                 return redirect('cambiar_password_primera_vez')
 
@@ -3968,3 +3973,10 @@ def editar_perfil_mesero(request):
 
     return render(request, "mesero/editar_perfil_mesero.html", {"usuario": usuario})
 
+
+
+def service_worker(request):
+    sw_path = Path(settings.BASE_DIR) / "Restaurante" / "static" / "pwa" / "sw.js"
+    if not sw_path.exists():
+        return HttpResponseNotFound("sw.js no encontrado")
+    return FileResponse(open(sw_path, "rb"), content_type="application/javascript")

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.views.generic import TemplateView
 
 urlpatterns = [
     # Login
@@ -125,5 +126,8 @@ urlpatterns = [
     #Cajero - Perfil
     path('cajero/perfil/', views.perfil_cajero, name='perfil_cajero'),
     path('cajero/perfil/editar/', views.editar_perfil_cajero, name='editar_perfil_cajero'),
+
+    #offline
+    path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
 
 ]

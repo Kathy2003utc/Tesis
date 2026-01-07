@@ -1,7 +1,13 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+  <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+  <meta name="theme-color" content="#8A5A3C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
     <meta charset="UTF-8">
     <title>Café Restaurante Productos Carlos Gerardo · Administración</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -278,6 +284,27 @@ footer{
   overflow-x: visible;
 }
 
+/* ================= FORZAR BOTÓN LOGOUT IGUAL AL CAJERO ================= */
+.btn-logout {
+  border: 1px solid var(--rojo-alerta) !important;
+  color: var(--rojo-alerta) !important;
+  background: transparent !important;
+  font-weight: 600;
+  border-radius: 0.25rem; /* igual al outline default bootstrap */
+  padding: .25rem .5rem;  /* igual al btn-sm */
+  line-height: 1.5;
+}
+
+.btn-logout:hover {
+  background: var(--rojo-alerta) !important;
+  color: #fff !important;
+}
+
+.btn-logout:focus,
+.btn-logout:active {
+  box-shadow: 0 0 0 .2rem rgba(193, 73, 73, .25) !important;
+}
+
 </style>
 </head>
 
@@ -324,9 +351,10 @@ footer{
     <a href="{% url 'perfil_admin' %}" class="text-dark">
       <i class="bi bi-person-circle fs-4"></i>
     </a>
-    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger">
+    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger btn-logout">
       Cerrar Sesión
     </a>
+
   </div>
 </div>
 
@@ -451,7 +479,13 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
-
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    });
+  }
+</script>
 
 </body>
 </html>

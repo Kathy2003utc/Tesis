@@ -1,6 +1,14 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    
+    <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+    <meta name="theme-color" content="#8A5A3C">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
     <meta charset="UTF-8">
     <title>Iniciar sesión - Restaurante</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -195,6 +203,48 @@
             letter-spacing: 0.5px;
         }
 
+        .alert {
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-width: 1px;
+        }
+
+        /* ERROR (rojo elegante) */
+        .alert-danger {
+            background-color: #FCE4E4;
+            color: var(--rojo-oscuro);
+            border: 1px solid var(--rojo-alerta);
+        }
+
+        /* SUCCESS (verde elegante) */
+        .alert-success {
+            background-color: var(--exito-suave);
+            color: var(--verde-profundo);
+            border: 1px solid var(--exito);
+        }
+
+        /* INFO (azul elegante) */
+        .alert-info {
+            background-color: var(--info-suave);
+            color: var(--azul-pizarra);
+            border: 1px solid var(--info);
+        }
+
+        /* Opcional: iconito a la izquierda sin tocar tu lógica */
+        .alert::before{
+            display: inline-block;
+            margin-right: 8px;
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            vertical-align: middle;
+        }
+
+        .alert-danger::before { content: "\f06a"; }  /* triangle exclamation */
+        .alert-success::before { content: "\f058"; } /* circle-check */
+        .alert-info::before { content: "\f05a"; }    /* circle-info */
+
+
 
 
     </style>
@@ -228,13 +278,21 @@
                             <form id="frm_login" method="post" action="{% url 'iniciar_sesion' %}">
                                 {% csrf_token %}
 
-                                {% if messages %}
+                               {% if messages %}
                                     {% for message in messages %}
-                                        <div class="alert alert-{{ message.tags }} py-2" role="alert">
-                                            {{ message }}
+                                        <div class="alert 
+                                        {% if message.tags == 'error' %} alert-danger
+                                        {% elif message.tags == 'success' %} alert-success
+                                        {% elif message.tags == 'info' %} alert-info
+                                        {% else %} alert-secondary
+                                        {% endif %}
+                                        py-2" role="alert">
+                                        {{ message }}
                                         </div>
                                     {% endfor %}
                                 {% endif %}
+
+
 
                                 <!-- Correo -->
                                 <div class="form-group mb-3">
@@ -334,6 +392,15 @@ $(function () {
         }
     });
 </script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    });
+  }
+</script>
+
 
 </body>
 </html>
