@@ -16,18 +16,22 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import redirect
 
 from django.conf import settings
 from django.conf.urls.static import static
 
-from Aplicacion.gestionPedidos.views import service_worker 
+from Aplicacion.gestionPedidos.views import service_worker
+
+def home(request):
+    return redirect("login")  # tu login está definido como name='login'
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("", home, name="home"),
+    path("admin/", admin.site.urls),
     path("sw.js", service_worker, name="service_worker"),
-    path('', include('Aplicacion.gestionPedidos.urls'))
+    path("", include("Aplicacion.gestionPedidos.urls")),
 ]
-
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
