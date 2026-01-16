@@ -184,6 +184,103 @@ html,body{
 @media (max-width: 576px){
     .wrapper-editar{ padding: 16px; border-radius: 16px; }
 }
+.producto-agotado{
+  opacity: .55;
+  filter: grayscale(100%);
+}
+
+.producto-agotado .btn-agregar{
+  cursor: not-allowed;
+}
+
+.producto-agotado .btn-agregar:disabled{
+  opacity: 1; /* para que no se vea doblemente apagado */
+}
+
+/* ===============================
+   SWEETALERT2 – ESTILO COMO IMAGEN
+   =============================== */
+.swal-cafe-popup{
+    background: #FFF7F0 !important;
+    border-radius: 16px !important;
+    padding: 18px 20px 16px !important;
+}
+
+.swal-cafe-title{
+    color: #4A3F38 !important;
+    font-weight: 800 !important;
+    font-size: 28px !important;
+    margin-bottom: 10px !important;
+}
+
+.swal-cafe-html{
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.swal-form-wrap{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.swal-form-wrap label{
+    text-align: center;
+    font-weight: 700;
+    color: #4A3F38;
+    margin: 0;
+}
+
+.swal-cafe-input{
+    width: 100%;
+    border-radius: 12px !important;
+    border: 1px solid #D7B999 !important;
+    background: #F8F5F2 !important;
+    padding: 10px 12px !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.swal-cafe-input:focus{
+    border-color: #7FBF6A !important;
+    box-shadow: 0 0 0 3px rgba(127, 191, 106, .25) !important;
+}
+
+.swal-cafe-actions{
+    margin-top: 14px !important;
+    gap: 14px !important;
+}
+
+.swal-cafe-confirm{
+    background: #3E7A3F !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 18px !important;
+    font-weight: 800 !important;
+    min-width: 140px;
+}
+
+.swal-cafe-cancel{
+    background: #C14949 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 18px !important;
+    font-weight: 800 !important;
+    min-width: 140px;
+}
+
+/* Mensaje de validación */
+.swal2-validation-message{
+    background: #FFF5DA !important;
+    color: #4A3F38 !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+}
+
+
 </style>
 
 <div class="main-content-wrapper">
@@ -231,36 +328,43 @@ html,body{
 
         <div class="grid-productos">
             {% for producto in productos %}
-            <div class="card-producto h-100">
+            <div class="card-producto h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+                data-producto-id="{{ producto.id }}">
 
-                <h5 class="fw-bold text-center mb-2">{{ producto.nombre }}</h5>
+                <h5 class="fw-bold text-center mb-2">
+                {{ producto.nombre }}
+                {% if producto.agotado_hoy %}
+                    <span class="badge bg-secondary ms-2">Agotado hoy</span>
+                {% endif %}
+                </h5>
 
-                <p class="text-muted text-center small mb-2">
-                    {{ producto.descripcion }}
-                </p>
+                <p class="text-muted text-center small mb-2">{{ producto.descripcion }}</p>
 
-                <p class="precio-producto text-center">
-                    ${{ producto.precio }}
-                </p>
+                <p class="precio-producto text-center">${{ producto.precio }}</p>
 
                 <label>Cantidad:</label>
                 <input type="number" min="1" value="1"
                     id="cantidad_{{ producto.id }}"
-                    class="form-control mt-2">
+                    class="form-control mt-2"
+                    {% if producto.agotado_hoy %}disabled{% endif %}>
 
                 <label>Observación:</label>
                 <input type="text"
                     placeholder="Observación"
                     id="obs_{{ producto.id }}"
-                    class="form-control mt-2">
+                    class="form-control mt-2"
+                    {% if producto.agotado_hoy %}disabled{% endif %}>
 
-                <button type="button" class="btn btn-agregar mt-3 w-100"
+                <button type="button"
+                        class="btn btn-agregar mt-3 w-100"
+                        data-producto-id="{{ producto.id }}"
+                        {% if producto.agotado_hoy %}disabled{% endif %}
                         onclick="agregarProducto('{{ producto.id }}')">
                     Agregar
                 </button>
-
             </div>
             {% endfor %}
+
         </div>
 
         <!-- TABLA -->
@@ -286,6 +390,21 @@ html,body{
 // Agregar producto (restaurante) + estilo Swal igual al cajero
 // -------------------------------------------------------------
 function agregarProducto(id) {
+
+    const btn = document.querySelector(`button[data-producto-id="${id}"]`);
+    if (btn && btn.disabled) {
+    Swal.fire({
+        icon: "warning",
+        title: "Agotado hoy",
+        text: "Este producto está agotado hoy y no se puede agregar.",
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#3E7A3F",
+        background: "#FFF7F0",
+        iconColor: "#D9A441"
+    });
+    return;
+    }
+
     let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
     let observacion = document.getElementById(`obs_${id}`).value;
 
@@ -296,7 +415,7 @@ function agregarProducto(id) {
             text: 'Ingrese una cantidad mayor a 0',
             background: "#FFF7F0",
             confirmButtonText: "Aceptar",
-            confirmButtonColor: "#D9A441",
+            confirmButtonColor: "#3E7A3F",
             iconColor: "#D9A441"
         });
         return;
@@ -358,30 +477,53 @@ function agregarProducto(id) {
 // -------------------------------------------------------------
 // Editar detalle (sin recargo) + estilo cajero
 // -------------------------------------------------------------
-function editarDetalleAjax(detalle_id, cantidad, observacion) {
-
-    let html = `
-        <label>Cantidad</label>
-        <input id="sw_cantidad" type="number" min="1" value="${cantidad}" class="form-control">
-
-        <label class="mt-2">Observación</label>
-        <input id="sw_obs" type="text" value="${observacion || ''}" class="form-control">
-    `;
+function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
 
     Swal.fire({
         title: "Editar detalle",
-        html: html,
+        html: `
+            <div class="swal-form-wrap">
+                <label>Cantidad</label>
+                <input id="swal_cantidad"
+                       type="number"
+                       min="1"
+                       value="${cantidad_actual}"
+                       class="swal-cafe-input">
+
+                <label>Observación</label>
+                <input id="swal_observacion"
+                       type="text"
+                       value="${observacion_actual || ''}"
+                       class="swal-cafe-input">
+            </div>
+        `,
         showCancelButton: true,
         confirmButtonText: "Actualizar",
         cancelButtonText: "Cancelar",
-        background: "#FFF7F0",
-        confirmButtonColor: "#3E7A3F",
-        cancelButtonColor: "#4F6D7A",
-        preConfirm: () => ({
-            cantidad: parseInt(document.getElementById("sw_cantidad").value),
-            observacion: document.getElementById("sw_obs").value
-        })
-    }).then(result => {
+
+        // IMPORTANTE para que use tus estilos
+        buttonsStyling: false,
+        customClass: {
+            popup: "swal-cafe-popup",
+            title: "swal-cafe-title",
+            htmlContainer: "swal-cafe-html",
+            actions: "swal-cafe-actions",
+            confirmButton: "swal-cafe-confirm",
+            cancelButton: "swal-cafe-cancel",
+        },
+
+        preConfirm: () => {
+            const cantidad = parseInt(document.getElementById("swal_cantidad").value);
+            const observacion = document.getElementById("swal_observacion").value;
+
+            if (isNaN(cantidad) || cantidad <= 0) {
+                Swal.showValidationMessage("La cantidad debe ser mayor a 0");
+                return false;
+            }
+
+            return { cantidad, observacion };
+        }
+    }).then((result) => {
         if (!result.isConfirmed) return;
 
         fetch("{% url 'editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
@@ -400,22 +542,34 @@ function editarDetalleAjax(detalle_id, cantidad, observacion) {
                 Swal.fire({
                     icon: "success",
                     title: "Detalle actualizado",
-                    timer: 1200,
-                    background: "#FFF7F0",
+                    text: data.mensaje || "",
+                    timer: 1400,
                     showConfirmButton: false,
+                    background: "#FFF7F0",
                     iconColor: "#3E7A3F"
                 });
             } else {
                 Swal.fire({
                     icon: "error",
                     title: "Error",
-                    text: data.mensaje || "No se pudo actualizar.",
-                    background: "#FFF7F0",
+                    text: data.mensaje || "No se pudo actualizar el detalle.",
                     confirmButtonText: "Aceptar",
                     confirmButtonColor: "#C14949",
-                    iconColor: "#C14949",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
                 });
             }
+        })
+        .catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Falló la petición (revisa Network/Console).",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0",
+                iconColor: "#C14949"
+            });
         });
     });
 }
@@ -429,7 +583,7 @@ function eliminarDetalleAjax(detalle_id) {
         title: "¿Eliminar producto?",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
+        confirmButtonText: "Eliminar",
         cancelButtonText: "Cancelar",
         background: "#FFF7F0",
         confirmButtonColor: "#C14949",
@@ -482,7 +636,7 @@ function validarProductos() {
             text: 'Debe agregar al menos un producto antes de finalizar.',
             background: "#FFF7F0",
             confirmButtonText: "Aceptar",
-            confirmButtonColor: "#D9A441",
+            confirmButtonColor: "#3E7A3F",
             iconColor: "#D9A441"
         });
         return false;

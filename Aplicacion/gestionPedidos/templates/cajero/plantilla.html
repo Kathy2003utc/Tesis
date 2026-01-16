@@ -333,6 +333,34 @@
       font-size: 0.85rem;
       margin-top: 4px;
     }
+
+    .producto-agotado{
+      opacity: .55;
+      filter: grayscale(100%);
+    }
+
+    .producto-agotado .btn-agregar{
+      cursor: not-allowed;
+    }
+
+    .producto-agotado .btn-agregar:disabled{
+      opacity: 1;
+    }
+
+    .form-label {
+        font-weight: bold;
+        color: var(--cafe-profundo);
+        font-size: 20px; 
+        margin-bottom: 6px;
+    }
+
+    label {
+        font-weight: bold;
+        color: var(--cafe-profundo);
+        font-size: 20px; 
+        margin-bottom: 6px;
+    }
+
   </style>
 </head>
 
@@ -392,14 +420,6 @@
           </a>
         </li>
 
-
-        <!-- NOTIFICACIONES -->
-        <li>
-          <a href="{% url 'cajero_notificaciones' %}"
-            class="{% if '/cajero/notificaciones/' in request.path %}active{% endif %}">
-            <i class="fas fa-bell"></i> Notificaciones
-          </a>
-        </li>
 
       </ul>
     </aside>
@@ -545,56 +565,123 @@
     });
   </script>
 
-  <script>
-    const USER_ID = "{{ request.user.id }}";
-    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+<script>
+  const USER_ID = "{{ request.user.id }}";
+  const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 
-    const socketNotif = new WebSocket(
-      ws_scheme + '://' + window.location.host + '/ws/notificaciones/' + USER_ID + '/'
-    );
+  const socketNotif = new WebSocket(
+    ws_scheme + "://" + window.location.host + "/ws/notificaciones/" + USER_ID + "/"
+  );
 
-    socketNotif.onmessage = function (e) {
-      const data = JSON.parse(e.data);
+  socketNotif.onopen = function () {
+    console.log("WS notificaciones conectado | usuario:", USER_ID);
+  };
 
-      // ================= PEDIDO LISTO =================
-      if (data.tipo === "pedido_listo") {
+  socketNotif.onclose = function () {
+    console.log("WS notificaciones cerrado");
+  };
 
-        // 👉 usar código; si no viene, usamos el id
-        const codigo = data.codigo_pedido && data.codigo_pedido !== ""
-          ? data.codigo_pedido
-          : `#${data.pedido}`;
+  socketNotif.onerror = function (e) {
+    console.log("WS notificaciones error:", e);
+  };
 
-        // 👉 texto de mesa / domicilio
-        let mesaTexto = "";
-        if (data.mesa) {
-          mesaTexto = data.mesa === "Domicilio"
-            ? "Entregar al cliente"
-            : `Mesa ${data.mesa}`;
-        }
+  socketNotif.onmessage = function (e) {
+    const data = JSON.parse(e.data);
 
-        Swal.fire({
-          icon: "success",
-          title: "Pedido a domicilio listo",
-          html: `<b>Pedido ${codigo}</b><br>Entregar al cliente `,
-          confirmButtonColor: "#3E7A3F",
-          background: "#FFF7F0",
-          confirmButtonText: 'Aceptar',
-          iconColor: "#3E7A3F"
+    const tipo = data.tipo || "";
+    const mensaje = data.mensaje || "Tienes una nueva notificación";
+
+    /* ================= PRODUCTO NO HAY ================= */
+    if (tipo === "producto_no_hay") {
+
+      // BLOQUEO EN TIEMPO REAL (sin recargar) - CAJERO
+      const pid = data.producto_id;
+
+      if (pid) {
+        // 1) Botones Agregar
+        document.querySelectorAll(`button[data-producto-id="${pid}"]`).forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add("disabled");
+        });
+
+        // 2) Inputs (cantidad / observación)
+        const c = document.getElementById(`cantidad_${pid}`);
+        const o = document.getElementById(`obs_${pid}`);
+        if (c) c.disabled = true;
+        if (o) o.disabled = true;
+
+        // 3) Poner gris la card contenedora (si existe en esa pantalla)
+        document.querySelectorAll(`.card-producto[data-producto-id="${pid}"]`).forEach(card => {
+          card.classList.add("producto-agotado");
+
+          // (Opcional) agregar badge "Agotado hoy" si no está
+          const h5 = card.querySelector("h5");
+          if (h5 && !h5.querySelector(".badge")) {
+            const badge = document.createElement("span");
+            badge.className = "badge bg-secondary ms-2";
+            badge.textContent = "Agotado hoy";
+            h5.appendChild(badge);
+          }
         });
       }
 
-      // ================= MENSAJE DEL COCINERO =================
-      if (data.tipo === "mensaje") {
-        Swal.fire({
-          title: "Nuevo mensaje del cocinero",
-          text: data.mensaje,
-          confirmButtonColor: "#3E7A3F",
-          background: "#FFF7F0",
-          confirmButtonText: 'Aceptar',
-        });
-      }
-    };
-  </script>
+      Swal.fire({
+        icon: "warning",
+        title: "Producto agotado",
+        text: mensaje,
+        confirmButtonText: "Entendido",
+        confirmButtonColor: "#C14949",
+        background: "#FFF7F0"
+      });
+      return;
+    }
+
+
+    /* ================= PEDIDO LISTO ================= */
+    if (tipo === "pedido_listo") {
+      const codigo = (data.codigo_pedido && data.codigo_pedido !== "")
+        ? data.codigo_pedido
+        : (data.pedido ? `#${data.pedido}` : "");
+
+      const destino = data.mesa
+        ? `Mesa ${data.mesa}`
+        : "Domicilio / Entregar al cliente";
+
+      Swal.fire({
+        icon: "success",
+        title: "Pedido listo",
+        html: (codigo ? `<b>Pedido ${codigo}</b><br>` : "") + destino,
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#3E7A3F",
+        background: "#FFF7F0"
+      });
+      return;
+    }
+
+    /* ================= MENSAJE DEL COCINERO ================= */
+    if (tipo === "mensaje") {
+      Swal.fire({
+        icon: "info",
+        title: "Mensaje de cocina",
+        text: mensaje,
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#3E7A3F",
+        background: "#FFF7F0"
+      });
+      return;
+    }
+
+    /* ================= NOTIFICACIÓN GENÉRICA ================= */
+    Swal.fire({
+      icon: "info",
+      title: "Notificación",
+      text: mensaje,
+      confirmButtonText: "Aceptar",
+      confirmButtonColor: "#4F6D7A",
+      background: "#FFF7F0"
+    });
+  };
+</script>
 
 
   <script>

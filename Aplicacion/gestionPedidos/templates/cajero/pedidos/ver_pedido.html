@@ -141,6 +141,9 @@
     font-size: 1.1rem;
     font-weight: bold;
 }
+.badge-creacion{
+        background-color: var(--naranja-tierra) !important;
+    }
 </style>
 
 <div class="main-content-wrapper">
@@ -166,7 +169,7 @@
 
                 <div>
                     {% if pedido.estado == 'en_creacion' %}
-                        <span class="badge bg-warning">En creación</span>
+                    <span class="badge badge-creacion">En creación</span>
                     {% elif pedido.estado == 'en preparacion' %}
                         <span class="badge bg-warning">En preparación</span>
                     {% elif pedido.estado == 'listo' %}

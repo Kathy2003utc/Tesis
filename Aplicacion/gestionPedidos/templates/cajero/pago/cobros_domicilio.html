@@ -223,8 +223,10 @@
     }
 
     .form-label {
-        color: var(--texto-oscuro);
-        font-weight: 500;
+        font-weight: bold;
+        color: var(--cafe-profundo);
+        font-size: 20px; 
+        margin-bottom: 6px;
     }
 
     .form-control,
@@ -283,14 +285,14 @@
                         {% for p in pedidos_cobrar %}
                         <tr id="fila-{{ p.id }}">
                             <td>{{ p.codigo_pedido }}</td>
-                            <td>{{ p.nombre_cliente }}</td>
-                            <td>$ {{ p.total }}</td>
+                            <td>{{ p.cliente_nombre }}</td>
+                            <td>$ <span class="money" data-valor="{{ p.total }}">{{ p.total }}</span></td>
                             <td>
                                 <span class="badge bg-warning">pendiente</span>
                             </td>
                             <td>
                                 <button type="button" class="btn btn-primary btn-sm"
-                                    onclick="abrirCobro('{{ p.id }}', '{{ p.total }}')">
+                                    onclick="abrirCobro('{{ p.id }}', '{{ p.total|floatformat:2 }}')">
                                     $ Cobrar
                                 </button>
                             </td>
@@ -380,55 +382,84 @@
     </div>
 </div>
 
+<span id="miCajero" data-id="{{ request.user.id }}" style="display:none;"></span>
+
 <!-- ======================================================= -->
 <!-- JAVASCRIPT / WEBSOCKET (SIN CAMBIOS DE LÓGICA) -->
 <!-- ======================================================= -->
 <script>
+    function money2(v) {
+        const n = parseFloat(String(v).replace(",", "."));
+        const safe = isNaN(n) ? 0 : n;
+        return safe.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function num(v) {
+        const n = parseFloat(String(v).replace(",", "."));
+        return isNaN(n) ? 0 : n;
+    }
+
+    // Formatea los totales ya pintados por el servidor
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".money").forEach(el => {
+            const valor = el.dataset.valor ?? el.innerText;
+            el.innerText = money2(valor);
+        });
+    });
+
     function abrirCobro(id, total) {
+        const totalNum = num(total);
+
         document.getElementById("pedido_id").value = id;
-        document.getElementById("total_pagar").innerText = total;
+
+        // Mostrar bonito
+        document.getElementById("total_pagar").innerText = money2(totalNum);
+        // Guardar numérico real para cálculos
+        document.getElementById("total_pagar").dataset.valor = totalNum.toFixed(2);
 
         document.getElementById("monto_recibido").value = "";
-        document.getElementById("cambio").innerText = "0.00";
+        document.getElementById("monto_transferencia").value = "";
+        document.getElementById("referencia_transferencia").value = "";
+        document.getElementById("cambio").innerText = "0,00";
 
         new bootstrap.Modal(document.getElementById("modalCobro")).show();
     }
 
     document.getElementById("monto_recibido").addEventListener("input", function () {
-        let recibido = parseFloat(this.value.replace(",", ".")) || 0;
-        let total = parseFloat(document.getElementById("total_pagar").innerText.replace(",", "."));
-        document.getElementById("cambio").innerText = (recibido - total).toFixed(2);
+        const recibido = num(this.value);
+        const total = parseFloat(document.getElementById("total_pagar").dataset.valor || "0");
+        document.getElementById("cambio").innerText = money2((recibido - total).toFixed(2));
     });
 
     document.getElementById("metodo_pago").addEventListener("change", function () {
-        let metodo = this.value;
-        document.getElementById("contenedor_monto").style.display =
-            metodo === "efectivo" ? "block" : "none";
-        document.getElementById("cambio_box").style.display =
-            metodo === "efectivo" ? "block" : "none";
-        document.getElementById("contenedor_referencia").style.display =
-            metodo === "transferencia" ? "block" : "none";
-        document.getElementById("contenedor_monto_transfer").style.display =
-            metodo === "transferencia" ? "block" : "none";
+        const metodo = this.value;
+        document.getElementById("contenedor_monto").style.display = metodo === "efectivo" ? "block" : "none";
+        document.getElementById("cambio_box").style.display = metodo === "efectivo" ? "block" : "none";
+        document.getElementById("contenedor_referencia").style.display = metodo === "transferencia" ? "block" : "none";
+        document.getElementById("contenedor_monto_transfer").style.display = metodo === "transferencia" ? "block" : "none";
     });
 
-    function confirmarCobro() {
+    function recargarTablaPagadosDomicilio() {
+        const url = `/cajero/tabla-pedidos-pagados-domicilio/?_=${Date.now()}`;
+        fetch(url, { cache: "no-store" })
+            .then(res => res.json())
+            .then(resp => {
+                document.getElementById("contenedor-tabla-pagados").innerHTML = resp.html;
+            });
+    }
 
+    function confirmarCobro() {
         const id = document.getElementById("pedido_id").value;
         const metodo = document.getElementById("metodo_pago").value;
 
-        const totalTexto = document.getElementById("total_pagar").innerText.replace(",", ".");
-        const total = parseFloat(totalTexto);
-
+        const total = parseFloat(document.getElementById("total_pagar").dataset.valor || "0");
         let recibido;
-        let referencia = document.getElementById("referencia_transferencia").value.trim();
+        const referencia = document.getElementById("referencia_transferencia").value.trim();
 
         if (metodo === "efectivo") {
+            recibido = num(document.getElementById("monto_recibido").value);
 
-            const txt = document.getElementById("monto_recibido").value.replace(",", ".");
-            recibido = parseFloat(txt);
-
-            if (isNaN(recibido)) {
+            if (!recibido) {
                 Swal.fire({
                     icon: "error",
                     title: "Error",
@@ -456,11 +487,9 @@
         }
 
         if (metodo === "transferencia") {
+            recibido = num(document.getElementById("monto_transferencia").value);
 
-            const txtTransf = document.getElementById("monto_transferencia").value.replace(",", ".");
-            recibido = parseFloat(txtTransf);
-
-            if (isNaN(recibido)) {
+            if (!recibido) {
                 Swal.fire({
                     icon: "error",
                     title: "Error",
@@ -473,7 +502,7 @@
                 return;
             }
 
-            if (recibido !== total) {
+            if (recibido.toFixed(2) !== total.toFixed(2)) {
                 Swal.fire({
                     icon: "warning",
                     title: "Monto incorrecto",
@@ -498,6 +527,23 @@
                 });
                 return;
             }
+            // Normaliza: quita espacios y guiones
+            const refClean = referencia.replace(/\s|-/g, "");
+
+            // No permitir solo ceros (ej: 0000000)
+            if (/^0+$/.test(refClean)) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "El número de comprobante no puede ser 0000000.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
+                return;
+            }
+
         }
 
         fetch(`/cajero/domicilio/${id}/pagar/`, {
@@ -506,56 +552,41 @@
                 "X-CSRFToken": "{{ csrf_token }}",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                metodo: metodo,
-                recibido: recibido,
-                referencia: referencia
-            })
+            body: JSON.stringify({ metodo, recibido, referencia })
         })
-            .then(r => r.json())
-            .then(data => {
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById("modalCobro")).hide();
 
-                if (data.success) {
+                Swal.fire({
+                    title: "Pago registrado",
+                    text: data.message,
+                    icon: "success",
+                    confirmButtonText: "Aceptar",
+                    background: "#FFF7F0",
+                    confirmButtonColor: "#3E7A3F",
+                    iconColor: "#3E7A3F"
+                }).then(() => {
+                    if (data.comprobante_url) window.open(data.comprobante_url, "_blank");
 
-                    bootstrap.Modal.getInstance(document.getElementById("modalCobro")).hide();
+                    const fila = document.getElementById("fila-" + id);
+                    if (fila) fila.remove();
 
-                    Swal.fire({
-                        title: "Pago registrado",
-                        text: data.message,
-                        icon: "success",
-                        confirmButtonText: "Aceptar",
-                        background: "#FFF7F0",
-                        confirmButtonColor: "#3E7A3F",
-                        iconColor: "#3E7A3F"
-                    }).then(() => {
-
-                        if (data.comprobante_url) {
-                            window.open(data.comprobante_url, "_blank");
-                        }
-
-                        const fila = document.getElementById("fila-" + id);
-                        if (fila) fila.remove();
-
-                        fetch("/cajero/tabla-pedidos-pagados-domicilio/")
-                            .then(res => res.json())
-                            .then(resp => {
-                                document.getElementById("contenedor-tabla-pagados").innerHTML = resp.html;
-                            });
-
-                    });
-                } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error",
-                        text: data.message || "Ocurrió un error al registrar el pago.",
-                        confirmButtonText: "Aceptar",
-                        confirmButtonColor: "#3E7A3F",
-                        background: "#FFF7F0",
-                        iconColor: "#C14949"
-                    });
-                }
-
-            });
+                    recargarTablaPagadosDomicilio();
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "Ocurrió un error al registrar el pago.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
+                });
+            }
+        });
     }
 
     let ws = new WebSocket("ws://" + window.location.host + "/ws/pedidos/");
@@ -565,20 +596,22 @@
 
         if (data.type === "nuevo_cobro" && data.origen === "domicilio") {
 
-            if (document.getElementById("fila-" + data.pedido_id)) { return; }
+            const miCajeroId = parseInt(document.getElementById("miCajero").dataset.id || "0");
+            if (data.cajero_id && parseInt(data.cajero_id) !== miCajeroId) return;
+
+            if (document.getElementById("fila-" + data.pedido_id)) return;
 
             const filaVacia = document.getElementById("fila-vacia-cobros");
             if (filaVacia) filaVacia.remove();
 
-            // IMPORTANTE: aquí usamos data.codigo_pedido para mostrar el código
+            const totalFormateado = money2(data.total);
+
             let fila = `
                 <tr id="fila-${data.pedido_id}">
                     <td>${data.codigo_pedido}</td>
                     <td>${data.cliente}</td>
-                    <td>$ ${data.total}</td>
-                    <td>
-                        <span class="badge bg-warning">pendiente</span>
-                    </td>
+                    <td>$ ${totalFormateado}</td>
+                    <td><span class="badge bg-warning">pendiente</span></td>
                     <td>
                         <button class="btn btn-primary btn-sm"
                                 onclick="abrirCobro('${data.pedido_id}', '${data.total}')">
@@ -588,26 +621,17 @@
                 </tr>
             `;
 
-            document.querySelector("#tbody-cobros")
-                .insertAdjacentHTML("afterbegin", fila);
+            document.querySelector("#tbody-cobros").insertAdjacentHTML("afterbegin", fila);
         }
 
         if (data.type === "nuevo_pagado" && data.origen === "domicilio") {
-            // También mostramos código en la tabla de pagados
-            let fila = `
-                <tr>
-                    <td>${data.codigo_pedido}</td>
-                    <td>${data.cliente}</td>
-                    <td>$ ${parseFloat(data.total).toFixed(2)}</td>
-                    <td><span class="badge bg-success">confirmado</span></td>
-                    <td>${data.fecha}</td>
-                </tr>
-            `;
-            document.querySelector("#tabla-pagados tbody")
-                .insertAdjacentHTML("afterbegin", fila);
+            const fila = document.getElementById("fila-" + data.pedido_id);
+            if (fila) fila.remove();
+            recargarTablaPagadosDomicilio();
         }
     };
 </script>
+
 
 <br>
 {% endblock %}

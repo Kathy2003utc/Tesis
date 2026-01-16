@@ -1,8 +1,6 @@
 {% extends 'cajero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br>
-
 
 <style>
     :root {
@@ -159,10 +157,15 @@
         color: var(--texto-oscuro) !important;
     }
 
+    
     .badge {
         padding: 6px 10px;
         border-radius: 10px;
         font-size: 14px;
+    }
+
+    .badge-creacion{
+        background-color: var(--naranja-tierra) !important;
     }
 
     .badge.bg-success {
@@ -258,14 +261,15 @@
 
                     <tbody>
                         {% for pedido in pedidos %}
-                        <tr>
+                        <tr data-pedido-row="{{ pedido.id }}">
+
                             <td>{{ pedido.codigo_pedido }}</td>
                             <td>{{ pedido.nombre_cliente }}</td>
                             <td>{{ pedido.contacto_cliente }}</td>
 
                             <td class="estado-pedido-domicilio" data-id="{{ pedido.id }}">
                                 {% if pedido.estado == 'en_creacion' %}
-                                <span class="badge bg-warning">En creación</span>
+                                <span class="badge badge-creacion">En creación</span>
                                 {% elif pedido.estado == 'en preparacion' %}
                                 <span class="badge bg-warning">En preparación</span>
                                 {% elif pedido.estado == 'listo' %}
@@ -275,14 +279,14 @@
                                 {% endif %}
                             </td>
 
-                            <td>${{ pedido.total }}</td>
+                            <td>$ <span class="money" data-valor="{{ pedido.total }}">{{ pedido.total }}</span></td>
 
-                            <td>
+                            <td class="acciones-pedido-domicilio" data-id="{{ pedido.id }}">
                                 <a href="{% url 'cajero_ver_pedido' pedido.id %}" class="btn btn-info btn-sm">
                                     <i class="fas fa-eye"></i> Ver
                                 </a>
 
-                                {% if pedido.estado == 'en preparacion' %}
+                                {% if pedido.estado == 'en_creacion' %}
                                 <a href="{% url 'cajero_editar_pedido' pedido.id %}" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
@@ -293,14 +297,16 @@
                                 </button>
                                 {% endif %}
                             </td>
+
                         </tr>
                         {% empty %}
-                        <tr>
+                        <tr id="filaVacia">
                             <td colspan="7" class="text-center text-muted py-4">
                                 No hay pedidos registrados.
                             </td>
                         </tr>
                         {% endfor %}
+
                     </tbody>
 
                 </table>
@@ -313,6 +319,49 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+  function money2(v) {
+    // Limpia todo menos números, coma, punto y signo
+    let s = String(v ?? "").trim();
+    s = s.replace(/\s/g, "");     // quita espacios
+    s = s.replace("$", "");       // quita $
+    s = s.replace(/[^0-9,.\-]/g, ""); // por si viene algo raro
+
+    // Si viene con coma decimal, conviértelo a punto
+    // Ej: 1.234,56 => 1234.56
+    if (s.includes(",") && s.includes(".")) {
+        s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+        s = s.replace(",", ".");
+    }
+
+    const n = Number(s);
+    if (isNaN(n)) return "0,00";
+    return n.toFixed(2).replace(".", ",");
+}
+
+
+  // Formatea todos los totales que vienen renderizados por Django
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".money").forEach(el => {
+      const raw = el.dataset.valor ?? el.textContent;
+      el.textContent = money2(raw);
+    });
+  });
+</script>
+
+<script>
+    // =========================
+    // CONFIG
+    // =========================
+    const STORAGE_KEY = "domicilios_cache_v4";
+    let pollingId = null;
+    let wsOk = false;
+    let socket = null;
+    let reconnectTimer = null;
+
+    // =========================
+    // SWAL: ELIMINAR
+    // =========================
     function confirmarEliminarDomicilio(id) {
         Swal.fire({
             title: "¿Eliminar pedido?",
@@ -320,155 +369,391 @@
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#C14949",
-            cancelButtonColor: '#4F6D7A',
-            confirmButtonText: 'Sí, eliminar',
+            cancelButtonColor: "#4F6D7A",
+            confirmButtonText: "Eliminar",
             cancelButtonText: "Cancelar",
             background: "#FFF7F0",
             iconColor: "#D9A441"
         }).then((r) => {
-
             if (!r.isConfirmed) return;
 
             fetch(`/cajero/pedidos/${id}/eliminar/`, {
                 method: "POST",
                 headers: { "X-CSRFToken": "{{ csrf_token }}" },
             })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-
-                        Swal.fire({
-                            icon: "success",
-                            title: "Éxito",
-                            text: "Pedido eliminado correctamente.",
-                            confirmButtonText: "Aceptar",
-                            confirmButtonColor: "#3E7A3F",
-                            background: "#FFF7F0",
-                            iconColor: "#3E7A3F"
-                        }).then(() => {
-                            // quitar fila de la tabla
-                            $(`.estado-pedido-domicilio[data-id='${id}']`)
-                                .closest("tr")
-                                .remove();
-                        });
-
-                    } else {
-                        Swal.fire({
-                            icon: "error",
-                            title: "Error",
-                            text: data.message || "No se pudo eliminar el pedido.",
-                            confirmButtonText: "Aceptar",
-                            confirmButtonColor: "#C14949",
-                            background: "#FFF7F0",
-                            iconColor: "#C14949",
-                        });
-                    }
-                });
-        });
-    }
-
-
-    function finalizarPedidoDomicilio(id) {
-        Swal.fire({
-            title: "¿Finalizar pedido?",
-            text: "El pedido se marcará como finalizado.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#C14949",
-            cancelButtonColor: "#4F6D7A",
-            confirmButtonText: "Sí, finalizar",
-            cancelButtonText: "Cancelar",
-            background: "#FFF7F0",
-            iconColor: "#D9A441"
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-
-            fetch(`/cajero/pedidos/${id}/finalizar/`, {
-                method: 'POST',
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}"
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Éxito",
+                        text: "Pedido eliminado correctamente.",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#3E7A3F",
+                        background: "#FFF7F0",
+                        iconColor: "#3E7A3F"
+                    }).then(() => {
+                        eliminarFilaPedido(id);
+                        cacheRemove(id);
+                        mostrarFilaVaciaSiNoHayNada();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.message || "No se pudo eliminar el pedido.",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#C14949",
+                        background: "#FFF7F0",
+                        iconColor: "#C14949"
+                    });
                 }
             })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: "success",
-                            title: "Pedido finalizado",
-                            text: data.message,
-                            timer: 1500,
-                            showConfirmButton: false,
-                            iconColor: "#3E7A3F"
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: "error",
-                            title: "Error",
-                            text: data.message || "No se pudo finalizar el pedido.",
-                            confirmButtonText: "Aceptar",
-                            confirmButtonColor: "#C14949",
-                            background: "#FFF7F0",
-                            iconColor: "#C14949",
-                        });
-                    }
+            .catch(() => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "No se pudo conectar con el servidor.",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
                 });
+            });
         });
     }
 
+    // =========================
+    // FILA VACÍA
+    // =========================
+    function quitarFilaVacia() {
+        const fila = document.getElementById("filaVacia");
+        if (fila) fila.remove();
+    }
 
-    // ---------------------------
-    // Refrescar estados en tiempo real
-    // ---------------------------
+    function mostrarFilaVaciaSiNoHayNada() {
+        const tbody = document.querySelector("#tbl_pedidos tbody");
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr[data-pedido-row]');
+        const yaHayFilaVacia = document.getElementById("filaVacia");
+
+        if (rows.length === 0 && !yaHayFilaVacia) {
+            const tr = document.createElement("tr");
+            tr.id = "filaVacia";
+            tr.innerHTML = `
+                <td colspan="7" class="text-center text-muted py-4">
+                    No hay pedidos registrados.
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    // =========================
+    // CACHE
+    // =========================
+    function cacheGet() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return [];
+            const data = JSON.parse(raw);
+            return Array.isArray(data) ? data : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function cacheSet(lista) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+        } catch (e) {}
+    }
+
+    function cacheUpsert(p) {
+        if (!p || !p.id) return;
+
+        const list = cacheGet();
+        const id = String(p.id);
+        const idx = list.findIndex(x => String(x.id) === id);
+
+        if (idx >= 0) list[idx] = Object.assign({}, list[idx], p);
+        else list.unshift(p);
+
+        cacheSet(list);
+    }
+
+    function cacheRemove(id) {
+        const list = cacheGet().filter(x => String(x.id) !== String(id));
+        cacheSet(list);
+    }
+
+    function guardarTablaInicialEnCache() {
+        const tbody = document.querySelector("#tbl_pedidos tbody");
+        if (!tbody) return;
+
+        const filas = tbody.querySelectorAll('tr[data-pedido-row]');
+        if (!filas || filas.length === 0) return;
+
+        const list = [];
+        filas.forEach(tr => {
+            const id = tr.getAttribute("data-pedido-row");
+            const tds = tr.querySelectorAll("td");
+            if (tds.length < 6) return;
+
+            list.push({
+                id: id,
+                codigo_pedido: (tds[0].textContent || "").trim(),
+                nombre_cliente: (tds[1].textContent || "").trim(),
+                contacto_cliente: (tds[2].textContent || "").trim(),
+                total: (tds[4].querySelector(".money")?.dataset.valor || tds[4].textContent || "").replace("$", "").trim(),
+                estado: "" // lo actualizará el API/WS
+            });
+        });
+
+        if (list.length > 0) cacheSet(list);
+    }
+
+    function pintarCacheSiTablaVacia() {
+        const tbody = document.querySelector("#tbl_pedidos tbody");
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr[data-pedido-row]');
+        if (rows.length > 0) return; // ya hay data del servidor
+
+        const cached = cacheGet();
+        if (!cached || cached.length === 0) {
+            mostrarFilaVaciaSiNoHayNada();
+            return;
+        }
+
+        quitarFilaVacia();
+        cached.forEach(p => upsertFilaPedido(p));
+        mostrarFilaVaciaSiNoHayNada();
+    }
+
+    // =========================
+    // HTML ESTADO / ACCIONES
+    // =========================
+    function estadoBadgeHTML(estado) {
+        if (estado === "en_creacion") return `<span class="badge badge-creacion">En creación</span>`;
+        if (estado === "en preparacion") return `<span class="badge bg-warning">En preparación</span>`;
+        if (estado === "listo") return `<span class="badge bg-success">Listo</span>`;
+        if (estado === "finalizado") return `<span class="badge bg-primary">Finalizado</span>`;
+        return `<span class="badge bg-warning">${estado || ""}</span>`;
+    }
+
+    function accionesHTML(p) {
+        let html = `
+            <a href="/cajero/pedidos/${p.id}/ver/" class="btn btn-info btn-sm me-1">
+                <i class="fas fa-eye"></i> Ver
+            </a>
+        `;
+
+        if (p.estado === "en_creacion") {
+            html += `
+                <a href="/cajero/pedidos/${p.id}/editar/" class="btn btn-warning btn-sm me-1">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <button class="btn btn-danger btn-sm" onclick="confirmarEliminarDomicilio('${p.id}')">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            `;
+        }
+
+        return html;
+    }
+
+     function ordenarFilasPorIdAsc() {
+        const tbody = document.querySelector("#tbl_pedidos tbody");
+        if (!tbody) return;
+
+        const rows = Array.from(tbody.querySelectorAll('tr[data-pedido-row]'));
+        rows.sort((a, b) => Number(a.dataset.pedidoRow) - Number(b.dataset.pedidoRow));
+
+        rows.forEach(r => tbody.appendChild(r));
+    }
+    
+    // =========================
+    // UPSERT FILA (compatible con tu HTML)
+    // =========================
+    function upsertFilaPedido(p) {
+        const tbody = document.querySelector("#tbl_pedidos tbody");
+        if (!tbody || !p || !p.id) return;
+
+        let fila = tbody.querySelector(`tr[data-pedido-row="${p.id}"]`);
+
+        // Crear fila nueva SOLO si viene data completa
+        if (!fila) {
+            if (!p.codigo_pedido) return;
+
+            quitarFilaVacia();
+
+            fila = document.createElement("tr");
+            fila.setAttribute("data-pedido-row", p.id);
+
+            fila.innerHTML = `
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="estado-pedido-domicilio" data-id="${p.id}"></td>
+                <td></td>
+                <td class="acciones-pedido-domicilio" data-id="${p.id}"></td>
+            `;
+
+            tbody.insertBefore(fila, tbody.firstChild);
+        }
+
+        const tds = fila.querySelectorAll("td");
+        if (tds.length >= 6) {
+            if (p.codigo_pedido !== undefined) tds[0].textContent = p.codigo_pedido;
+            if (p.nombre_cliente !== undefined) tds[1].textContent = p.nombre_cliente;
+            if (p.contacto_cliente !== undefined) tds[2].textContent = p.contacto_cliente;
+            if (p.total !== undefined) {
+                tds[4].innerHTML = `$ <span class="money" data-valor="${p.total}">${money2(p.total)}</span>`;
+            }
+
+        }
+
+        const celdaEstado = fila.querySelector(`.estado-pedido-domicilio[data-id="${p.id}"]`);
+        if (celdaEstado && p.estado !== undefined) celdaEstado.innerHTML = estadoBadgeHTML(p.estado);
+
+        const celdaAcc = fila.querySelector(`.acciones-pedido-domicilio[data-id="${p.id}"]`);
+        if (celdaAcc && p.estado !== undefined) celdaAcc.innerHTML = accionesHTML(p);
+
+        ordenarFilasPorIdAsc();
+    }
+
+    function eliminarFilaPedido(id) {
+        const fila = document.querySelector(`#tbl_pedidos tbody tr[data-pedido-row="${id}"]`);
+        if (fila) fila.remove();
+    }
+
+    // =========================
+    // AJAX (NO elimina filas nunca)
+    // =========================
     function actualizarEstadosDomicilio() {
         $.ajax({
             url: "{% url 'cajero_api_estados_pedidos' %}",
             type: "GET",
+            dataType: "json",
+            timeout: 2500,
             success: function (data) {
+                if (!Array.isArray(data)) return;
+
+                // Si viene vacío: NO borres, solo cache si está vacía
+                if (data.length === 0) {
+                    pintarCacheSiTablaVacia();
+                    return;
+                }
+
                 data.forEach(p => {
-                    let fila = $(`.estado-pedido-domicilio[data-id='${p.id}']`).closest("tr");
-                    let celdaEstado = fila.find(".estado-pedido-domicilio");
-
-                    if (p.estado === "en_creacion") {
-                        celdaEstado.html(`<span class="badge bg-warning">En creación</span>`);
-                    }
-                    else if (p.estado === "en preparacion") {
-                        celdaEstado.html(`<span class="badge bg-warning">En preparación</span>`);
-                    }
-                    else if (p.estado === "listo") {
-                        celdaEstado.html(`<span class="badge bg-success">Listo</span>`);
-                    }
-                    else if (p.estado === "finalizado") {
-                        celdaEstado.html(`<span class="badge bg-primary">Finalizado</span>`);
-                    }
-
-                    // Actualizar acciones
-                    let celdaAcc = fila.find("td:last");
-                    let acciones = `
-                    <a href="/cajero/pedidos/${p.id}/ver/" class="btn btn-info btn-sm me-1">
-                        <i class="fas fa-eye"></i> Ver
-                    </a>
-                `;
-
-                    if (p.estado === "en preparacion") {
-                        acciones += `
-                        <a href="/cajero/pedidos/${p.id}/editar/" class="btn btn-warning btn-sm me-1">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-
-                        <button class="btn btn-danger btn-sm me-1"
-                                onclick="confirmarEliminarDomicilio('${p.id}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    `;
-                    }
-                    celdaAcc.html(acciones);
+                    if (p.tipo && p.tipo !== "domicilio") return;
+                    upsertFilaPedido(p);
+                    cacheUpsert(p);
                 });
+
+                quitarFilaVacia();
+                mostrarFilaVaciaSiNoHayNada();
+            },
+            error: function () {
+                // Si falla server: NO borres nada
+                pintarCacheSiTablaVacia();
             }
         });
     }
 
-    setInterval(actualizarEstadosDomicilio, 1000);
+    function iniciarPolling() {
+        if (pollingId) return;
+        pollingId = setInterval(actualizarEstadosDomicilio, 1000);
+        actualizarEstadosDomicilio();
+    }
+
+    function detenerPolling() {
+        if (!pollingId) return;
+        clearInterval(pollingId);
+        pollingId = null;
+    }
+
+    // =========================
+    // WEBSOCKET
+    // =========================
+    function conectarWS() {
+        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        socket = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
+
+        socket.onopen = () => {
+            wsOk = true;
+            detenerPolling();
+            actualizarEstadosDomicilio(); // sincroniza al reconectar
+        };
+
+        socket.onmessage = (e) => {
+        let data;
+        try { data = JSON.parse(e.data); } catch (err) { return; }
+
+        // SOLO DOMICILIO EN ESTA PANTALLA
+        const p = data.pedido || null;
+
+        if ((data.type === "nuevo_pedido" || data.type === "actualizar_pedido") && p) {
+            // tu payload trae "tipo": pedido.tipo_pedido
+            if (p.tipo && p.tipo !== "domicilio") return;
+
+            upsertFilaPedido(p);
+            cacheUpsert(p);
+            quitarFilaVacia();
+            mostrarFilaVaciaSiNoHayNada();
+            return;
+        }
+
+        if (data.type === "eliminar_pedido") {
+            // (opcional) si quieres ser estricto, manda tipo en backend.
+            eliminarFilaPedido(data.pedido_id);
+            cacheRemove(data.pedido_id);
+            mostrarFilaVaciaSiNoHayNada();
+            return;
+        }
+        };
+
+        socket.onclose = () => {
+            wsOk = false;
+            iniciarPolling();
+            reintentarWS();
+        };
+
+        socket.onerror = () => {
+            wsOk = false;
+            iniciarPolling();
+            try { socket.close(); } catch (e) {}
+        };
+    }
+
+    function reintentarWS() {
+        if (reconnectTimer) return;
+        reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            conectarWS();
+        }, 2000);
+    }
+
+    // =========================
+    // ARRANQUE
+    // =========================
+    guardarTablaInicialEnCache();   // guarda lo que vino renderizado
+    pintarCacheSiTablaVacia();      // si está vacía, pinta cache
+
+    conectarWS();
+
+    // fallback: si no conectó WS rápido, polling
+    setTimeout(() => {
+        if (!wsOk) iniciarPolling();
+    }, 1500);
+
+    actualizarEstadosDomicilio();  // primer sync
+
 </script>
+
+
 
 <br>
 {% endblock %}

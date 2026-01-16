@@ -91,6 +91,8 @@ html, body {
 label {
     font-weight: bold;
     color: var(--cafe-profundo);
+    font-size: 20px;
+    margin-bottom: 6px;
 }
 
 /* Inputs */
@@ -158,6 +160,23 @@ label {
     .card-form { padding: 20px; }
     .titulo-form { font-size: 20px; }
 }
+
+/* GRID IGUAL AL FORMULARIO REGISTRAR */
+.form-grid .col-md-6,
+.form-grid .col-12{
+    margin-bottom: 15px;
+}
+
+/* Botones en dos columnas */
+.btn-row{
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+}
+.btn-row .btn{
+    width: 100%;
+}
+
 </style>
 
 <div class="form-container">
@@ -185,59 +204,89 @@ label {
 
             <h2 class="titulo-form">Editar Trabajador</h2>
 
-            <div class="mb-3">
-                <label>Nombre:</label>
-                <input type="text" name="nombre" class="form-control" value="{{ trabajador.nombre }}" required>
+            <div class="row form-grid">
+                <!-- Nombre / Apellido -->
+                <div class="col-12 col-md-6">
+                    <label>Nombre:</label>
+                    <input type="text" name="nombre" class="form-control" value="{{ trabajador.nombre }}" required>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Apellido:</label>
+                    <input type="text" name="apellido" class="form-control" value="{{ trabajador.apellido }}" required>
+                </div>
+
+                <!-- Correo / Teléfono -->
+                <div class="col-12 col-md-6">
+                    <label>Correo:</label>
+                    <input type="email" name="correo" class="form-control" value="{{ trabajador.correo }}" required>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Teléfono:</label>
+                    <input type="text" name="telefono" class="form-control" value="{{ trabajador.telefono }}" required>
+                </div>
+
+                <!-- Dirección -->
+                <div class="col-12">
+                    <label>Dirección:</label>
+                    <textarea name="direccion" class="form-control" rows="2" required>{{ trabajador.direccion }}</textarea>
+                </div>
+
+                <!-- Rol / Horario -->
+                <div class="col-12 col-md-6">
+                    <label>Rol:</label>
+                    <select name="rol" class="form-select" required>
+                        <option value="" disabled>Seleccione un rol</option>
+                        <option value="mesero" {% if trabajador.rol == "mesero" %}selected{% endif %}>Mesero</option>
+                        <option value="cocinero" {% if trabajador.rol == "cocinero" %}selected{% endif %}>Cocinero</option>
+                        <option value="cajero" {% if trabajador.rol == "cajero" %}selected{% endif %}>Cajero</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Horario de trabajo:</label>
+                    <select name="horario" class="form-select" required>
+                        <option value="" disabled>Seleccione un horario</option>
+
+                        <optgroup label="Lunes a Viernes">
+                            <option value="lv_manana" {% if trabajador.horario == "lv_manana" %}selected{% endif %}>Mañana (06:00 - 14:00)</option>
+                            <option value="lv_tarde" {% if trabajador.horario == "lv_tarde" %}selected{% endif %}>Tarde (14:00 - 22:00)</option>
+                            <option value="lv_noche" {% if trabajador.horario == "lv_noche" %}selected{% endif %}>Noche (22:00 - 06:00)</option>
+                        </optgroup>
+
+                        <optgroup label="Fin de semana">
+                            <option value="sab_manana" {% if trabajador.horario == "sab_manana" %}selected{% endif %}>Sábado Mañana (06:00 - 12:00)</option>
+                            <option value="sab_tarde" {% if trabajador.horario == "sab_tarde" %}selected{% endif %}>Sábado Tarde (11:00 - 15:00)</option>
+                            <option value="dom_unico" {% if trabajador.horario == "dom_unico" %}selected{% endif %}>Domingo (06:00 - 13:00)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Password -->
+                <div class="col-12">
+                    <hr>
+                    <p class="text-muted">Si deseas cambiar la contraseña, llena estos campos.</p>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Nueva Contraseña:</label>
+                    <input type="password" name="password" class="form-control">
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Confirmar Contraseña:</label>
+                    <input type="password" name="password2" class="form-control">
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label>Apellido:</label>
-                <input type="text" name="apellido" class="form-control" value="{{ trabajador.apellido }}" required>
+            <!-- Botones -->
+            <div class="btn-row">
+                <button type="submit" class="btn btn-guardar">Actualizar Trabajador</button>
+                <a href="{% url 'listar_trabajadores' %}" class="btn btn-cancelar">Cancelar</a>
             </div>
-
-            <div class="mb-3">
-                <label>Correo:</label>
-                <input type="email" name="correo" class="form-control" value="{{ trabajador.correo }}" required>
-            </div>
-
-            <div class="mb-3">
-                <label>Teléfono:</label>
-                <input type="text" name="telefono" class="form-control" value="{{ trabajador.telefono }}" required>
-            </div>
-
-            <div class="mb-3">
-                <label>Dirección:</label>
-                <textarea name="direccion" class="form-control" rows="2" required>{{ trabajador.direccion }}</textarea>
-            </div>
-
-            <div class="mb-3">
-                <label>Rol:</label>
-                <select name="rol" class="form-select" required>
-                    <option value="" disabled>Seleccione un rol</option>
-                    <option value="mesero"   {% if trabajador.rol == "mesero" %}selected{% endif %}>Mesero</option>
-                    <option value="cocinero" {% if trabajador.rol == "cocinero" %}selected{% endif %}>Cocinero</option>
-                    <option value="cajero"   {% if trabajador.rol == "cajero" %}selected{% endif %}>Cajero</option>
-                </select>
-            </div>
-
-            <hr>
-            <p class="text-muted">Si deseas cambiar la contraseña, llena estos campos.</p>
-
-            <div class="mb-3">
-                <label>Nueva Contraseña:</label>
-                <input type="password" name="password" class="form-control">
-            </div>
-
-            <div class="mb-3">
-                <label>Confirmar Contraseña:</label>
-                <input type="password" name="password2" class="form-control">
-            </div>
-
-            <button type="submit" class="btn btn-guardar w-100">Actualizar Trabajador</button>
-
-            <a href="{% url 'listar_trabajadores' %}" class="btn btn-cancelar">Cancelar</a>
-
         </form>
+
     </div>
 </div>
 
@@ -256,6 +305,7 @@ $("#frm_trabajador").validate({
         telefono: {required:true,minlength:10,maxlength:10,digits:true},
         direccion: {required:true},
         rol: {required:true},
+        horario: {required:true},
         password: {minlength:6},
         password2: {minlength:6,equalTo:"[name='password']"}
     },
@@ -266,6 +316,7 @@ $("#frm_trabajador").validate({
         telefono:{required:"Campo obligatorio",minlength:"Mínimo 10 dígitos",digits:"Solo números", maxlength:"Máximo 10 dígitos"},
         direccion:{required:"Campo obligatorio"},
         rol:{required:"Seleccione un rol"},
+        horario:{required:"Seleccione un horario"},
         password:{minlength:"Mínimo 6 caracteres"},
         password2:{equalTo:"Las contraseñas no coinciden"}
     }

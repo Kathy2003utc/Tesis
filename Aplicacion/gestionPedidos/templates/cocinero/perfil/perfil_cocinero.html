@@ -1,0 +1,168 @@
+{% extends 'cocinero/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br>
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
+
+    --verde-profundo: #2E5F32;
+    --verde-oliva: #5E7A43;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
+
+    --crema-suave: #FAF4EC;
+    --gris-claro-calido: #D8D3CC;
+    --gris-medio-calido: #B8B1A8;
+    --gris-oscuro-calido: #4A3F38;
+
+    --exito: #4F8A57;
+    --exito-suave: #D9F2D6;
+    --advertencia: #D9A441;
+    --advertencia-suave: #FFF5DA;
+}
+
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+.perfil-container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+}
+
+.perfil-card {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-claro);
+    border-radius: 20px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.perfil-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.perfil-header h3 {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    font-size: 28px;
+    text-shadow: 1px 1px 2px #ffffff80;
+}
+
+.perfil-dato {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--gris-suave);
+    font-size: 16px;
+}
+
+.perfil-dato span {
+    font-weight: bold;
+    color: var(--cafe-tostado);
+}
+
+.btn-editar {
+    background: var(--advertencia);
+    color: white;
+    width: 100%;
+    padding: 13px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 16px;
+    margin-top: 25px;
+    transition: 0.3s;
+    border: none;
+}
+
+.btn-editar:hover {
+    background: var(--advertencia-suave);
+    color: var(--texto-oscuro) !important;
+    transform: translateY(-3px);
+}
+
+@media (max-width: 768px) {
+    .perfil-card { padding: 25px; border-radius: 15px; }
+    .perfil-header h3 { font-size: 24px; }
+    .perfil-dato { font-size: 15px; }
+}
+
+@media (max-width: 480px) {
+    .perfil-card { padding: 20px; }
+    .perfil-header h3 { font-size: 22px; }
+}
+</style>
+
+<div class="perfil-container">
+    <div class="perfil-card">
+
+        <div class="perfil-header">
+            <i class="fas fa-user-circle fa-4x" style="color: var(--cafe-oscuro);"></i>
+            <h3>Perfil del Cocinero</h3>
+        </div>
+
+        <div class="perfil-dato">
+            <span>Nombre:</span> {{ usuario.nombre }} {{ usuario.apellido }}
+        </div>
+
+        <div class="perfil-dato">
+            <span>Correo:</span> {{ usuario.correo }}
+        </div>
+
+        <div class="perfil-dato">
+            <span>Teléfono:</span> {{ usuario.telefono|default:"No registrado" }}
+        </div>
+
+        <div class="perfil-dato">
+            <span>Dirección:</span> {{ usuario.direccion|default:"No registrada" }}
+        </div>
+
+        <div class="perfil-dato">
+            <span>Rol:</span> {{ usuario.get_rol_display }}
+        </div>
+
+        <a href="{% url 'editar_perfil_cocinero' %}" class="btn btn-editar">
+            <i class="fas fa-edit"></i> Editar Perfil
+        </a>
+
+    </div>
+</div>
+
+<br>
+{% endblock %}

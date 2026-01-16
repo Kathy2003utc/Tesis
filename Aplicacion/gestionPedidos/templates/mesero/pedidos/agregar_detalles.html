@@ -246,6 +246,37 @@
         font-weight: bold;
     }
 
+    .producto-agotado {
+        opacity: .55;
+        filter: grayscale(100%);
+    }
+
+    .producto-agotado .btn-agregar {
+        cursor: not-allowed;
+    }
+
+    .producto-agotado .btn-agregar:disabled {
+        opacity: 1; /* que no se vea “doblemente” apagado */
+    }
+
+    /* Botón Cancelar pedido */
+    .btn-cancelar {
+        background: var(--rojo-alerta);
+        color: white;
+        padding: 15px;
+        font-size: 18px;
+        border-radius: 15px;
+        font-weight: bold;
+        transition: 0.3s;
+        border: none;
+    }
+
+    .btn-cancelar:hover {
+        background: var(--rojo-claro);
+        color: var(--texto-oscuro);
+    }
+
+
 </style>
 
 
@@ -253,15 +284,22 @@
     <div class="container mt-5 content-card">
 
         <h2 class="text-center titulo-pedido mb-4">
-            Agregar Productos al Pedido #{{ pedido.codigo_pedido }}
+            Agregar Productos al Pedido {{ pedido.codigo_pedido }}
         </h2>
 
         <div class="menu-grid">
             {% for producto in productos %}
             <div>
-                <div class="card card-producto p-3 h-100">
+                <div class="card card-producto p-3 h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+                    data-producto-id="{{ producto.id }}">
 
-                    <h5 class="fw-bold text-center mb-2" style="color: var(--cafe-profundo);">{{ producto.nombre }}</h5>
+                    <h5 class="fw-bold text-center mb-2" style="color: var(--cafe-profundo);">
+                        {{ producto.nombre }}
+
+                        {% if producto.agotado_hoy %}
+                        <span class="badge bg-secondary ms-2">Agotado hoy</span>
+                        {% endif %}
+                    </h5>
 
                     <p class="text-muted text-center small mb-2">
                         {{ producto.descripcion }}
@@ -272,19 +310,29 @@
                     </p>
 
                     <label for="">Cantidad:</label>
-                    <input type="number" min="1" value="1" id="cantidad_{{ producto.id }}" class="form-control mb-2">
+                    <input type="number" min="1" value="1"
+                        id="cantidad_{{ producto.id }}"
+                        class="form-control mb-2"
+                        {% if producto.agotado_hoy %}disabled{% endif %}>
 
                     <label for="">Observación:</label>
-                    <input type="text" id="obs_{{ producto.id }}" class="form-control mb-2">
+                    <input type="text"
+                        id="obs_{{ producto.id }}"
+                        class="form-control mb-2"
+                        {% if producto.agotado_hoy %}disabled{% endif %}>
 
                     <button class="btn btn-agregar w-100"
+                            data-producto-id="{{ producto.id }}"
+                            {% if producto.agotado_hoy %}disabled{% endif %}
                             onclick="agregarProducto('{{ producto.id }}')">
-                        Agregar
+                    Agregar
                     </button>
+
 
                 </div>
             </div>
             {% endfor %}
+
         </div>
 
 
@@ -348,13 +396,32 @@
         </div>
 
 
-        <div class="text-center mt-4">
+        <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
+
+            <!-- Finalizar -->
             <a href="{% url 'ver_pedido' pedido.id %}" 
-            class="btn btn-finalizar" 
-            id="btn_finalizar">
+            class="btn btn-finalizar"
+            id="btn_finalizar"
+            style="min-width:260px;">
                 Finalizar & Ver pedido
             </a>
+
+            <!-- Cancelar -->
+            <form method="post"
+                action="{% url 'mesero_cancelar_pedido' pedido.id %}"
+                id="frm_cancelar_pedido">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn btn-cancelar"
+                        style="min-width:260px;">
+                    Cancelar pedido
+                </button>
+            </form>
+
         </div>
+
+
+
     </div>
 </div>
 
@@ -365,8 +432,36 @@
 // Agregar producto (solo restaurante)
 // ------------------------------
 function agregarProducto(id) {
+    const btn = document.querySelector(`button[data-producto-id="${id}"]`);
+    if (btn && btn.disabled) {
+        Swal.fire({
+            icon: "warning",
+            title: "Agotado hoy",
+            text: "Este producto está agotado hoy y no se puede agregar.",
+            confirmButtonColor: "#3E7A3F",
+            confirmButtonText: "Aceptar",
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
+        });
+        return;
+    }
+
     let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
     let observacion = document.getElementById(`obs_${id}`).value;
+
+    // VALIDACIÓN
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Swal.fire({
+            icon: "warning",
+            title: "Cantidad inválida",
+            text: "Ingrese una cantidad mayor a 0",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#3E7A3F",
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
+        });
+        return;
+    }
 
     fetch("{% url 'agregar_detalle_ajax' pedido.id %}", {
         method: "POST",
@@ -382,8 +477,9 @@ function agregarProducto(id) {
     })
     .then(response => response.json())
     .then(data => {
-        if(data.success){
+        if (data.success) {
             document.getElementById('tabla_detalles').innerHTML = data.tabla;
+
             Swal.fire({
                 icon: 'success',
                 title: 'Producto agregado',
@@ -393,19 +489,33 @@ function agregarProducto(id) {
                 background: "#FFF7F0",
                 iconColor: "#3E7A3F"
             });
+
             document.getElementById(`obs_${id}`).value = "";
         } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: data.mensaje,
+                text: data.mensaje || "No se pudo agregar el producto.",
                 confirmButtonText: "Aceptar",
                 confirmButtonColor: "#C14949",
-                background: "#FFF7F0"
+                background: "#FFF7F0",
+                iconColor: "#C14949"
             });
         }
+    })
+    .catch(() => {
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Falló la petición (revisa Network/Console).",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#C14949",
+            background: "#FFF7F0",
+            iconColor: "#C14949"
+        });
     });
 }
+
 
 // ------------------------------
 // Editar detalle (sin recargos)
@@ -418,13 +528,11 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
                 <label>Cantidad</label>
                 <input id="swal_cantidad" type="number" min="1"
-                       value="${cantidad_actual}"
-                       class="form-control">
+                       value="${cantidad_actual}" class="form-control">
 
                 <label>Observación</label>
                 <input id="swal_observacion" type="text"
-                       value="${observacion_actual}"
-                       class="form-control">
+                       value="${observacion_actual}" class="form-control">
             </div>
         `,
         background: "#FFF7F0",
@@ -434,10 +542,16 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
         confirmButtonColor: "#3E7A3F",
         cancelButtonColor: "#C14949",
         preConfirm: () => {
-            return {
-                cantidad: parseInt(document.getElementById('swal_cantidad').value),
-                observacion: document.getElementById('swal_observacion').value
-            };
+            const cantidad = parseInt(document.getElementById('swal_cantidad').value);
+            const observacion = document.getElementById('swal_observacion').value;
+
+            // VALIDACIÓN (importante: return false para que NO cierre el swal)
+            if (isNaN(cantidad) || cantidad <= 0) {
+                Swal.showValidationMessage("La cantidad debe ser mayor a 0");
+                return false;
+            }
+
+            return { cantidad, observacion };
         }
     }).then((result) => {
         if (!result.isConfirmed) return;
@@ -471,13 +585,24 @@ function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
                     text: data.mensaje || "No se pudo actualizar el detalle.",
                     confirmButtonText: "Aceptar",
                     confirmButtonColor: "#C14949",
-                    background: "#FFF7F0"
+                    background: "#FFF7F0",
+                    iconColor: "#C14949"
                 });
             }
+        })
+        .catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Falló la petición (revisa Network/Console).",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0",
+                iconColor: "#C14949"
+            });
         });
     });
 }
-
 
 // ------------------------------
 // Eliminar detalle
@@ -488,7 +613,7 @@ function eliminarDetalleAjax(detalle_id) {
         text: "Este producto será eliminado del pedido.",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
+        confirmButtonText: "Eliminar",
         cancelButtonText: "Cancelar",
         confirmButtonColor: "#C14949",
         cancelButtonColor: "#4F6D7A",
@@ -543,8 +668,9 @@ function validarProductos() {
             title: 'Sin productos',
             text: 'Debe agregar al menos un producto antes de finalizar.',
             confirmButtonText: "Aceptar",
-            confirmButtonColor: "#D9A441",
-            background: "#FFF7F0"
+            confirmButtonColor: "#3E7A3F",
+            background: "#FFF7F0",
+            iconColor: "#D9A441"
         });
         return false;
     }
@@ -574,7 +700,31 @@ document.getElementById("btn_finalizar").addEventListener("click", function(even
         window.location.href = this.href; 
     }, 1500);
 });
+
 </script>
+
+<script>
+const frmCancelar = document.getElementById("frm_cancelar_pedido");
+if (frmCancelar) {
+  frmCancelar.addEventListener("submit", function(e){
+    e.preventDefault();
+    Swal.fire({
+      icon: "warning",
+      title: "¿Cancelar pedido?",
+      text: "Se eliminará el pedido completo (con sus productos) y se liberará la mesa.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, cancelar",
+      cancelButtonText: "No",
+      confirmButtonColor: "#C14949",
+      cancelButtonColor: "#4F6D7A",
+      background: "#FFF7F0"
+    }).then((r)=>{
+      if(r.isConfirmed) frmCancelar.submit();
+    });
+  });
+}
+</script>
+
 
 <br>
 {% endblock %}

@@ -1,7 +1,6 @@
 {% extends 'mesero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br>
 
 <style>
     :root {
@@ -150,18 +149,18 @@
         color: var(--texto-oscuro) !important;
     }
 
-    .btn-fin {
-        background-color: var(--verde-musgo) !important;
-        border-color: var(--verde-musgo) !important;
-        font-weight: bold;
-        border-radius: 8px;
-        transition: 0.3s;
+    .btn-fin{
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
         color: white !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        transition: 0.3s;
     }
     .btn-fin:hover{
-        background-color: var(--verde-claro) !important;
-        color: var(--texto-oscuro) !important;
+        background-color: var(--verde) !important;
     }
+
 
     .table-responsive {
         width: 100%;
@@ -206,6 +205,34 @@
     .badge.bg-success {
         background-color: var(--exito) !important;
     }
+
+    .badge-creacion{
+        background-color: var(--naranja-tierra) !important;
+    }
+    /* Para que NO se bajen a otra línea */
+    #tbl_pedidos td:last-child{
+        white-space: nowrap;
+    }
+
+    /* Tamaño compacto igual cajero */
+    #tbl_pedidos .btn{
+        padding: 4px 10px !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+
+    /* Separación entre botones (igual cajero) */
+    #tbl_pedidos .btn + .btn{
+        margin-left: 6px !important;
+    }
+
+    /* Alineación bonita de icono + texto */
+    #tbl_pedidos .acciones-pedido .btn{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
 </style>
 
 <div class="main-content-wrapper">
@@ -235,60 +262,55 @@
 
                     <tbody>
                         {% for pedido in pedidos %}
-                        <tr>
-                            {# AQUÍ MOSTRAMOS EL CÓDIGO DEL PEDIDO, NO EL ID #}
+                        <tr data-pedido-row="{{ pedido.id }}">
+
                             <td class="text-center">{{ pedido.codigo_pedido }}</td>
                             <td class="text-center">{{ pedido.mesero.nombre }} {{ pedido.mesero.apellido }}</td>
                             <td class="text-center">{{ pedido.mesa.numero }}</td>
 
                             <td class="text-center estado-pedido" data-id="{{ pedido.id }}">
-                                {% if pedido.estado == 'en preparacion' %}
-                                    <span class="badge bg-warning">En preparación</span>
+                            {% if pedido.estado == 'en_creacion' %}
+                                <span class="badge badge-creacion">En creación</span>
 
-                                {% elif pedido.estado == 'listo' %}
-                                    <span class="badge bg-success">Listo</span>
+                            {% elif pedido.estado == 'en preparacion' %}
+                                <span class="badge bg-warning">En preparación</span>
 
-                                {% elif pedido.estado == 'finalizado' %}
-                                    <span class="badge bg-primary">Finalizado</span>
-                                {% endif %}
+                            {% elif pedido.estado == 'listo' %}
+                                <span class="badge bg-success">Listo</span>
+
+                            {% elif pedido.estado == 'finalizado' %}
+                                <span class="badge bg-primary">Finalizado</span>
+                            {% endif %}
                             </td>
 
                             <td class="text-center">${{ pedido.total }}</td>
 
-                            <td class="text-center">
-                                <a href="{% url 'ver_pedido' pedido.id %}" class="btn btn-info btn-sm me-1">
-                                    <i class="fas fa-eye"></i> Ver
+                            <td class="text-center acciones-pedido" data-id="{{ pedido.id }}">
+                              <a href="{% url 'ver_pedido' pedido.id %}" class="btn btn-info btn-sm">
+                                  <i class="fas fa-eye"></i> Ver
+                              </a>
+
+                              {% if pedido.estado == 'listo' %}
+                                <button class="btn btn-fin btn-sm" onclick="finalizarPedido('{{ pedido.id }}')">
+                                  <i class="fas fa-check"></i> Finalizar
+                                </button>
+                              {% endif %}
+
+                              {% if pedido.estado == 'en_creacion' %}
+                                <a href="{% url 'editar_pedido' pedido.id %}" class="btn btn-warning btn-sm">
+                                  <i class="fas fa-edit"></i> Editar
                                 </a>
 
-                                {% if pedido.estado == 'listo' %}
-                                <button class="btn btn-fin btn-sm me-1"
-                                        onclick="finalizarPedido('{{ pedido.id }}')">
-                                    <i class="fas fa-check"></i> Finalizar
+                                <button type="button" class="btn btn-danger btn-sm"
+                                        onclick="confirmarEliminacion('{{ pedido.id }}')">
+                                  <i class="fas fa-trash"></i> Eliminar
                                 </button>
-                                {% endif %}
-
-                                {% if pedido.estado == 'en preparacion' %}
-                                    <a href="{% url 'editar_pedido' pedido.id %}" class="btn btn-warning btn-sm me-1">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </a>
-                                {% endif %}
-
-                                {% if pedido.estado == 'en preparacion' %}
-                                    <form id="form-eliminar-{{ pedido.id }}" action="{% url 'eliminar_pedido' pedido.id %}" method="post" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="button" class="btn btn-danger btn-sm"
-                                                onclick="confirmarEliminacion('{{ pedido.id }}')">
-                                            <i class="fas fa-trash"></i> Eliminar
-                                        </button>
-                                    </form>
-                                {% endif %}
+                              {% endif %}
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                No hay pedidos registrados.
-                            </td>
+                        <tr id="filaVacia">
+                            <td colspan="6" class="text-center text-muted py-4">No hay pedidos registrados.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -303,183 +325,316 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+/* =========================
+   CONFIG
+========================= */
+let pollingId = null;
+let wsOk = false;
+let socket = null;
+let reconnectTimer = null;
+
+/* =========================
+   UI helpers
+========================= */
+function badgeHTML(estado) {
+  if (estado === "en_creacion")    return `<span class="badge badge-creacion">En creación</span>`;
+  if (estado === "en preparacion") return `<span class="badge bg-warning">En preparación</span>`;
+  if (estado === "listo")          return `<span class="badge bg-success">Listo</span>`;
+  if (estado === "finalizado")     return `<span class="badge bg-primary">Finalizado</span>`;
+  return `<span class="badge bg-warning">${estado || ""}</span>`;
+}
+
+function accionesHTML(id, estado) {
+  let html = `
+    <a href="/pedidos/ver/${id}/" class="btn btn-info btn-sm">
+      <i class="fas fa-eye"></i> Ver
+    </a>
+  `;
+
+  if (estado === "en_creacion") {
+    html += `
+      <a href="/pedidos/editar/${id}/" class="btn btn-warning btn-sm">
+        <i class="fas fa-edit"></i> Editar
+      </a>
+      <button class="btn btn-danger btn-sm" onclick="confirmarEliminacion('${id}')">
+        <i class="fas fa-trash"></i> Eliminar
+      </button>
+    `;
+  }
+
+  if (estado === "listo") {
+    html += `
+      <button class="btn btn-fin btn-sm" onclick="finalizarPedido('${id}')">
+        <i class="fas fa-check"></i> Finalizar
+      </button>
+    `;
+  }
+
+  return html;
+}
+
+
+function aplicarEstadoEnFila(p) {
+  const id = String(p.id);
+
+  const celdaEstado = document.querySelector(`.estado-pedido[data-id='${id}']`);
+  if (celdaEstado) celdaEstado.innerHTML = badgeHTML(p.estado);
+
+  const celdaAcc = document.querySelector(`.acciones-pedido[data-id='${id}']`);
+  if (celdaAcc) celdaAcc.innerHTML = accionesHTML(id, p.estado);
+}
+
+function eliminarFilaPedido(id) {
+  const fila = document.querySelector(`tr[data-pedido-row='${id}']`);
+  if (fila) fila.remove();
+
+  // si ya no queda nada, muestra fila vacía
+  const tbody = document.querySelector("#tbl_pedidos tbody");
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll("tr[data-pedido-row]");
+  if (rows.length === 0 && !document.getElementById("filaVacia")) {
+    const tr = document.createElement("tr");
+    tr.id = "filaVacia";
+    tr.innerHTML = `<td colspan="6" class="text-center text-muted py-4">No hay pedidos registrados.</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function quitarFilaVacia() {
+  const f = document.getElementById("filaVacia");
+  if (f) f.remove();
+}
+
+/* =========================
+   SYNC (sin jQuery)
+========================= */
+async function actualizarEstados() {
+  try {
+    const res = await fetch("{% url 'api_estados_pedidos' %}", {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    data.forEach(p => aplicarEstadoEnFila(p));
+  } catch (e) {
+    // si falla server, no hacemos nada (queda lo último)
+  }
+}
+
+function iniciarPolling() {
+  if (pollingId) return;
+  pollingId = setInterval(actualizarEstados, 1000);
+  actualizarEstados();
+}
+
+function detenerPolling() {
+  if (!pollingId) return;
+  clearInterval(pollingId);
+  pollingId = null;
+}
+
+/* =========================
+   WEBSOCKET + fallback
+========================= */
+function conectarWS() {
+  const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+  socket = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
+
+  socket.onopen = () => {
+    wsOk = true;
+    detenerPolling();
+    actualizarEstados();
+  };
+
+  socket.onmessage = (e) => {
+    let data;
+    try { data = JSON.parse(e.data); } catch (err) { return; }
+
+    if ((data.type === "nuevo_pedido" || data.type === "actualizar_pedido") && data.pedido) {
+      // tu payload trae: tipo = pedido.tipo_pedido
+      if (data.pedido.tipo && data.pedido.tipo !== "restaurante") return;
+
+      // actualizar badge + acciones
+      aplicarEstadoEnFila({ id: data.pedido.id, estado: data.pedido.estado });
+    }
+
+    if (data.type === "eliminar_pedido" && data.pedido_id) {
+      if (data.accion === "quitar_de_cobros") return;
+      eliminarFilaPedido(data.pedido_id);
+    }
+
+  };
+
+  socket.onclose = () => {
+    wsOk = false;
+    iniciarPolling();
+    reintentarWS();
+  };
+
+  socket.onerror = () => {
+    wsOk = false;
+    iniciarPolling();
+    try { socket.close(); } catch (e) {}
+  };
+}
+
+function reintentarWS() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    conectarWS();
+  }, 2000);
+}
+
+/* =========================
+   SWAL - ELIMINAR (con sync)
+========================= */
 function confirmarEliminacion(id) {
-    Swal.fire({
-        title: "¿Eliminar pedido?",
-        text: "La mesa quedará libre automáticamente.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#C14949",
-        cancelButtonColor: '#4F6D7A',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: "Cancelar",
-        background: "#FFF7F0",
-        iconColor: "#D9A441"
-    }).then((r) => {
+  Swal.fire({
+    title: "¿Eliminar pedido?",
+    text: "La mesa quedará libre automáticamente.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#C14949",
+    cancelButtonColor: "#4F6D7A",
+    confirmButtonText: "Eliminar",
+    cancelButtonText: "Cancelar",
+    background: "#FFF7F0",
+    iconColor: "#D9A441"
+  }).then(async (r) => {
+    if (!r.isConfirmed) return;
 
-        if (!r.isConfirmed) return;
+    try {
+      const res = await fetch(`/pedidos/eliminar/${id}/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }
+      });
+      const data = await res.json();
 
-        fetch(`/pedidos/eliminar/${id}/`, {
-            method: "POST",
-            headers: {"X-CSRFToken": "{{ csrf_token }}"},
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-
-                Swal.fire({
-                    icon: "success",
-                    title: "Éxito",
-                    text: "Pedido eliminado correctamente.",
-                    confirmButtonText: "Aceptar",
-                    confirmButtonColor: "#3E7A3F",
-                    background: "#FFF7F0",
-                    iconColor: "#3E7A3F",
-                }).then(() => {
-                    // QUITAR FILA DE LA TABLA
-                    $(`.estado-pedido[data-id='${id}']`).closest("tr").remove();
-                });
-
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: data.message || "No se pudo eliminar el pedido.",
-                    confirmButtonText: "Aceptar",
-                    confirmButtonColor: "#C14949",
-                    background: "#FFF7F0",
-                    iconColor: "#C14949",
-                });
-            }
+      if (data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Éxito",
+          text: "Pedido eliminado correctamente.",
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0",
+          iconColor: "#3E7A3F"
+        }).then(() => {
+          eliminarFilaPedido(id);
+          actualizarEstados();
         });
-    });
-}
-</script>
-
-<script>
-function actualizarEstados() {
-    $.ajax({
-        url: "{% url 'api_estados_pedidos' %}",
-        type: "GET",
-        success: function(data) {
-
-            data.forEach(p => {
-
-                let fila = $(`.estado-pedido[data-id='${p.id}']`).closest("tr");
-
-                // ACTUALIZAR ESTADO (BADGE)
-                let celdaEstado = fila.find(".estado-pedido");
-                if (p.estado === "en preparacion") {
-                    celdaEstado.html(`<span class="badge bg-warning">En preparación</span>`);
-                }
-                else if (p.estado === "listo") {
-                    celdaEstado.html(`<span class="badge bg-success">Listo</span>`);
-                }
-                else if (p.estado === "finalizado") {
-                    celdaEstado.html(`<span class="badge bg-primary">Finalizado</span>`);
-                }
-
-                // ACTUALIZAR ACCIONES COMPLETAS (EDITAR, ELIMINAR, FINALIZAR)
-                let celdaAcc = fila.find("td:last");
-
-                let acciones = `
-                    <a href="/pedidos/ver/${p.id}/" class="btn btn-info btn-sm me-1">
-                        <i class="fas fa-eye"></i> Ver
-                    </a>
-                `;
-                if (p.estado === "en preparacion") {
-
-                    acciones += `
-                        <a href="/pedidos/editar/${p.id}/" class="btn btn-warning btn-sm me-1">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-
-                        <button class="btn btn-danger btn-sm me-1"
-                                onclick="confirmarEliminacion('${p.id}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    `;
-                }
-
-                if (p.estado === "listo") {
-
-                    acciones += `
-                        <button class="btn btn-fin btn-sm me-1"
-                                onclick="finalizarPedido('${p.id}')">
-                            <i class="fas fa-check"></i> Finalizar
-                        </button>
-                    `;
-                }
-
-                celdaAcc.html(acciones);
-
-                // ACTUALIZAR ESTADO DE LA MESA SIN RECARGAR
-                if (p.mesa_id) {
-                    let filaMesa = $(`#tbl_mesas tbody tr`).filter(function() {
-                        return $(this).find("td:first").text().trim() == p.mesa_id;
-                    });
-
-                    if (filaMesa.length) {
-                        filaMesa.find("td").eq(2).text(p.mesa__estado);
-                    }
-                }
-
-            });
-        }
-    });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "No se pudo eliminar el pedido.",
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#C14949",
+          background: "#FFF7F0",
+          iconColor: "#C14949"
+        });
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo conectar con el servidor.",
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#C14949",
+        background: "#FFF7F0",
+        iconColor: "#C14949"
+      });
+    }
+  });
 }
 
-setInterval(actualizarEstados, 1000);
-</script>
-
-<script>
+/* =========================
+   SWAL - FINALIZAR (con UI inmediata)
+========================= */
 function finalizarPedido(id) {
-    Swal.fire({
-        title: "¿Finalizar pedido?",
-        text: "La mesa quedará libre automáticamente.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#C14949",
-        cancelButtonColor: "#4F6D7A",
-        confirmButtonText: "Sí, finalizar",
-        cancelButtonText: "Cancelar",
-        background: "#FFF7F0",
-        iconColor: "#D9A441"
-    }).then((result) => {
-        if (!result.isConfirmed) return;
+  Swal.fire({
+    title: "¿Finalizar pedido?",
+    text: "La mesa quedará libre automáticamente.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#C14949",
+    cancelButtonColor: "#4F6D7A",
+    confirmButtonText: "Finalizar",
+    cancelButtonText: "Cancelar",
+    background: "#FFF7F0",
+    iconColor: "#D9A441"
+  }).then(async (result) => {
+    if (!result.isConfirmed) return;
 
-        fetch(`/pedidos/finalizar/${id}/`, {
-            method: 'POST',
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}"
-            }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({
-                    icon: "success",
-                    title: "Pedido finalizado",
-                    background: "#FFF7F0",
-                    showConfirmButton: false,
-                    iconColor: "#3E7A3F",
-                    timer: 1800
-                });
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: data.message || "No se pudo finalizar el pedido.",
-                    confirmButtonText: "Aceptar",
-                    confirmButtonColor: "#C14949",
-                    background: "#FFF7F0",
-                    iconColor: "#C14949",
-                });
-            }
+    try {
+      const res = await fetch(`/pedidos/finalizar/${id}/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // ✅ CAMBIO INMEDIATO (sin esperar polling)
+        aplicarEstadoEnFila({ id: id, estado: "finalizado" });
+
+        Swal.fire({
+          icon: "success",
+          title: "Pedido finalizado",
+          background: "#FFF7F0",
+          showConfirmButton: false,
+          iconColor: "#3E7A3F",
+          timer: 1400
         });
-    });
+
+        // luego sincroniza con server por si hay otros cambios
+        actualizarEstados();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "No se pudo finalizar el pedido.",
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#C14949",
+          background: "#FFF7F0",
+          iconColor: "#C14949"
+        });
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo conectar con el servidor.",
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#C14949",
+        background: "#FFF7F0",
+        iconColor: "#C14949"
+      });
+    }
+  });
 }
+
+/* =========================
+   ARRANQUE
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  quitarFilaVacia();
+  conectarWS();
+  actualizarEstados();
+
+  setTimeout(() => {
+    if (!wsOk) iniciarPolling();
+  }, 1500);
+});
 </script>
+
+
 
 <br>
 {% endblock %}

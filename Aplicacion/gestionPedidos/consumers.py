@@ -35,6 +35,8 @@ class PedidosConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "type": "eliminar_pedido",
             "pedido_id": event["pedido_id"],
+            "origen": event.get("origen", ""),
+            "accion": event.get("accion", "")
         }))
 
     async def nuevo_cobro(self, event):
@@ -55,13 +57,6 @@ class PedidosConsumer(AsyncWebsocketConsumer):
             "total": event["total"],
             "estado_pago": event.get("estado_pago", "pendiente"),
             
-        }))
-
-    
-    async def eliminar_pedido(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "eliminar_pedido",
-            "pedido_id": event["pedido_id"]
         }))
 
     async def nuevo_pagado(self, event):
@@ -85,8 +80,6 @@ class PedidosConsumer(AsyncWebsocketConsumer):
 
             "comprobante_url": event.get("comprobante_url", ""),
         }))
-
-
 
 class NotificacionesConsumer(AsyncWebsocketConsumer):
     async def connect(self):

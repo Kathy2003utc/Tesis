@@ -87,9 +87,12 @@
                         </button>
 
                         <button class="btn btn-danger btn-sm"
-                            onclick="eliminarDetalleAjax('{{ det.id }}')">
+                                data-url="{% url 'cajero_eliminar_detalle_ajax' det.id %}"
+                                onclick="eliminarDetalleAjax(this)">
                             <i class="fas fa-trash"></i>
                         </button>
+
+
                     </div>
                 </td>
             </tr>

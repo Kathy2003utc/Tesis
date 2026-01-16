@@ -11,13 +11,6 @@
             color: #000;
         }
 
-        .ticket {
-            max-width: 350px;
-            margin: auto;
-            padding: 15px;
-            /* Sin borde para formato ticket */
-        }
-
         h2 {
             text-align: center;
             font-size: 18px;
@@ -90,6 +83,24 @@
             margin-top: 12px;
             line-height: 1.4;
         }
+
+        @page {
+            size: 148mm 210mm; /* A5 vertical (factura pequeña) */
+            margin: 8mm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            color: #000;
+        }
+
+        .ticket {
+            width: 100%;
+            max-width: none;
+            margin: 0 auto;
+            padding: 10;
+        }
     </style>
 </head>
 
@@ -105,21 +116,19 @@
         Dirección: Barrio Eloy Alfaro
     </div>
 
-    <p class="subtitulo">NOTA DE PEDIDO</p>
+    <p class="subtitulo">NOTA DE VENTA</p>
 
     <div class="info">
         <b>N°:</b> {{ comprobante.numero_comprobante }} <br>
         <b>Fecha:</b> {{ comprobante.fecha_hora|date:"d/m/Y H:i" }} <br>
         <b>Tipo:</b> Restaurante <br>
         <b>Mesa:</b> {{ pedido.mesa.numero|default:"N/A" }} <br>
-        <b>Cliente:</b> Consumidor final <br>
-        <b>Cajero:</b> 
-        {% if pedido.cajero %}
-            {{ pedido.cajero.nombre }} {{ pedido.cajero.apellido }}
+        {% if pedido.total >= 50 %}
+        <b>Cliente:</b> {{ comprobante.nombre_cliente|default:"(SIN NOMBRE)" }} <br>
+        <b>Dirección:</b> {{ comprobante.direccion_cliente|default:"(SIN DIRECCIÓN)" }} <br>
         {% else %}
-            No asignado
+        <b>Cliente:</b> Consumidor final <br>
         {% endif %}
-        <br>
     </div>
 
     <hr>

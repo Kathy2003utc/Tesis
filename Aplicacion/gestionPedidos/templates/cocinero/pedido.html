@@ -3,8 +3,6 @@
 
 {% block contenido %}
 
-<br>
-
 <style>
     :root {
         --cafe-oscuro: #b4764f;
@@ -29,28 +27,18 @@
         --cafe-crema: #F0E1CA;
 
         --verde-profundo: #2E5F32;
-        --verde-oliva: #5E7A43;
-        --verde-menta: #A6D5A1;
-        --verde-musgo: #507B4C;
 
         --crema-suave: #FAF4EC;
-        --gris-claro-calido: #D8D3CC;
-        --gris-medio-calido: #B8B1A8;
         --gris-oscuro-calido: #4A3F38;
 
         --azul-pizarra: #4F6D7A;
-        --azul-gris: #7A8C99;
 
-        --exito: #4F8A57;
-        --exito-suave: #D9F2D6;
-        --info: #6A93B0;
         --info-suave: #DDE9F2;
         --advertencia: #D9A441;
         --advertencia-suave: #FFF5DA;
     }
 
-    html,
-    body {
+    html, body {
         height: 100%;
         margin: 0;
         overflow-x: hidden;
@@ -68,17 +56,11 @@
     }
 
     @media (min-width: 768px) {
-        .main-content-wrapper {
-            padding-left: 40px;
-            padding-right: 40px;
-        }
+        .main-content-wrapper { padding-left: 40px; padding-right: 40px; }
     }
 
     @media (min-width: 1200px) {
-        .main-content-wrapper {
-            padding-left: 80px;
-            padding-right: 80px;
-        }
+        .main-content-wrapper { padding-left: 80px; padding-right: 80px; }
     }
 
     .content-card {
@@ -94,132 +76,195 @@
         color: var(--cafe-profundo);
         font-weight: 800;
         text-align: center;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
         text-shadow: 1px 1px 2px #ffffff80;
     }
 
-    .content-subtitle {
-        text-align: center;
-        color: var(--gris-oscuro-calido);
-        font-size: 0.95rem;
-        margin-bottom: 18px;
+    .pedidos-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
     }
 
-    /* Tarjetas de pedidos */
     .pedido-card {
+        width: 100%;
         background: var(--blanco-calido);
         border-radius: 18px;
         border: 1px solid var(--gris-suave);
+        border-left: 7px solid #B8B1A8;
         box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10);
-        padding: 20px 22px 18px 22px;
-        transition: all 0.3s ease;
+        padding: 14px 14px 12px 14px;
+        transition: all 0.2s ease;
         position: relative;
-        min-height: 230px;
     }
 
     .pedido-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-2px);
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
         border-color: var(--cafe-medio);
         background: var(--crema-suave);
     }
 
-    .pedido-restaurante {
-        border-left: 5px solid var(--verde-profundo);
+    .pedido-card.estado-nuevo {
+        border-left-color: var(--verde-profundo);
+        box-shadow: 0 8px 18px rgba(46, 95, 50, 0.14);
     }
 
-    .pedido-domicilio {
-        border-left: 5px solid var(--azul-pizarra);
+    .pedido-card.estado-preparacion {
+        border-left-color: var(--advertencia);
+        box-shadow: 0 8px 18px rgba(217, 164, 65, 0.18);
     }
 
-    /* Cabecera de la tarjeta */
-    .pedido-header {
+    .badge-estado {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        border: 1px solid transparent;
+        background: var(--advertencia-suave);
+        color: #7A4F00;
+        border-color: var(--advertencia);
+    }
+
+    /* ===============================
+       FILA ÚNICA: encabezado + productos (MISMA LÍNEA)
+    ================================ */
+    .pedido-topline{
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--gris-suave);
     }
 
-    .badge-codigo {
-        background: var(--cafe-profundo);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .badge-mesa {
-        background: var(--verde-profundo);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .pedido-domicilio .badge-mesa {
-        background: var(--azul-pizarra);
-    }
-
-    .texto-mesero {
-        margin-bottom: 10px;
-        color: var(--gris-oscuro-calido);
-    }
-
-    /* Lista de productos */
-    .lista-productos {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        text-align: left;
-    }
-
-    .lista-productos li {
-        margin-bottom: 8px;
-        border-bottom: 1px dashed var(--gris-suave);
-        padding-bottom: 6px;
-    }
-
-    .linea-producto {
+    .pedido-meta{
         display: flex;
-        align-items: center;
+        flex-wrap: wrap;
         gap: 10px;
+        align-items: center;
+        min-width: 320px;
     }
 
-    .qty {
-        font-weight: 800;
-        font-size: 1rem;
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+    }
+
+    .pill-codigo { background: var(--cafe-profundo); }
+    .pill-tipo { background: var(--azul-pizarra); }
+    .pill-mesa { background: var(--verde-profundo); }
+
+    /* Productos pegados al header */
+    .pedido-productos-inline{
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 18px; /* antes 14px (mejor lectura) */
+        min-width: 280px;
+    }
+
+    .prod-inline{
+        display: inline-flex;
+        align-items: baseline;
+        gap: 12px; /* antes 10px */
+        white-space: nowrap;
+    }
+
+    /* ===============================
+       MEJOR VISUALIZACIÓN COCINA
+       - Productos más grandes (para verse lejos)
+    ================================ */
+    .qty{
+        font-size: 1.15rem;
+        font-weight: 900;
         color: var(--cafe-profundo);
-        min-width: 36px;
+        min-width: 30px;
         text-align: right;
     }
 
-    .nombre {
-        font-weight: 600;
-        font-size: 0.98rem;
+    .nombre{
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: var(--texto-oscuro);
     }
 
-    .nota {
-        font-size: 0.85rem;
+    .obs{
+        font-size: 1.10rem;
+        font-weight: 700;
         color: var(--gris-oscuro-calido);
-        margin-left: 46px;
     }
 
-    /* Botón Listo */
+    /* En móvil: si no cabe, que baje */
+    @media (max-width: 768px){
+        .pedido-topline{
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .pedido-meta{
+            min-width: auto;
+        }
+        .pedido-productos-inline{
+            width: 100%;
+        }
+        .prod-inline{
+            white-space: normal;
+        }
+    }
+
+    /* ===============================
+       Botones más pequeños
+    ================================ */
     .btn-marcar-listo.btn-success {
         background-color: var(--verde-profundo) !important;
         border-color: var(--verde-profundo) !important;
-        padding: 8px 16px;
-        border-radius: 10px;
-        font-weight: 600;
-        transition: 0.3s;
+        padding: 6px 12px;     /* antes 8px 16px */
+        border-radius: 9px;    /* antes 10px */
+        font-weight: 700;
+        font-size: 1.2rem;
+        transition: 0.2s;
     }
 
     .btn-marcar-listo.btn-success:hover {
         background-color: var(--verde) !important;
+    }
+
+    .btn-preparacion.btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: #fff !important;
+        padding: 6px 12px;     /* antes 8px 14px */
+        border-radius: 9px;
+        font-weight: 800;
+        font-size: 1.2rem;
+        transition: .2s;
+    }
+
+    .btn-preparacion.btn-warning:hover {
+        filter: brightness(0.95);
+    }
+
+    /* reduce el espacio del contenedor de botones */
+    .pedido-card .mt-3{
+        margin-top: 10px !important;
+    }
+
+    /* En pantallas grandes (TV/monitor lejos) aumenta un poquito más */
+    @media (min-width: 992px){
+        .qty{ font-size: 1.25rem; }
+        .nombre{ font-size: 1.25rem; }
+        .obs{ font-size: 1.18rem; }
     }
 
     /* Botón flotante */
@@ -248,70 +293,13 @@
         transform: translateY(-3px);
     }
 
-    /* Formulario flotante */
-    .form-flotante {
-        position: fixed;
-        bottom: 100px;
-        right: 30px;
-        width: 360px;
-        background: var(--blanco-calido);
-        border-radius: 14px;
-        padding: 18px 20px;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
-        z-index: 999;
-        transition: .3s;
-        border: 1px solid var(--cafe-avellana);
-    }
 
-    .form-flotante.oculto {
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(20px);
-    }
-
-    .form-flotante h4 {
-        color: var(--cafe-profundo);
-        font-weight: 700;
-    }
-
-    .form-flotante .form-label {
-        font-weight: 600;
-        color: var(--texto-oscuro);
-    }
-
-    .form-flotante .form-control {
-        border-radius: 10px;
-        border: 1px solid var(--gris-suave);
-    }
-
-    .form-flotante .btn-secondary {
-        background-color: var(--rojo-alerta);
-        border-color: var(--rojo-alerta);
-        border-radius: 10px;
-        font-weight: 600;
-    }
-
-    .form-flotante .btn-primary {
-        background-color: var(--verde-profundo);
-        border-color: var(--verde-profundo);
-        border-radius: 10px;
-        font-weight: 600;
-    }
-
-    .form-flotante .btn-primary:hover {
-        background-color: var(--verde);
-    }
-
-    /* Animación desaparecer tarjeta */
     .pedido-fade-out {
         animation: desaparecer .5s ease forwards;
     }
 
     @keyframes desaparecer {
-        from {
-            opacity: 1;
-        }
-
+        from { opacity: 1; }
         to {
             opacity: 0;
             transform: translateY(-20px);
@@ -320,151 +308,300 @@
             margin: 0;
         }
     }
+
+    /* ===============================
+       PRODUCTOS ORDENADOS (CHIPS)
+       - Cada producto queda en UNA sola línea
+       - Se acomodan en filas sin desorden
+       - No se parte qty/nombre/obs
+    =============================== */
+
+    .pedido-productos-inline{
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        justify-content: flex-start;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .prod-inline{
+        display: inline-flex !important;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+        padding: 6px 10px;
+        border-radius: 12px;
+        background: rgba(240,225,202,.55);
+        border: 1px solid rgba(166,110,74,.20);
+    }
+
+    /* cantidad más visible y alineada */
+    .qty{
+        font-size: 1.18rem;
+        font-weight: 900;
+        color: var(--cafe-profundo);
+        min-width: 36px;
+        text-align: right;
+    }
+
+    .nombre{
+        font-size: 1.18rem;
+        font-weight: 900;
+        color: var(--texto-oscuro);
+    }
+
+    .obs{
+        font-size: 1.10rem;
+        font-weight: 700;
+        color: var(--gris-oscuro-calido);
+    }
+
+    @media (min-width: 992px){
+        .qty{ font-size: 1.28rem; }
+        .nombre{ font-size: 1.28rem; }
+        .obs{ font-size: 1.18rem; }
+    }
+
+    @media (max-width: 768px){
+        .prod-inline{ white-space: normal; }
+    }
+
+    /* ==========================================================
+       AGREGADO: MÁS ANCHO + PILLS MÁS GRANDES (SIN CAMBIAR LO DEMÁS)
+       (Esto VA AL FINAL para sobrescribir lo anterior)
+    ========================================================== */
+
+    /* MÁS ANCHO ÚTIL: quita límite del .container de Bootstrap */
+    .main-content-wrapper .container{
+        max-width: 1800px !important;
+    }
+    @media (min-width: 1400px){
+        .main-content-wrapper .container{
+            max-width: 98vw !important;
+        }
+    }
+
+    /* Card grande: reduce padding lateral para ganar espacio */
+    .content-card{
+        width: 100%;
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+    @media (min-width: 1200px){
+        .content-card{
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+    }
+
+    /* Al quitar mesero/cajero, compacta meta */
+    .pedido-meta{
+        min-width: auto !important;
+        flex: 0 0 auto;
+    }
+
+    /* Pills más grandes (Código / Domicilio / Mesa) */
+    .pill{
+        font-size: 1.05rem;
+        padding: 7px 14px;
+        font-weight: 900;
+        letter-spacing: .2px;
+    }
+
+    /* Badge “En preparación” más grande */
+    .badge-estado{
+        font-size: 0.95rem;
+        padding: 6px 12px;
+        font-weight: 900;
+    }
+
+    /* Chips un poco más compactos para que entren MÁS por línea */
+    .prod-inline{
+        padding: 5px 8px;
+        gap: 8px;
+    }
+    .pedido-productos-inline{
+        gap: 8px 12px;
+    }
+
+    /* Un poquito menos separación meta-productos */
+    .pedido-topline{
+        gap: 10px;
+    }
 </style>
+
 
 <div class="main-content-wrapper">
     <div class="container mt-4">
 
-        <!-- ========================= SECCIÓN RESTAURANTE ========================= -->
         <div class="content-card">
-            <h2>Pedidos del restaurante</h2>
-            <p class="content-subtitle">
-                Aquí se muestran los pedidos realizados en mesas dentro del local.
-            </p>
 
-            <div id="pedidos-restaurante" class="row g-4">
+            <div id="pedidos-cocina" class="pedidos-lista">
+
                 {% for pedido in pedidos_restaurante %}
-                <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-{{ pedido.id }}">
-                    <div class="pedido-card pedido-restaurante card">
-                        <div class="pedido-header">
-                            <span class="badge-codigo">Código: {{ pedido.codigo_pedido }}</span>
-                            <span class="badge-mesa">Mesa {{ pedido.mesa.numero }}</span>
-                        </div>
+                <div id="pedido-{{ pedido.id }}" data-pedido-id="{{ pedido.id }}">
+                    <div class="pedido-card
+                        {% if pedido.estado == 'en preparacion' %}estado-preparacion{% else %}estado-nuevo{% endif %}">
 
-                        <p class="texto-mesero">
-                            Mesero: <strong>{{ pedido.mesero.nombre }}</strong>
-                        </p>
+                        {% if pedido.estado != 'en preparacion' %}
+                            <span class="badge-estado">En preparación</span>
+                        {% endif %}
 
-                        <ul class="lista-productos">
-                            {% for d in pedido.detalles.all %}
-                            <li>
-                                <div class="linea-producto">
+                        <div class="pedido-topline">
+                            <div class="pedido-meta">
+                                <span class="pill pill-codigo">Código: {{ pedido.codigo_pedido }}</span>
+                                <span class="pill pill-mesa">Mesa {{ pedido.mesa.numero }}</span>
+                            </div>
+
+                            <div class="pedido-productos-inline">
+                                {% for d in pedido.detalles.all %}
+                                <span class="prod-inline">
                                     <span class="qty">{{ d.cantidad }}x</span>
                                     <span class="nombre">{{ d.producto.nombre }}</span>
-                                </div>
-                                <div class="nota">
-                                    {{ d.observacion|default:"Sin observación" }}
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                                    <span class="obs">- {{ d.observacion|default:"Sin observación" }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
 
-                        <div class="text-end mt-2">
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            {% if pedido.estado != 'en preparacion' %}
+                            <button class="btn btn-warning btn-preparacion btn-marcar-preparacion"
+                                    data-pedido-id="{{ pedido.id }}">
+                                En preparación
+                            </button>
+                            {% endif %}
+
                             <button class="btn btn-success btn-marcar-listo" data-pedido-id="{{ pedido.id }}">
                                 Listo
                             </button>
                         </div>
                     </div>
                 </div>
-                {% empty %}
-                <div class="col-12 text-center text-muted">
-                </div>
                 {% endfor %}
-            </div>
-        </div>
 
-        <!-- ========================= SECCIÓN DOMICILIO ========================= -->
-        <div class="content-card">
-            <h2>Pedidos a domicilio</h2>
-            <p class="content-subtitle">
-                Pedidos generados para envío a domicilio, listos para ser preparados.
-            </p>
 
-            <div id="pedidos-domicilio" class="row g-4">
                 {% for pedido in pedidos_domicilio %}
-                <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-{{ pedido.id }}">
-                    <div class="pedido-card pedido-domicilio card">
-                        <div class="pedido-header">
-                            <span class="badge-codigo">Código: {{ pedido.codigo_pedido }}</span>
-                            <span class="badge-mesa">Domicilio</span>
-                        </div>
+                <div id="pedido-{{ pedido.id }}">
+                    <div class="pedido-card
+                        {% if pedido.estado == 'EN_PREPARACION' %}estado-preparacion{% else %}estado-nuevo{% endif %}">
 
-                        <p class="texto-mesero">
-                            Cajero: <strong>{{ pedido.cajero.nombre }}</strong>
-                        </p>
+                        {% if pedido.estado == 'EN_PREPARACION' %}
+                            <span class="badge-estado">En preparación</span>
+                        {% endif %}
 
-                        <ul class="lista-productos">
-                            {% for d in pedido.detalles.all %}
-                            <li>
-                                <div class="linea-producto">
+                        <div class="pedido-topline">
+                            <div class="pedido-meta">
+                                <span class="pill pill-codigo">Código: {{ pedido.codigo_pedido }}</span>
+                                <span class="pill pill-tipo">Domicilio</span>
+                            </div>
+
+                            <div class="pedido-productos-inline">
+                                {% for d in pedido.detalles.all %}
+                                <span class="prod-inline">
                                     <span class="qty">{{ d.cantidad }}x</span>
                                     <span class="nombre">{{ d.producto.nombre }}</span>
-                                </div>
-                                <div class="nota">
-                                    {{ d.observacion|default:"Sin observación" }}
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                                    <span class="obs">- {{ d.observacion|default:"Sin observación" }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
 
-                        <div class="text-end mt-2">
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            {% if pedido.estado != 'EN_PREPARACION' %}
+                            <button class="btn btn-warning btn-preparacion btn-marcar-preparacion"
+                                    data-pedido-id="{{ pedido.id }}">
+                                En preparación
+                            </button>
+                            {% endif %}
+
                             <button class="btn btn-success btn-marcar-listo" data-pedido-id="{{ pedido.id }}">
                                 Listo
                             </button>
                         </div>
                     </div>
                 </div>
-                {% empty %}
-                <div class="col-12 text-center text-muted">
-                </div>
                 {% endfor %}
+
             </div>
         </div>
 
     </div>
 </div>
 
-<!-- BOTÓN FLOTANTE -->
-<button id="btnAbrirMensaje" class="btn-flotante">
+<button id="btnAbrirMensaje" class="btn-flotante" type="button">
     <i class="fas fa-comments"></i>
 </button>
 
-<!-- FORMULARIO FLOTANTE -->
-<div id="formMensaje" class="form-flotante oculto">
-    <div class="form-contenido">
-        <h4 class="mb-3">Enviar mensaje</h4>
 
-        <label class="form-label">Enviar a:</label>
-        <select id="destinoTipo" class="form-control mb-3">
-            <option value="mesero">Mesero</option>
-            <option value="cajero">Cajero</option>
-        </select>
+<div class="modal fade" id="modalNoHay" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content" style="border-radius: 16px; border: 1px solid var(--cafe-avellana);">
+      <div class="modal-header" style="background: var(--cafe-crema);">
+        <h5 class="modal-title" style="font-weight: 900; color: var(--cafe-profundo);">
+          Reportar producto
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
 
-        <label class="form-label">Seleccione destinatario:</label>
-        <select id="destinoUsuario" class="form-control mb-3"></select>
-
-        <label class="form-label">Mensaje:</label>
-        <textarea id="mensajeTexto" class="form-control mb-3" rows="3"></textarea>
-
-        <div class="text-end">
-            <button class="btn btn-secondary" id="btnCerrarMensaje">Cancelar</button>
-            <button class="btn btn-primary" id="btnEnviarMensaje">Enviar</button>
+      <div class="modal-body" style="background: var(--blanco-calido);">
+        <div class="mb-3">
+          <input id="buscarProducto" type="text" class="form-control"
+                 placeholder="Buscar producto..."
+                 style="border-radius: 12px;">
         </div>
+
+        <div class="list-group" id="listaProductosNoHay">
+          {% for p in productos_menu %}
+            <div class="list-group-item d-flex align-items-center justify-content-between"
+                 style="border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--gris-suave);">
+
+              <div class="me-3" style="min-width: 0;">
+                <div class="prod-nombre" style="font-weight: 900; font-size: 1.05rem; color: var(--texto-oscuro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  {{ p.nombre }}
+                </div>
+                <div style="font-size: .92rem; color: var(--gris-oscuro-calido); font-weight: 700;">
+                  Presiona NO para avisar que se agotó
+                </div>
+              </div>
+
+              {% if p.agotado_hoy %}
+                <button class="btn btn-sm"
+                        type="button"
+                        disabled
+                        style="background: #6c757d; border-color: #6c757d; color: #fff; font-weight: 900; border-radius: 10px; min-width: 90px; cursor:not-allowed; opacity:.9;">
+                    Enviado
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-nohay"
+                        type="button"
+                        data-producto-id="{{ p.id }}"
+                        data-producto-nombre="{{ p.nombre|escapejs }}"
+                        style="background: var(--rojo-alerta); border-color: var(--rojo-alerta); color: #fff; font-weight: 900; border-radius: 10px; min-width: 70px;">
+                    NO
+                </button>
+                {% endif %}
+
+            </div>
+          {% empty %}
+            <div class="alert alert-warning" style="border-radius: 12px;">
+              No hay productos en el menú.
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background: var(--crema-suave);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                style="background: var(--gris-oscuro-calido); border-color: var(--gris-oscuro-calido); border-radius: 10px; font-weight: 800;">
+          Cerrar
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- SELECTS OCULTOS SOLO PARA CARGAR OPCIONES -->
-<select id="meserosHidden" class="d-none">
-    {% for m in meseros %}
-    <option value="{{ m.id }}">{{ m.nombre }} {{ m.apellido }}</option>
-    {% endfor %}
-</select>
-
-<select id="cajerosHidden" class="d-none">
-    {% for c in cajeros %}
-    <option value="{{ c.id }}">{{ c.nombre }} {{ c.apellido }}</option>
-    {% endfor %}
-</select>
 
 <meta name="csrf-token" content="{{ csrf_token }}">
 
@@ -479,87 +616,136 @@
     socket.onmessage = (e) => {
         const data = JSON.parse(e.data);
 
-        // ========== NUEVO PEDIDO ==========
         if (data.type === "nuevo_pedido") {
             const html = generarCard(data.pedido);
-
-            let contenedor = data.pedido.mesa
-                ? document.getElementById("pedidos-restaurante")
-                : document.getElementById("pedidos-domicilio");
-
-            contenedor.insertAdjacentHTML("afterbegin", html);
+            insertarPedidoOrdenado(html, data.pedido.id);
         }
 
-        // ========== ACTUALIZAR PEDIDO ==========
+
         if (data.type === "actualizar_pedido") {
-            const p = data.pedido;
+        const p = data.pedido;
 
-            // 1) quitar tarjeta anterior
-            const viejo = document.getElementById(`pedido-${p.id}`);
-            if (viejo) {
-                viejo.remove();
-            }
+        const estadoNorm = (p.estado || "").toString().toLowerCase();
 
-            // 2) insertar tarjeta actualizada
-            let contenedor = p.mesa
-                ? document.getElementById("pedidos-restaurante")
-                : document.getElementById("pedidos-domicilio");
-
-            contenedor.insertAdjacentHTML("afterbegin", generarCard(p));
-        }
-
-        // ========== ELIMINAR PEDIDO ==========
-        if (data.type === "eliminar_pedido") {
-            const col = document.getElementById(`pedido-${data.pedido_id}`);
-            if (col) {
-                const card = col.querySelector(".pedido-card");
+        // estados que YA NO deben verse en cocina
+        if (estadoNorm === "listo" || estadoNorm === "finalizado") {
+            const wrap = document.getElementById(`pedido-${p.id}`);
+            if (wrap) {
+                const card = wrap.querySelector(".pedido-card");
                 if (card) {
                     card.classList.add("pedido-fade-out");
-                    setTimeout(() => col.remove(), 500);
+                    setTimeout(() => wrap.remove(), 500);
                 } else {
-                    col.remove();
+                    wrap.remove();
+                }
+            }
+            return; // importante: NO re-render
+        }
+
+        // si sigue activo, se actualiza normal
+        const viejo = document.getElementById(`pedido-${p.id}`);
+        if (viejo) viejo.remove();
+
+        const html = generarCard(p);
+        insertarPedidoOrdenado(html, p.id);
+    }
+
+
+        if (data.type === "eliminar_pedido") {
+            const wrap = document.getElementById(`pedido-${data.pedido_id}`);
+            if (wrap) {
+                const card = wrap.querySelector(".pedido-card");
+                if (card) {
+                    card.classList.add("pedido-fade-out");
+                    setTimeout(() => wrap.remove(), 500);
+                } else {
+                    wrap.remove();
                 }
             }
         }
     };
 
+    // ===============================
+    // INSERTAR EN ORDEN ASC (viejo arriba)
+    // ===============================
+    function insertarPedidoOrdenado(html, pedidoId) {
+        const contenedor = document.getElementById("pedidos-cocina");
+
+        const temp = document.createElement("div");
+        temp.innerHTML = html.trim();
+        const nuevo = temp.firstElementChild;
+
+        if (!nuevo) return;
+
+        // guarda el id en el wrapper
+        nuevo.setAttribute("data-pedido-id", pedidoId);
+
+        const items = Array.from(contenedor.children);
+
+        // inserta antes del primero que tenga id mayor
+        const antesDe = items.find(el => {
+            const idExistente = parseInt(el.getAttribute("data-pedido-id") || "0", 10);
+            return idExistente > pedidoId;
+        });
+
+        if (antesDe) contenedor.insertBefore(nuevo, antesDe);
+        else contenedor.appendChild(nuevo);
+    }
+
+
     function generarCard(p) {
         const esRestaurante = !!p.mesa;
-        const claseTipo = esRestaurante ? "pedido-restaurante" : "pedido-domicilio";
-        const etiquetaTipo = esRestaurante ? `Mesa ${p.mesa}` : "Domicilio";
-        const textoAtendio = esRestaurante
-            ? `Mesero: <strong>${p.mesero}</strong>`
-            : `Cajero: <strong>${p.cajero || ""}</strong>`;
+
+        const pillLugar = esRestaurante
+            ? `<span class="pill pill-mesa">Mesa ${p.mesa}</span>`
+            : `<span class="pill pill-tipo">Domicilio</span>`;
+
+        // Normaliza estado para soportar: "en preparacion", "EN_PREPARACION", "listo", "LISTO"
+        const estadoNorm = (p.estado || "").toString().toLowerCase();
+
+        const esPreparacion = (estadoNorm === "en preparacion" || estadoNorm === "en_preparacion");
+        const esListo = (estadoNorm === "listo");
+
+        const claseEstado = esPreparacion ? "estado-preparacion" : "estado-nuevo";
+        const badgeEstado = esPreparacion ? `<span class="badge-estado">En preparación</span>` : ``;
+
+        // Solo mostrar botón "En preparación" si NO está en preparación y NO está listo
+        const btnPreparacion = (!esPreparacion && !esListo) ? `
+            <button class="btn btn-warning btn-preparacion btn-marcar-preparacion" data-pedido-id="${p.id}">
+                En preparación
+            </button>
+        ` : "";
+
+        const productosHtml = (p.productos || []).map(x => {
+            const obs = (x.observacion && x.observacion.trim()) ? x.observacion : "Sin observación";
+            return `
+                <span class="prod-inline">
+                    <span class="qty">${x.cantidad}x</span>
+                    <span class="nombre">${x.nombre}</span>
+                    <span class="obs">- ${obs}</span>
+                </span>
+            `;
+        }).join("");
 
         return `
-            <div class="col-lg-6 col-md-6 col-sm-12" id="pedido-${p.id}">
-                <div class="pedido-card ${claseTipo} card">
-                    <div class="pedido-header">
-                        <span class="badge-codigo">Código: ${p.codigo_pedido || p.id}</span>
-                        <span class="badge-mesa">${etiquetaTipo}</span>
+            <div id="pedido-${p.id}" data-pedido-id="${p.id}">
+                <div class="pedido-card ${claseEstado}">
+                    ${badgeEstado}
+
+                    <div class="pedido-topline">
+                        <div class="pedido-meta">
+                            <span class="pill pill-codigo">Código: ${p.codigo_pedido || p.id}</span>
+                            ${pillLugar}
+                        </div>
+
+                        <div class="pedido-productos-inline">
+                            ${productosHtml}
+                        </div>
                     </div>
 
-                    <p class="texto-mesero">
-                        ${textoAtendio}
-                    </p>
-
-                    <ul class="lista-productos">
-                        ${p.productos.map(x => `
-                            <li>
-                                <div class="linea-producto">
-                                    <span class="qty">${x.cantidad}x</span>
-                                    <span class="nombre">${x.nombre}</span>
-                                </div>
-                                <div class="nota">
-                                    ${x.observacion || "Sin observación"}
-                                </div>
-                            </li>
-                        `).join("")}
-                    </ul>
-
-                    <div class="text-end mt-2">
-                        <button class="btn btn-success btn-marcar-listo"
-                                data-pedido-id="${p.id}">
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        ${btnPreparacion}
+                        <button class="btn btn-success btn-marcar-listo" data-pedido-id="${p.id}">
                             Listo
                         </button>
                     </div>
@@ -568,11 +754,11 @@
         `;
     }
 
-
     document.addEventListener("click", function (e) {
-        if (!e.target.classList.contains("btn-marcar-listo")) return;
+        const btnListo = e.target.closest(".btn-marcar-listo");
+        if (!btnListo) return;
 
-        let btn = e.target;
+        let btn = btnListo;
         let pedidoId = btn.dataset.pedidoId;
 
         btn.disabled = true;
@@ -585,34 +771,233 @@
                 "Content-Type": "application/json"
             }
         })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                btn.innerText = "Listo";
+                btn.classList.replace("btn-success", "btn-secondary");
+
+                let wrap = document.getElementById(`pedido-${pedidoId}`);
+                const card = btn.closest(".pedido-card");
+                if (card) {
+                    card.classList.add("pedido-fade-out");
+                    setTimeout(() => wrap && wrap.remove(), 500);
+                } else {
+                    wrap && wrap.remove();
+                }
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Pedido listo",
+                    text: "El pedido fue marcado como listo.",
+                    timer: 1600,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+            } else {
+                btn.disabled = false;
+                btn.innerText = "Listo";
+
+                Swal.fire({
+                    icon: "error",
+                    title: "No se pudo actualizar",
+                    text: data.mensaje || "Ocurrió un error al marcar el pedido como listo.",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949"
+                });
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerText = "Listo";
+
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: "No se pudo contactar con el servidor.",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949"
+            });
+        });
+    });
+
+    document.addEventListener("click", function (e) {
+        const btnPrep = e.target.closest(".btn-marcar-preparacion");
+        if (!btnPrep) return;
+
+        const pedidoId = btnPrep.dataset.pedidoId;
+
+        btnPrep.disabled = true;
+        btnPrep.innerText = "Procesando...";
+
+        fetch(`/pedido/${pedidoId}/preparacion/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCSRFToken(),
+                "Content-Type": "application/json"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const card = btnPrep.closest(".pedido-card");
+                card.classList.remove("estado-nuevo");
+                card.classList.add("estado-preparacion");
+
+                let badge = card.querySelector(".badge-estado");
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "badge-estado";
+                    badge.textContent = "En preparación";
+                    card.appendChild(badge);
+                } else {
+                    badge.textContent = "En preparación";
+                }
+
+                btnPrep.remove();
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Marcado en preparación",
+                    text: "El pedido fue marcado como en preparación.",
+                    timer: 1400,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+
+            } else {
+                btnPrep.disabled = false;
+                btnPrep.innerText = "En preparación";
+
+                Swal.fire({
+                    icon: "info",
+                    title: "Pedido en preparación",
+                    text: data.mensaje || "Este pedido ya está siendo preparado.",
+                    timer: 1600,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#D9A441"
+                });
+
+            }
+        })
+        .catch(() => {
+            btnPrep.disabled = false;
+            btnPrep.innerText = "En preparación";
+
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: "No se pudo contactar con el servidor.",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949"
+            });
+        });
+    });
+
+    // ===============================
+    // MODAL "NO HAY PRODUCTOS" (lista + buscar + enviar)
+    // ===============================
+
+    // Abrir modal desde el botón flotante
+    const btnAbrirMensaje = document.getElementById("btnAbrirMensaje");
+    btnAbrirMensaje.addEventListener("click", () => {
+        const modalEl = document.getElementById("modalNoHay");
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        const buscador = document.getElementById("buscarProducto");
+        if (buscador) buscador.value = "";
+        filtrarProductos("");
+    });
+
+    // Filtro de búsqueda
+    const buscarProducto = document.getElementById("buscarProducto");
+    if (buscarProducto) {
+        buscarProducto.addEventListener("input", function () {
+            filtrarProductos(this.value);
+        });
+    }
+
+    function filtrarProductos(texto) {
+        const q = (texto || "").toLowerCase().trim();
+        const items = document.querySelectorAll("#listaProductosNoHay .list-group-item");
+        items.forEach(it => {
+            const nombreEl = it.querySelector(".prod-nombre");
+            const nombre = (nombreEl ? nombreEl.textContent : "").toLowerCase();
+            it.style.display = nombre.includes(q) ? "" : "none";
+        });
+    }
+
+    // Click en botón NO
+    document.addEventListener("click", function (e) {
+        const btn = e.target.closest(".btn-nohay");
+        if (!btn) return;
+
+        const productoId = btn.dataset.productoId;
+        const productoNombre = btn.dataset.productoNombre;
+
+        Swal.fire({
+            icon: "warning",
+            title: "Confirmar",
+            text: `¿Enviar aviso de que no hay "${productoNombre}" a meseros y cajeros?`,
+            showCancelButton: true,
+            confirmButtonText: "Enviar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#C14949",
+            cancelButtonColor: "#4A3F38",
+            background: "#FFF7F0"
+        }).then((res) => {
+            if (!res.isConfirmed) return;
+
+            btn.disabled = true;
+            const oldText = btn.textContent;
+            btn.textContent = "Enviando...";
+
+            fetch("/cocina/no-hay-producto/", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "X-CSRFToken": getCSRFToken(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ producto_id: productoId })
+            })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    btn.innerText = "Listo";
-                    btn.classList.replace("btn-success", "btn-secondary");
-
-                    let card = btn.closest(".pedido-card");
-                    card.classList.add("pedido-fade-out");
-                    setTimeout(() => card.parentElement.remove(), 500);
-
                     Swal.fire({
                         icon: "success",
-                        title: "Pedido listo",
-                        text: "El pedido fue marcado como listo.",
+                        title: "Aviso enviado",
+                        text: data.mensaje || "Se notificó a meseros y cajeros.",
                         timer: 1600,
                         showConfirmButton: false,
                         background: "#FFF7F0",
                         iconColor: "#3E7A3F"
                     });
 
+                    btn.textContent = "Enviado";
+                    btn.disabled = true;
+                    btn.classList.remove("btn-nohay");
+                    btn.style.background = "#6c757d";
+                    btn.style.borderColor = "#6c757d";
+                    btn.style.cursor = "not-allowed";
+                    btn.style.opacity = ".9";
+
+
                 } else {
                     btn.disabled = false;
-                    btn.innerText = "Listo";
+                    btn.textContent = oldText;
 
                     Swal.fire({
                         icon: "error",
-                        title: "No se pudo actualizar",
-                        text: data.mensaje || "Ocurrió un error al marcar el pedido como listo.",
+                        title: "Error",
+                        text: data.mensaje || "No se pudo enviar el aviso.",
                         background: "#FFF7F0",
                         confirmButtonText: "Aceptar",
                         confirmButtonColor: "#C14949"
@@ -621,7 +1006,7 @@
             })
             .catch(() => {
                 btn.disabled = false;
-                btn.innerText = "Listo";
+                btn.textContent = oldText;
 
                 Swal.fire({
                     icon: "error",
@@ -632,104 +1017,10 @@
                     confirmButtonColor: "#C14949"
                 });
             });
-
+        });
     });
 
-    const btnAbrirMensaje = document.getElementById("btnAbrirMensaje");
-    const formMensaje = document.getElementById("formMensaje");
-    const btnCerrarMensaje = document.getElementById("btnCerrarMensaje");
-    const btnEnviarMensaje = document.getElementById("btnEnviarMensaje");
-
-    btnAbrirMensaje.onclick = () => formMensaje.classList.remove("oculto");
-    btnCerrarMensaje.onclick = () => formMensaje.classList.add("oculto");
-
-    btnEnviarMensaje.onclick = () => {
-        const tipo = document.getElementById("destinoTipo").value;
-        const usuarioId = document.getElementById("destinoUsuario").value;
-        const mensaje = document.getElementById("mensajeTexto").value.trim();
-
-        if (!mensaje) {
-            Swal.fire({
-                icon: "warning",
-                title: "Mensaje vacío",
-                text: "Escribe un mensaje antes de enviarlo.",
-                background: "#FFF7F0",
-                confirmButtonText: "Aceptar",
-                confirmButtonColor: "#D9A441"
-            });
-            return;
-        }
-
-        fetch("/cocina/enviar-mensaje/", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-                "X-CSRFToken": getCSRFToken(),
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                tipo_destino: tipo,
-                usuario_id: usuarioId,
-                mensaje: mensaje
-            })
-        })
-
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        icon: "success",
-                        title: "Mensaje enviado",
-                        text: "Tu mensaje fue enviado correctamente.",
-                        timer: 1600,
-                        showConfirmButton: false,
-                        background: "#FFF7F0",
-                        iconColor: "#3E7A3F"
-                    });
-
-                    document.getElementById("mensajeTexto").value = "";
-                    formMensaje.classList.add("oculto");
-                } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error al enviar",
-                        text: data.mensaje || "No se pudo enviar el mensaje.",
-                        background: "#FFF7F0",
-                        confirmButtonText: "Aceptar",
-                        confirmButtonColor: "#C14949"
-                    });
-                }
-            })
-            .catch(() => {
-                Swal.fire({
-                    icon: "error",
-                    title: "Error de conexión",
-                    text: "Ocurrió un problema al comunicarse con el servidor.",
-                    background: "#FFF7F0",
-                    confirmButtonText: "Aceptar",
-                    confirmButtonColor: "#C14949"
-                });
-            });
-
-    };
-
-    const selectTipo = document.getElementById("destinoTipo");
-    const selectUsuario = document.getElementById("destinoUsuario");
-    const meserosHidden = document.getElementById("meserosHidden");
-    const cajerosHidden = document.getElementById("cajerosHidden");
-
-    cargarDestinatarios("mesero");
-
-    selectTipo.addEventListener("change", function () {
-        cargarDestinatarios(this.value);
-    });
-
-    function cargarDestinatarios(tipo) {
-        const source = (tipo === "mesero") ? meserosHidden : cajerosHidden;
-        selectUsuario.innerHTML = source.innerHTML;
-    }
 </script>
 
-<br>
 
 {% endblock %}

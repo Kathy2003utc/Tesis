@@ -245,6 +245,20 @@ html,body{
     letter-spacing: 0.5px;
 }
 
+.producto-agotado{
+  opacity: .55;
+  filter: grayscale(100%);
+}
+
+.producto-agotado .btn-agregar{
+  cursor: not-allowed;
+}
+
+.producto-agotado .btn-agregar:disabled{
+  opacity: 1; 
+}
+
+
 </style>
 
 <div class="main-content-wrapper">
@@ -288,43 +302,44 @@ html,body{
 
         <div class="grid-productos">
             {% for producto in productos %}
-            <div>
-                <div class="card-producto h-100">
+            <div class="card-producto h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+                data-producto-id="{{ producto.id }}">
 
-                    <h5 class="fw-bold text-center mb-2" style="color: var(--cafe-profundo);">
-                        {{ producto.nombre }}
-                    </h5>
+                <h5 class="fw-bold text-center mb-2">
+                {{ producto.nombre }}
+                {% if producto.agotado_hoy %}
+                    <span class="badge bg-secondary ms-2">Agotado hoy</span>
+                {% endif %}
+                </h5>
 
-                    <p class="text-muted text-center small mb-2">
-                        {{ producto.descripcion }}
-                    </p>
+                <p class="text-muted text-center small mb-2">{{ producto.descripcion }}</p>
 
-                    <p class="precio-producto text-center">
-                        ${{ producto.precio }}
-                    </p>
+                <p class="precio-producto text-center">${{ producto.precio }}</p>
 
-                    <label>Cantidad:</label>
-                    <input type="number" min="1" value="1"
-                        id="cantidad_{{ producto.id }}"
-                        class="form-control mt-2">
+                <label>Cantidad:</label>
+                <input type="number" min="1" value="1"
+                    id="cantidad_{{ producto.id }}"
+                    class="form-control mt-2"
+                    {% if producto.agotado_hoy %}disabled{% endif %}>
 
-                    <label>Observación:</label>
-                    <input type="text"
-                        placeholder="Observación"
-                        id="obs_{{ producto.id }}"
-                        class="form-control mt-2">
+                <label>Observación:</label>
+                <input type="text"
+                    placeholder="Observación"
+                    id="obs_{{ producto.id }}"
+                    class="form-control mt-2"
+                    {% if producto.agotado_hoy %}disabled{% endif %}>
 
-                    <button class="btn btn-agregar mt-3 w-100"
-                            onclick="agregarProducto('{{ producto.id }}')">
-                        Agregar
-                    </button>
-
-                </div>
+                <button type="button"
+                        class="btn btn-agregar mt-3 w-100"
+                        data-producto-id="{{ producto.id }}"
+                        {% if producto.agotado_hoy %}disabled{% endif %}
+                        onclick="agregarProducto('{{ producto.id }}')">
+                    Agregar
+                </button>
             </div>
             {% endfor %}
+
         </div>
-
-
 
         <!-- TABLA -->
         <h4 class="titulo-seccion">Detalles del pedido</h4>
@@ -342,55 +357,71 @@ html,body{
     </div>
 </div>
 
-
-
-<!-- ========================================================= -->
-<!-- ======================== SCRIPTS ========================= -->
-<!-- ========================================================= -->
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 // -------------------------------------------------------------
 // Agregar producto CON RECARGO
 // -------------------------------------------------------------
-function agregarProducto(id) {
-    let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
-    let observacion = document.getElementById(`obs_${id}`).value;
 
-    if (isNaN(cantidad) || cantidad <= 0) {
+function agregarProducto(id) {
+    const btn = document.querySelector(`button[data-producto-id="${id}"]`);
+
+    if (btn && btn.disabled) {
         Swal.fire({
-            icon: 'warning',
-            title: 'Cantidad inválida',
-            text: 'Ingrese una cantidad mayor a 0',
+            icon: "warning",
+            title: "Agotado hoy",
+            text: "Este producto está agotado hoy y no se puede agregar.",
+            confirmButtonText: "Aceptar",
+            confirmButtonColor: "#3E7A3F",
             background: "#FFF7F0",
             iconColor: "#D9A441"
         });
         return;
     }
 
+    let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
+    let observacion = document.getElementById(`obs_${id}`).value;
+
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Swal.fire({
+            icon: "warning",
+            title: "Cantidad inválida",
+            text: "Ingrese una cantidad mayor a 0",
+            background: "#FFF7F0",
+            confirmButtonColor: "#3E7A3F",
+            confirmButtonText: "Aceptar",
+            iconColor: "#D9A441"
+        });
+        return;
+    }
+
     Swal.fire({
-        title: 'Recargo por envase / domicilio',
-        input: 'number',
-        inputLabel: 'Valor unitario (0.25, 0.30, etc)',
-        inputPlaceholder: '0.00',
+        title: "Recargo por envase/domicilio",
+        input: "number",
+        inputLabel: "Valor unitario del recargo (ej. 0.25)",
+        inputPlaceholder: "0.00",
         inputAttributes: {
             min: 0,
             step: 0.01
         },
         showCancelButton: true,
-        confirmButtonText: 'Agregar producto',
-        cancelButtonText: 'Cancelar',
+        confirmButtonText: "Agregar producto",
+        cancelButtonText: "Cancelar",
         background: "#FFF7F0",
         confirmButtonColor: "#3E7A3F",
         cancelButtonColor: "#C14949",
         preConfirm: (valor) => {
-            if (valor === '' || isNaN(valor) || valor < 0) {
-                Swal.showValidationMessage("Ingrese un valor válido");
+            const recargo = parseFloat(valor);
+            const centavos = Math.round(recargo * 100);
+
+            if (valor === "" || isNaN(recargo) || centavos < 20) {
+                Swal.showValidationMessage("El recargo debe ser un número válido mayor o igual a $0.20");
+                return false;
             }
-            return parseFloat(valor || 0);
+            return recargo;
         }
-    }).then(result => {
+    }).then((result) => {
         if (!result.isConfirmed) return;
 
         const recargo_unitario = result.value;
@@ -418,6 +449,7 @@ function agregarProducto(id) {
                 Swal.fire({
                     icon: "success",
                     title: "Producto agregado",
+                    text: data.mensaje,
                     timer: 1200,
                     background: "#FFF7F0",
                     showConfirmButton: false,
@@ -425,57 +457,81 @@ function agregarProducto(id) {
                 });
 
                 document.getElementById(`obs_${id}`).value = "";
-            }else {
+            } else {
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.mensaje || 'No se pudo agregar el producto.',
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo agregar el producto.",
                     confirmButtonText: "Aceptar",
-                    confirmButtonColor: "#C14949",
-                    background: "#FFF7F0",
-                    iconColor: "#C14949",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0"
                 });
             }
+        })
+        .catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Falló la petición (revisa Network/Console).",
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0"
+            });
         });
     });
 }
-
 </script>
+
 
 
 <script>
 // -------------------------------------------------------------
 // Editar detalle (cantidad, observación, recargo)
 // -------------------------------------------------------------
-function editarDetalleAjax(detalle_id, cantidad, observacion, recargo) {
-
-    let html = `
-        <label>Cantidad</label>
-        <input id="sw_cantidad" type="number" min="1" value="${cantidad}" class="form-control">
-
-        <label>Observación</label>
-        <input id="sw_obs" type="text" value="${observacion}" class="form-control">
-
-        <label>Recargo unitario ($)</label>
-        <input id="sw_recargo" type="number" min="0" step="0.01" value="${recargo}" class="form-control">
-    `;
+function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual, recargo_actual = 0) {
 
     Swal.fire({
         title: "Editar detalle",
-        html: html,
+        html: `
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+                <label style="font-weight:600;">Cantidad</label>
+                <input id="swal_cantidad" type="number" min="1"
+                       value="${cantidad_actual}" class="form-control">
+
+                <label style="font-weight:600;">Observación</label>
+                <input id="swal_observacion" type="text"
+                       value="${observacion_actual}" class="form-control">
+
+                <label style="font-weight:600;">Recargo unitario ($)</label>
+                <input id="swal_recargo" type="number" min="0" step="0.01"
+                       value="${recargo_actual}" class="form-control">
+            </div>
+        `,
         showCancelButton: true,
         confirmButtonText: "Actualizar",
         cancelButtonText: "Cancelar",
-        confirmButtonColor: "#4F6D7A",
+        confirmButtonColor: "#3E7A3F",
         cancelButtonColor: "#C14949",
         background: "#FFF7F0",
-        preConfirm: () => ({
-            cantidad: parseInt(document.getElementById("sw_cantidad").value),
-            observacion: document.getElementById("sw_obs").value,
-            recargo: parseFloat(document.getElementById("sw_recargo").value)
-        })
-    }).then(result => {
+        preConfirm: () => {
+            const cantidad = parseInt(document.getElementById("swal_cantidad").value);
+            const observacion = document.getElementById("swal_observacion").value;
+            const recargo = parseFloat(document.getElementById("swal_recargo").value);
+            const centavos = Math.round(recargo * 100);
 
+            if (isNaN(cantidad) || cantidad <= 0) {
+                Swal.showValidationMessage("La cantidad debe ser mayor a 0");
+                return false;
+            }
+
+            if (isNaN(recargo) || centavos < 20) {
+                Swal.showValidationMessage("El recargo debe ser un número válido mayor o igual a $0.20");
+                return false;
+            }
+
+            return { cantidad, observacion, recargo };
+        }
+    }).then((result) => {
         if (!result.isConfirmed) return;
 
         fetch("{% url 'cajero_editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
@@ -488,54 +544,74 @@ function editarDetalleAjax(detalle_id, cantidad, observacion, recargo) {
         })
         .then(res => res.json())
         .then(data => {
-
             if (data.success) {
                 document.getElementById("tabla_detalles").innerHTML = data.tabla;
 
                 Swal.fire({
                     icon: "success",
                     title: "Detalle actualizado",
+                    text: data.mensaje,
                     timer: 1200,
-                    background: "#FFF7F0",
                     showConfirmButton: false,
-                    iconColor: "#3E7A3F",
+                    background: "#FFF7F0",
                     iconColor: "#3E7A3F"
                 });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo actualizar.",
+                    background: "#FFF7F0",
+                    confirmButtonColor: "#C14949",
+                    confirmButtonText: "Aceptar",
+                    iconColor: "#C14949"
+                });
             }
-
+        })
+        .catch(() => {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Falló la petición (revisa Network/Console).",
+                background: "#FFF7F0",
+                confirmButtonColor: "#C14949",
+                confirmButtonText: "Aceptar",
+                iconColor: "#C14949"
+            });
         });
-
     });
 }
+
 </script>
 
 
 <script>
-// -------------------------------------------------------------
-// Eliminar detalle
-// -------------------------------------------------------------
-function eliminarDetalleAjax(detalle_id) {
+function eliminarDetalleAjax(btn) {
+    const url = btn.getAttribute("data-url");
 
     Swal.fire({
         title: "¿Eliminar producto?",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
+        confirmButtonText: "Eliminar",
         cancelButtonText: "Cancelar",
         background: "#FFF7F0",
         confirmButtonColor: "#C14949",
-        cancelButtonColor: '#4F6D7A',
+        cancelButtonColor: "#4F6D7A",
         iconColor: "#D9A441"
-    }).then(result => {
-
+    }).then(async (result) => {
         if (!result.isConfirmed) return;
 
-        fetch("{% url 'cajero_eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}" }
-        })
-        .then(res => res.json())
-        .then(data => {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            });
+
+            const data = await response.json();
 
             if (data.success) {
                 document.getElementById("tabla_detalles").innerHTML = data.tabla;
@@ -543,18 +619,38 @@ function eliminarDetalleAjax(detalle_id) {
                 Swal.fire({
                     icon: "success",
                     title: "Eliminado",
+                    text: data.mensaje,
                     timer: 1200,
                     showConfirmButton: false,
                     background: "#FFF7F0",
-                    iconColor: "#3E7A3F",
                     iconColor: "#3E7A3F"
                 });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.mensaje || "No se pudo eliminar.",
+                    background: "#FFF7F0",
+                    confirmButtonColor: "#C14949",
+                    confirmButtonText: "Aceptar",
+                    iconColor: "#C14949"
+                });
             }
-        });
-
+        } catch (e) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Falló la petición (revisa Network/Console).",
+                background: "#FFF7F0",
+                confirmButtonColor: "#C14949",
+                confirmButtonText: "Aceptar",
+                iconColor: "#C14949"
+            });
+        }
     });
 }
 </script>
+
 
 
 <script>

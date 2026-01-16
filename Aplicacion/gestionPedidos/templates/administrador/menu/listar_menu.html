@@ -1,7 +1,6 @@
 {% extends 'administrador/plantilla.html' %}
 {% load static %}
 {% block contenido %}
-<br>
 
 <style>
     /* ================= PALETA COMPLETA ================= */
@@ -21,11 +20,13 @@
         --rojo-alerta: #C14949;
         --rojo-oscuro: #8C2F39;
         --rojo-claro: #EA9A9A;
+        --rojo-inactivo: #e04d4d;
 
         --cafe-profundo: #8A5A3C;
         --cafe-tostado: #A66E4A;
         --cafe-avellana: #C8A784;
         --cafe-crema: #F0E1CA;
+        --dorado-suave: #D9B77A;
 
         --verde-profundo: #2E5F32;
         --verde-oliva: #5E7A43;
@@ -36,6 +37,7 @@
         --gris-claro-calido: #D8D3CC;
         --gris-medio-calido: #B8B1A8;
         --gris-oscuro-calido: #4A3F38;
+        --gris-oscuro: #756c67;
 
         --exito: #4F8A57;
         --info: #6A93B0;
@@ -121,36 +123,57 @@
     }
 
     /* ================= FILTRO (SE MANTIENE) ================= */
-    .categoria-menu {
+    .categoria-menu{
         display: flex;
-        justify-content: center;
-        gap: 12px;
-        overflow-x: auto;
+        gap: 18px;
+        flex-wrap: nowrap;                 /* CLAVE: no saltar línea */
+        overflow-x: auto;                  /* scroll horizontal */
+        overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;     /* opcional: scroll suave */
+        padding: 10px 12px;                /* padding interno */
+        margin: 0 auto 18px auto;          /* separación abajo */
+        width: 100%;
     }
 
-    .categoria-menu::-webkit-scrollbar {
+    .categoria-menu::-webkit-scrollbar{
         display: none;
     }
 
-    .categoria-menu a {
+    .categoria-menu a{
         text-decoration: none;
         text-align: center;
         font-weight: 600;
         color: var(--gris-medio-calido);
         padding: 10px 15px;
         border-radius: 10px;
+
+        flex: 0 0 auto;                    /* CLAVE: no encoger */
+        min-width: 92px;                   /* más ancho para que se vea completo */
+        white-space: nowrap;               /* texto en 1 línea */
+        scroll-snap-align: start;          /* opcional */
     }
 
-    .categoria-menu a i {
+    .categoria-menu a i{
         display: block;
         font-size: 26px;
+        margin-bottom: 4px;
     }
 
-    .categoria-item.active {
+    .categoria-item.active{
         color: var(--cafe-profundo) !important;
         border-bottom: 3px solid var(--cafe-profundo);
     }
+
+    /* En celular, que empiece desde la izquierda */
+    @media (max-width: 576px){
+        .categoria-menu{
+            justify-content: flex-start !important;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+    }
+
 
     /* ================= GRID ================= */
     .menu-page .row {
@@ -190,7 +213,7 @@
     }
 
     .badge-almuerzo {
-        background: var(--verde);
+        background: var(--info);
         color: white;
     }
 
@@ -205,7 +228,7 @@
     }
 
     .badge-bebida {
-        background: var(--info);
+        background: var(--gris-oscuro);
         color: white;
     }
 
@@ -246,6 +269,26 @@
             /* no se encogen */
         }
     }
+
+    .btn-activar{
+        background-color: var(--exito) !important;
+        border-color: var(--exito) !important;
+        color: white !important;
+        font-weight: 700;
+    }
+    .btn-activar:hover{
+        background-color: var(--verde-menta) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    .badge.bg-activo {
+        background-color: var(--verde-musgo) !important;
+    }
+
+    .badge.bg-inactivo {
+        background-color: var(--rojo-inactivo) !important;
+    }
+
 </style>
 
 
@@ -336,35 +379,45 @@
                             <!-- ESTADO -->
                             <div>
                                 {% if p.activo %}
-                                <span class="badge bg-success">Disponible</span>
+                                <span class="badge bg-activo">Activo</span>
                                 {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
+                                <span class="badge bg-inactivo">Inactivo</span>
                                 {% endif %}
                             </div>
 
                             <!-- BOTONES -->
-                            <div class="d-flex justify-content-center gap-2">
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+
                                 <a href="{% url 'editar_menu' p.id %}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-edit"></i> Editar
+                                    Editar
                                 </a>
 
-                                <form action="{% url 'eliminar_menu' p.id %}" method="post" class="form-eliminar">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm btn-eliminar"
-                                        data-modo="{% if p.tiene_pedidos %}{% if p.activo %}desactivar{% else %}nada{% endif %}{% else %}eliminar{% endif %}">
-                                        <i class="fas fa-trash"></i>
-                                        {% if p.tiene_pedidos %}
-                                        {% if p.activo %}
-                                        Desactivar
-                                        {% else %}
-                                        Inactivo
-                                        {% endif %}
-                                        {% else %}
-                                        Eliminar
-                                        {% endif %}
-                                    </button>
-                                </form>
+                                {% if p.activo %}
+                                    <!-- Si está activo: Desactivar o Eliminar -->
+                                    <form action="{% url 'eliminar_menu' p.id %}" method="post" class="form-eliminar m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm btn-eliminar"
+                                            data-modo="{% if p.tiene_pedidos %}desactivar{% else %}eliminar{% endif %}">
+                                            {% if p.tiene_pedidos %}
+                                                Desactivar
+                                            {% else %}
+                                                Eliminar
+                                            {% endif %}
+                                        </button>
+                                    </form>
+
+                                {% else %}
+                                    <!-- Si está inactivo: Activar -->
+                                    <form action="{% url 'activar_menu' p.id %}" method="post" class="form-activar m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-activar btn-sm btn-activar-js">
+                                            Activar
+                                        </button>
+                                    </form>
+                                {% endif %}
+
                             </div>
+
 
                         </div>
 
@@ -395,11 +448,11 @@
             if (modo === "desactivar") {
                 title = "¿Desactivar producto?";
                 text = "El producto ya no aparecerá en el menú ni para nuevos pedidos, pero se mantendrá en el historial.";
-                confirmText = "Sí, desactivar";
+                confirmText = "Desactivar";
             } else if (modo === "eliminar") {
                 title = "¿Eliminar producto?";
                 text = "Este producto no tiene pedidos asociados y será eliminado permanentemente.";
-                confirmText = "Sí, eliminar";
+                confirmText = "Eliminar";
             } else {
                 // Si está inactivo y no hay nada más que hacer:
                 Swal.fire({
@@ -431,7 +484,29 @@
     });
 </script>
 
+<script>
+document.querySelectorAll(".form-activar").forEach(form => {
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
 
+        Swal.fire({
+            title: "¿Activar producto?",
+            text: "El producto volverá a mostrarse en el menú para nuevos pedidos.",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#4F8A57",
+            cancelButtonColor: "#4F6D7A",
+            confirmButtonText: "Activar",
+            cancelButtonText: "Cancelar",
+            background: "#FFF7F0"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+</script>
 
 
 <br>

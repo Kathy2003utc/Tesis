@@ -14,9 +14,8 @@
         <tbody>
             {% for p in pedidos_pagados %}
             <tr>
-                {# MOSTRAR CÓDIGO EN LUGAR DE ID #}
                 <td>{{ p.codigo_pedido }}</td>
-                <td>{{ p.nombre_cliente }}</td>
+                <td>{{ p.cliente_nombre }}</td>
                 <td>$ {{ p.total|floatformat:2 }}</td>
 
                 <td>

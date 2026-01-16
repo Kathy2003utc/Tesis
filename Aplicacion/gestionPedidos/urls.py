@@ -24,6 +24,7 @@ urlpatterns = [
     path('trabajadores/crear/', views.crear_trabajador, name='crear_trabajador'),
     path('trabajadores/editar/<int:trabajador_id>/', views.editar_trabajador, name='editar_trabajador'),
     path('trabajadores/eliminar/<int:trabajador_id>/', views.eliminar_trabajador, name='eliminar_trabajador'),
+    path('trabajadores/activar/<int:trabajador_id>/', views.activar_trabajador, name='activar_trabajador'),
 
     # Admin-gestion de mesas
     path('mesas/', views.listar_mesas, name='listar_mesas'),
@@ -36,6 +37,7 @@ urlpatterns = [
     path('menu/registrar/', views.registrar_menu, name='registrar_menu'),
     path('menu/editar/<int:producto_id>/', views.editar_menu, name='editar_menu'),
     path('menu/eliminar/<int:producto_id>/', views.eliminar_menu, name='eliminar_menu'),
+    path('menu/activar/<int:producto_id>/', views.activar_menu, name='activar_menu'),
 
     # Admin - Resportes
     path('reportes/', views.reportes_general, name='reportes_general'),
@@ -68,6 +70,7 @@ urlpatterns = [
     path('pedidos/editar/<int:pedido_id>/', views.editar_pedido, name='editar_pedido'),
     path('pedidos/eliminar/<int:pedido_id>/', views.eliminar_pedido, name='eliminar_pedido'),
     path('pedidos/finalizar/<int:pedido_id>/', views.finalizar_pedido, name='finalizar_pedido'),
+    path('mesero/pedidos/cancelar/<int:pedido_id>/', views.mesero_cancelar_pedido, name='mesero_cancelar_pedido'),
 
     # DetallePedido AJAX
     path('pedidos/detalle/agregar/ajax/<int:pedido_id>/', views.agregar_detalle_ajax, name='agregar_detalle_ajax'),
@@ -77,12 +80,13 @@ urlpatterns = [
     #Cocinero pedido
     path('cocinero/pedidos/', views.vista_cocina, name='vista_cocina'),
     path('pedido/<int:pedido_id>/listo/', views.marcar_pedido_listo, name='marcar_pedido_listo'),
+    path("pedido/<int:pedido_id>/preparacion/", views.marcar_pedido_preparacion, name="pedido_preparacion"),
     path("cocina/enviar-mensaje/", views.enviar_mensaje_mesero, name="enviar_mensaje_mesero"),
 
-    #notificaion al mesero de listo
-    path("notificaciones/", views.notificaciones_mesero, name="notificaciones_mesero"),
-    path("notificaciones/obtener/", views.obtener_notificaciones, name="obtener_notificaciones"),
-    path("notificaciones/eliminar/<int:notif_id>/", views.eliminar_notificacion, name="eliminar_notificacion"),
+    path("cocina/no-hay-producto/", views.avisar_no_hay_producto, name="avisar_no_hay_producto"),
+
+    path("cocinero/perfil/", views.perfil_cocinero, name="perfil_cocinero"),
+    path("cocinero/perfil/editar/", views.editar_perfil_cocinero, name="editar_perfil_cocinero"),
 
     # PERFIL - MESERO
     path("mesero/perfil/", views.perfil_mesero, name="perfil_mesero"),
@@ -103,9 +107,6 @@ urlpatterns = [
     path('cajero/pedidos/<int:pedido_id>/detalle/agregar/', views.cajero_agregar_detalle_ajax, name='cajero_agregar_detalle_ajax'),
     path('cajero/detalle/<int:detalle_id>/editar/', views.cajero_editar_detalle_ajax, name='cajero_editar_detalle_ajax'),
     path('cajero/detalle/<int:detalle_id>/eliminar/', views.cajero_eliminar_detalle_ajax, name='cajero_eliminar_detalle_ajax'),
-
-    #notificaciones al cajero
-    path("cajero/notificaciones/", views.cajero_notificaciones, name="cajero_notificaciones"),
 
     # Cajero - cobros restaurante
     path('cajero/restaurante/cobros/', views.cajero_restaurante_cobros, name='cajero_restaurante_cobros'),

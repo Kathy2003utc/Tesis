@@ -259,6 +259,15 @@
             font-size: .95rem;
         }
     }
+
+    .producto-agotado{
+    opacity: .55;
+    filter: grayscale(100%);
+    }
+    .producto-agotado .btn,
+    .producto-agotado button{
+    cursor:not-allowed;
+    }
 </style>
 
 
@@ -272,7 +281,8 @@
         <div class="menu-grid">
             {% for producto in productos %}
             <div>
-                <div class="card card-producto p-3 h-100">
+                <div class="card card-producto p-3 h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+                    data-producto-id="{{ producto.id }}">
 
                     <h5 class="fw-bold text-center mb-2" style="color: var(--cafe-profundo);">{{ producto.nombre }}</h5>
                     <p class="text-muted text-center small mb-2">{{ producto.descripcion }}</p>
@@ -284,9 +294,13 @@
                     <label>Observación:</label>
                     <input type="text" id="obs_{{ producto.id }}" class="form-control mb-2">
 
-                    <button class="btn btn-agregar w-100" onclick="agregarProducto('{{ producto.id }}')">
-                        Agregar
+                    <button class="btn btn-agregar w-100"
+                            data-producto-id="{{ producto.id }}"
+                            {% if producto.agotado_hoy %}disabled{% endif %}
+                            onclick="agregarProducto('{{ producto.id }}')">
+                    Agregar
                     </button>
+
 
                 </div>
             </div>
@@ -319,6 +333,19 @@
 <script>
     // Agregar producto (cajero - domicilio)
     function agregarProducto(id) {
+        const btn = document.querySelector(`button[data-producto-id="${id}"]`);
+        if (btn && btn.disabled) {
+        Swal.fire({
+            icon: "warning",
+            title: "Agotado hoy",
+            text: "Este producto está agotado hoy y no se puede agregar.",
+            confirmButtonColor: "#3E7A3F",
+            confirmButtonText: "Aceptar",
+            background: "#FFF7F0"
+        });
+        return;
+        }
+
         let cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
         let observacion = document.getElementById(`obs_${id}`).value;
 
@@ -327,7 +354,9 @@
                 icon: 'warning',
                 title: 'Cantidad inválida',
                 text: 'Ingrese una cantidad mayor a 0',
-                background: "#FFF7F0"
+                background: "#FFF7F0",
+                confirmButtonColor: "#3E7A3F",
+                confirmButtonText: "Aceptar",
             });
             return;
         }
@@ -349,11 +378,19 @@
             confirmButtonColor: "#3E7A3F",
             cancelButtonColor: "#C14949",
             preConfirm: (valor) => {
-                if (valor === "" || isNaN(valor) || valor < 0) {
-                    Swal.showValidationMessage('Ingrese un valor válido (0 o mayor)');
+                const recargo = parseFloat(valor);
+                const centavos = Math.round(recargo * 100);
+
+                if (valor === "" || isNaN(recargo) || centavos < 20) {
+                    Swal.showValidationMessage(
+                        "El recargo debe ser un número válido mayor o igual a $0.20"
+                    );
+                    return false;
                 }
-                return parseFloat(valor || 0);
+
+                return recargo;
             }
+
         }).then((result) => {
             if (!result.isConfirmed) return;
 
@@ -396,7 +433,7 @@
                         title: 'Error',
                         text: data.mensaje,
                         confirmButtonText: "Aceptar",
-                        confirmButtonColor: "#C14949",
+                        confirmButtonColor: "#3E7A3F",
                         background: "#FFF7F0"
                     });
                     }
@@ -449,8 +486,9 @@
                     Swal.showValidationMessage("La cantidad debe ser mayor a 0");
                 }
 
-                if (isNaN(recargo) || recargo < 0) {
-                    Swal.showValidationMessage("El recargo debe ser un número válido mayor o igual a 0");
+                const recargoCents = Math.round(recargo * 100);
+                if (isNaN(recargo) || recargoCents < 20) {
+                    Swal.showValidationMessage("El recargo debe ser un número válido y mayor o igual a $0.20");
                 }
 
                 return {
@@ -489,7 +527,9 @@
                             icon: 'error',
                             title: 'Error',
                             text: data.mensaje,
-                            background: "#FFF7F0"
+                            background: "#FFF7F0",
+                            confirmButtonColor: "#C14949",
+                            confirmButtonText: "Aceptar"
                         });
                     }
                 });
@@ -498,41 +538,68 @@
 
 
     // Eliminar detalle
-    function eliminarDetalleAjax(detalle_id) {
+    function eliminarDetalleAjax(btn) {
+        const url = btn.getAttribute("data-url");
+
         Swal.fire({
             title: "¿Eliminar producto?",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonText: "Sí, eliminar",
+            confirmButtonText: "Eliminar",
             cancelButtonText: "Cancelar",
             background: "#FFF7F0",
             confirmButtonColor: "#C14949",
-            cancelButtonColor: '#4F6D7A',
-        }).then((result) => {
+            cancelButtonColor: "#4F6D7A",
+        }).then(async (result) => {
             if (!result.isConfirmed) return;
 
-            fetch("{% url 'cajero_eliminar_detalle_ajax' 0 %}".replace("0", detalle_id), {
-                method: "POST",
-                headers: { "X-CSRFToken": "{{ csrf_token }}" }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('tabla_detalles').innerHTML = data.tabla;
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Eliminado',
-                            text: data.mensaje,
-                            timer: 1500,
-                            showConfirmButton: false,
-                            background: "#FFF7F0",
-                            iconColor: "#3E7A3F"
-                        });
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "X-CSRFToken": "{{ csrf_token }}"
                     }
                 });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById("tabla_detalles").innerHTML = data.tabla;
+
+                    Swal.fire({
+                        icon: "success",
+                        title: "Eliminado",
+                        text: data.mensaje,
+                        timer: 1200,
+                        showConfirmButton: false,
+                        background: "#FFF7F0",
+                        iconColor: "#3E7A3F"
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.mensaje || "No se pudo eliminar.",
+                        background: "#FFF7F0",
+                        confirmButtonColor: "#C14949",
+                        confirmButtonText: "Aceptar"
+                    });
+                }
+            } catch (e) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Falló la petición (revisa Network/Console).",
+                    background: "#FFF7F0",
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#C14949"
+                });
+            }
         });
     }
+
+
 
     // Validar que haya productos antes de finalizar
     function validarProductos() {
@@ -542,7 +609,9 @@
                 icon: 'warning',
                 title: 'Sin productos',
                 text: 'Debe agregar al menos un producto antes de finalizar.',
-                background: "#FFF7F0"
+                background: "#FFF7F0",
+                confirmButtonColor: "#3E7A3F",
+                confirmButtonText: "Aceptar",
             });
             return false;
         }

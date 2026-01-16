@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Sum, F, DecimalField
 from django.utils import timezone    
 from django.db.models import Max  
+from django.conf import settings
 
 
 # ----------------------------
@@ -15,6 +16,16 @@ ROL_CHOICES = (
     ('cajero', 'Cajero'),
 )
 
+HORARIO_CHOICES = (
+    ('lv_manana', 'L-V Mañana (06:00 - 14:00)'),
+    ('lv_tarde',  'L-V Tarde (14:00 - 22:00)'),
+    ('lv_noche',  'L-V Noche (22:00 - 06:00)'),
+
+    ('sab_manana', 'Sábado Mañana (06:00 - 12:00)'),
+    ('sab_tarde',  'Sábado Tarde (11:00 - 15:00)'),
+    ('dom_unico',  'Domingo Único (06:00 - 13:00)'),
+)
+
 class Usuario(AbstractUser):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
@@ -22,6 +33,9 @@ class Usuario(AbstractUser):
     direccion = models.TextField(blank=True, null=True)
     correo = models.EmailField(unique=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES)
+
+    horario = models.CharField(max_length=20, choices=HORARIO_CHOICES, blank=True, null=True)
+
     cambio_password = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
@@ -93,8 +107,20 @@ class Producto(models.Model):
     tipo = models.CharField(max_length=20, choices=TIPOS)
     activo = models.BooleanField(default=True)
 
+    agotado_fecha = models.DateField(blank=True, null=True)  
+    agotado_hora = models.DateTimeField(blank=True, null=True)
+
     def __str__(self):
         return self.nombre
+    
+    @property
+    def agotado_hoy(self):
+        return self.agotado_fecha == timezone.localdate()
+
+    @property
+    def disponible_hoy(self):
+        # activo y NO agotado hoy
+        return self.activo and not self.agotado_hoy
 
     @property
     def tiene_pedidos(self):
@@ -119,13 +145,8 @@ class Pedido(models.Model):
         ('domicilio', 'Domicilio'),
     ]
 
-    cliente = models.ForeignKey(
-        'Usuario',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='pedidos_cliente',
-        limit_choices_to={'rol': 'cliente'}
-    )
+    cliente = models.ForeignKey( 'Usuario', on_delete=models.SET_NULL, null=True, blank=True, related_name='pedidos_cliente', limit_choices_to={'rol': 'cliente'} )
+
 
     mesero = models.ForeignKey(
         'Usuario',
@@ -159,6 +180,7 @@ class Pedido(models.Model):
     fecha_hora = models.DateTimeField(auto_now_add=True)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    enviado_cocina = models.BooleanField(default=False)
 
     codigo_pedido = models.CharField(
         max_length=20,
@@ -221,6 +243,19 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"Pedido {self.id}"
+    
+    @property
+    def cliente_nombre(self):
+        # 1) Si tiene cliente (FK), usar su nombre real
+        if self.cliente_id:
+            return f"{self.cliente.nombre} {self.cliente.apellido}".strip()
+
+        # 2) Si no hay FK, usar el campo nombre_cliente
+        if self.nombre_cliente and self.nombre_cliente.strip():
+            return self.nombre_cliente.strip()
+
+        # 3) Si no hay nada, devolver vacío (pero tú quieres sí o sí, así que esto NO debería pasar)
+        return ""
 
 # ----------------------------
 # Detalle de pedido

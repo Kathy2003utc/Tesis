@@ -126,7 +126,7 @@
 <div class="main-content-wrapper">
     <div class="content-card">
 
-        <h2 class="text-center mb-4">Reporte de Pedidos · Domicilio</h2>
+        <h2 class="text-center mb-4">Reporte de Pedidos - Domicilio</h2>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <a href="{% url 'reportes_general' %}" class="btn btn-regresar">
@@ -146,16 +146,6 @@
             <div class="col-md-3">
                 <label class="fw-semibold">Fecha fin</label>
                 <input type="date" name="fin" class="form-control" value="{{ request.GET.fin }}">
-            </div>
-
-            <div class="col-md-3">
-                <label class="fw-semibold">Estado</label>
-                <select name="estado" class="form-select">
-                    <option value="todos">Todos</option>
-                    <option value="en preparacion">En preparación</option>
-                    <option value="listo">Listo</option>
-                    <option value="finalizado">Finalizado</option>
-                </select>
             </div>
 
             <div class="col-md-3">

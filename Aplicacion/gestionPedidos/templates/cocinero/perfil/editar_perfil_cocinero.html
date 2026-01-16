@@ -1,0 +1,227 @@
+{% extends 'cocinero/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br>
+
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-avellana: #C8A784;
+        --cafe-suave2: #F0E1CA;
+
+        --advertencia: #D9A441;
+        --advertencia-suave: #FFF5DA;
+
+        --crema-suave: #FAF4EC;
+    }
+
+    html, body {
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
+        overflow-x: hidden;
+    }
+
+    .form-container {
+        max-width: 650px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    .card-form {
+        background: var(--blanco-calido);
+        border: 1px solid var(--cafe-avellana);
+        border-radius: 20px;
+        padding: 35px;
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.12);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .titulo-form {
+        color: var(--cafe-profundo);
+        font-weight: 800;
+        font-size: 28px;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .form-control, .form-select {
+        background: var(--blanco-calido);
+        border: 1px solid var(--cafe-claro);
+        border-radius: 12px;
+        padding: 12px;
+        transition: 0.3s;
+        color: var(--texto-oscuro);
+    }
+
+    .form-control:focus {
+        border-color: var(--verde);
+        box-shadow: 0 0 6px rgba(62, 122, 63, 0.4);
+    }
+
+    .btn-guardar {
+        background: var(--verde);
+        color: white;
+        padding: 12px;
+        border-radius: 14px;
+        font-weight: bold;
+        border: none;
+        width: 100%;
+        transition: 0.3s;
+        margin-top: 10px;
+    }
+
+    .btn-guardar:hover {
+        background: var(--verde-claro);
+        color: var(--texto-oscuro) !important;
+        transform: translateY(-3px);
+    }
+
+    .btn-cancelar {
+        background: var(--rojo-alerta);
+        color: white;
+        padding: 12px;
+        border-radius: 14px;
+        font-weight: bold;
+        margin-top: 10px;
+        width: 100%;
+        text-align: center;
+        display: inline-block;
+        text-decoration: none;
+    }
+
+    .btn-cancelar:hover {
+        background: var(--rojo-claro);
+        transform: translateY(-3px);
+    }
+</style>
+
+<div class="form-container">
+    <div class="card-form">
+
+        <form id="frm_cocinero" method="post" novalidate>
+            {% csrf_token %}
+
+            <h2 class="titulo-form">Editar Perfil del Cocinero</h2>
+
+            <div class="mb-3">
+                <label>Nombre:</label>
+                <input type="text" name="nombre" class="form-control" value="{{ usuario.nombre }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Apellido:</label>
+                <input type="text" name="apellido" class="form-control" value="{{ usuario.apellido }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Correo:</label>
+                <input type="email" name="correo" class="form-control" value="{{ usuario.correo }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Teléfono:</label>
+                <input type="text" name="telefono" class="form-control" value="{{ usuario.telefono }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Dirección:</label>
+                <textarea name="direccion" class="form-control" rows="2" required>{{ usuario.direccion }}</textarea>
+            </div>
+
+            <hr>
+
+            <p class="text-muted">
+                Si no deseas cambiar la contraseña, deja estos campos vacíos.
+            </p>
+
+            <div class="mb-3">
+                <label>Nueva contraseña:</label>
+                <input type="password" name="password" class="form-control">
+            </div>
+
+            <div class="mb-3">
+                <label>Confirmar contraseña:</label>
+                <input type="password" name="password2" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-guardar">Guardar cambios</button>
+            <a href="{% url 'perfil_cocinero' %}" class="btn btn-cancelar">Cancelar</a>
+
+        </form>
+
+    </div>
+</div>
+
+<script>
+    jQuery.validator.addMethod("lettersonly", function (value, element) {
+        return this.optional(element) || /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(value);
+    }, "Solo se permiten letras");
+
+    // EXACTAMENTE 10 DIGITOS
+    jQuery.validator.addMethod("exactlength", function(value, element, param) {
+        return this.optional(element) || value.length === param;
+    }, "Longitud inválida");
+
+    $("#frm_cocinero").validate({
+        rules: {
+            nombre: { required: true, minlength: 2, lettersonly: true },
+            apellido: { required: true, minlength: 2, lettersonly: true },
+            correo: { required: true, email: true },
+            telefono: { required: true, digits: true, exactlength: 10 },
+            password: { minlength: 6 },
+            password2: { minlength: 6, equalTo: "[name='password']" }
+        },
+        messages: {
+            nombre: { required: "Campo obligatorio", minlength: "Mínimo 2 letras", lettersonly: "Solo letras" },
+            apellido: { required: "Campo obligatorio", minlength: "Mínimo 2 letras", lettersonly: "Solo letras" },
+            correo: { required: "Campo obligatorio", email: "Correo no válido" },
+            telefono: {
+                required: "Campo obligatorio",
+                digits: "Solo números",
+                exactlength: "Debe tener exactamente 10 dígitos"
+            },
+            password: { minlength: "Mínimo 6 caracteres" },
+            password2: { minlength: "Mínimo 6 caracteres", equalTo: "Las contraseñas no coinciden" }
+        }
+    });
+
+    // BLOQUEAR LETRAS EN TELEFONO (pegar solo numeros)
+    const tel = document.querySelector("input[name='telefono']");
+    if (tel) {
+        tel.addEventListener("input", function () {
+            this.value = this.value.replace(/\D/g, "").slice(0, 10);
+        });
+
+        tel.addEventListener("keypress", function (e) {
+            const c = String.fromCharCode(e.which);
+            if (!/^\d$/.test(c)) e.preventDefault();
+        });
+    }
+</script>
+
+
+<br>
+{% endblock %}

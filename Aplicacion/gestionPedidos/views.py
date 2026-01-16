@@ -42,11 +42,13 @@ from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 import tempfile
 from django.views.decorators.http import require_POST
-
-
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET, require_POST
 from django.http import FileResponse, HttpResponseNotFound
 from django.conf import settings
 from pathlib import Path
+from datetime import datetime, time, timedelta
+from django.contrib.auth import update_session_auth_hash
 
 # ----------------------------
 # Login (pantalla)
@@ -267,6 +269,12 @@ def listar_trabajadores(request):
 @login_required(login_url='login')
 @rol_requerido('admin')
 def crear_trabajador(request):
+    TOPES = {
+        'mesero': 4,
+        'cajero': 3,
+        'cocinero': 4,
+    }
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         apellido = request.POST.get('apellido', '').strip()
@@ -274,15 +282,44 @@ def crear_trabajador(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         rol = request.POST.get('rol', '').strip()
+        horario = request.POST.get('horario', '').strip()
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
 
-        # ========== VALIDACIONES BACKEND ==========
-
         # Campos obligatorios
-        if not all([nombre, apellido, correo, telefono, direccion, rol, password, password2]):
+        if not all([nombre, apellido, correo, telefono, direccion, rol, horario, password, password2]):
             messages.error(request, "Todos los campos son obligatorios.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # Validar rol permitido (trabajadores)
+        if rol not in ['mesero', 'cocinero', 'cajero']:
+            messages.error(request, "Rol inválido.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # Validar horario
+        HORARIOS_VALIDOS = [
+            'lv_manana', 'lv_tarde', 'lv_noche',
+            'sab_manana', 'sab_tarde', 'dom_unico'
+        ]
+
+        if horario not in HORARIOS_VALIDOS:
+            messages.error(request, "Horario inválido.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+
+        # ========== VALIDAR TOPE POR ROL ==========
+        tope = TOPES.get(rol)
+        if tope is not None:
+            actuales = Usuario.objects.filter(
+                rol=rol,
+                is_active=True
+            ).exclude(rol__in=['admin', 'cliente']).count()
+
+            if actuales >= tope:
+                messages.error(
+                    request,
+                    f"No se puede registrar más personal para el rol {rol}. Tope permitido: {tope}."
+                )
+                return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
         # Validar solo letras
         solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
@@ -301,12 +338,11 @@ def crear_trabajador(request):
             messages.error(request, "Ingrese un correo electrónico válido.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
-        # Validar correo duplicado
         if Usuario.objects.filter(correo=correo).exists():
             messages.error(request, "Ya existe un usuario con este correo.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
 
-        # Validar teléfono (solo números, 10 dígitos)
+        # Validar teléfono
         if not telefono.isdigit() or len(telefono) != 10:
             messages.error(request, "El teléfono debe tener exactamente 10 números.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
@@ -319,7 +355,7 @@ def crear_trabajador(request):
         if password != password2:
             messages.error(request, "Las contraseñas no coinciden.")
             return render(request, 'administrador/trabajadores/crear_trabajador.html')
-        
+
         trabajador = Usuario(
             nombre=nombre,
             apellido=apellido,
@@ -327,7 +363,8 @@ def crear_trabajador(request):
             username=correo,
             telefono=telefono,
             direccion=direccion,
-            rol=rol
+            rol=rol,
+            horario=horario
         )
         trabajador.set_password(password)
         trabajador.save()
@@ -342,6 +379,12 @@ def crear_trabajador(request):
 def editar_trabajador(request, trabajador_id):
     trabajador = get_object_or_404(Usuario, id=trabajador_id)
 
+    TOPES = {
+        'mesero': 4,
+        'cajero': 3,
+        'cocinero': 4,
+    }
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         apellido = request.POST.get('apellido', '').strip()
@@ -349,11 +392,41 @@ def editar_trabajador(request, trabajador_id):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         rol = request.POST.get('rol', '').strip()
+        horario = request.POST.get('horario', '').strip()
 
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
 
-        # ========== VALIDACIONES BACKEND ==========
+        # Validar rol
+        if rol not in ['mesero', 'cocinero', 'cajero']:
+            messages.error(request, "Rol inválido.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # Validar horario
+        HORARIOS_VALIDOS = [
+            'lv_manana', 'lv_tarde', 'lv_noche',
+            'sab_manana', 'sab_tarde', 'dom_unico'
+        ]
+
+        if horario not in HORARIOS_VALIDOS:
+            messages.error(request, "Horario inválido.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+
+        # ========== VALIDAR TOPE POR ROL (si cambia rol o si estaba inactivo y lo reactivas luego) ==========
+        if rol != trabajador.rol:
+            tope = TOPES.get(rol)
+            if tope is not None:
+                actuales = Usuario.objects.filter(
+                    rol=rol,
+                    is_active=True
+                ).exclude(id=trabajador.id).count()
+
+                if actuales >= tope:
+                    messages.error(
+                        request,
+                        f"No se puede asignar el rol '{rol}'. Ya se alcanzó el tope: {tope}."
+                    )
+                    return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
 
         # Validar solo letras
         solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
@@ -372,7 +445,6 @@ def editar_trabajador(request, trabajador_id):
             messages.error(request, "Ingrese un correo electrónico válido.")
             return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
 
-        # Validar que el correo no exista en otro usuario
         if Usuario.objects.exclude(id=trabajador.id).filter(correo=correo).exists():
             messages.error(request, "Ya existe un usuario con este correo.")
             return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
@@ -382,7 +454,7 @@ def editar_trabajador(request, trabajador_id):
             messages.error(request, "El teléfono debe tener exactamente 10 números.")
             return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
 
-        # Validar contraseñas si se ingresan
+        # Contraseñas si se envían
         if password or password2:
             if password != password2:
                 messages.error(request, "Las contraseñas no coinciden.")
@@ -394,13 +466,13 @@ def editar_trabajador(request, trabajador_id):
 
             trabajador.set_password(password)
 
-        # ========== GUARDAR CAMBIOS ==========
         trabajador.nombre = nombre
         trabajador.apellido = apellido
         trabajador.correo = correo
         trabajador.telefono = telefono
         trabajador.direccion = direccion
         trabajador.rol = rol
+        trabajador.horario = horario
         trabajador.save()
 
         messages.success(request, f"Trabajador {trabajador.nombre} actualizado con éxito.")
@@ -451,6 +523,68 @@ def eliminar_trabajador(request, trabajador_id):
                 f"Trabajador {nombre_trabajador} eliminado correctamente."
             )
 
+    return redirect('listar_trabajadores')
+
+from django.db import transaction
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def activar_trabajador(request, trabajador_id):
+    if request.method != 'POST':
+        return redirect('listar_trabajadores')
+
+    TOPES = {
+        'mesero': 4,
+        'cajero': 3,
+        'cocinero': 4,
+    }
+
+    # Bloqueo transaccional para evitar activar 2 al mismo tiempo y pasarse del tope
+    with transaction.atomic():
+        trabajador = get_object_or_404(
+            Usuario.objects.select_for_update(),
+            id=trabajador_id
+        )
+
+        # Solo aplicar a roles de trabajador
+        if trabajador.rol not in ['mesero', 'cocinero', 'cajero']:
+            messages.error(request, "No se puede activar este usuario.")
+            return redirect('listar_trabajadores')
+
+        # Si ya está activo, no hacer nada
+        if trabajador.is_active:
+            messages.info(
+                request,
+                f"El trabajador {trabajador.nombre} {trabajador.apellido} ya estaba activo."
+            )
+            return redirect('listar_trabajadores')
+
+        # ===== VALIDAR TOPE POR ROL =====
+        tope = TOPES.get(trabajador.rol)
+        if tope is not None:
+            actuales = (
+                Usuario.objects
+                .filter(rol=trabajador.rol, is_active=True)
+                .exclude(id=trabajador.id)
+                .count()
+            )
+
+            if actuales >= tope:
+                messages.error(
+                    request,
+                    f"No se puede activar a {trabajador.nombre} {trabajador.apellido}. "
+                    f"Ya se alcanzó el tope para el rol {trabajador.rol} (máximo {tope})."
+                )
+                return redirect('listar_trabajadores')
+
+        # Activar
+        trabajador.is_active = True
+        trabajador.save()
+
+    messages.success(
+        request,
+        f"Trabajador {trabajador.nombre} {trabajador.apellido} activado correctamente."
+    )
     return redirect('listar_trabajadores')
 
 # ----------------------------
@@ -790,21 +924,43 @@ def eliminar_menu(request, producto_id):
 
     return redirect('listar_menu')
 
+# Activar producto
+@login_required(login_url='login')
+@rol_requerido('admin')
+def activar_menu(request, producto_id):
+    producto = get_object_or_404(Producto, id=producto_id)
+
+    if request.method != 'POST':
+        return redirect('listar_menu')
+
+    if not producto.activo:
+        producto.activo = True
+        producto.save()
+        messages.success(request, f"Producto {producto.nombre} activado correctamente.")
+    else:
+        messages.info(request, f"El producto {producto.nombre} ya estaba activo.")
+
+    return redirect('listar_menu')
+
 # ----------------------------
 # Mesero-Pedidos
 # ----------------------------
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def api_estados_pedidos(request):
+    hoy = timezone.localdate()
+
     pedidos = Pedido.objects.filter(
         tipo_pedido='restaurante',
-        mesero=request.user
-    ).values(
-        'id',
-        'estado',
-        'mesa_id',
-        'mesa__estado'
+        mesero=request.user,
+        fecha_hora__date=hoy
+    ).select_related("mesa").values(
+        "id",
+        "estado",
+        "mesa_id",
+        "mesa__estado",
     )
+
     return JsonResponse(list(pedidos), safe=False)
 
 # Listar pedidos
@@ -817,7 +973,7 @@ def listar_pedidos(request):
         tipo_pedido='restaurante',
         mesero=request.user,
         fecha_hora__date=hoy      
-    ).order_by('-id')
+    ).order_by('id')
 
     return render(request, 'mesero/pedidos/listar_pedidos.html', {
         'pedidos': pedidos
@@ -875,9 +1031,9 @@ def ver_pedido(request, pedido_id):
         return redirect('agregar_detalles', pedido_id=pedido.id)
 
     # SOLO la primera vez (cuando aún es en_creacion) se manda a cocina
-    if pedido.estado == 'en_creacion':
-        pedido.estado = 'en preparacion'
-        pedido.save()
+    if pedido.estado == "en_creacion" and not pedido.enviado_cocina:
+        pedido.enviado_cocina = True
+        pedido.save(update_fields=["enviado_cocina"])
         enviar_pedido_cocina(pedido)
 
     # IMPORTANTE: NO mandar actualizar aquí
@@ -885,46 +1041,50 @@ def ver_pedido(request, pedido_id):
 
     return render(request, 'mesero/pedidos/ver_pedido.html', {'pedido': pedido})
 
-
 # Editar pedido
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def editar_pedido(request, pedido_id):
 
-    pedido = get_object_or_404(Pedido, id=pedido_id)
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        mesero=request.user,
+        tipo_pedido="restaurante"
+    )
+
+    # SOLO permitir editar si está en creación
+    if pedido.estado != "en_creacion":
+        return JsonResponse({
+            "success": False,
+            "mensaje": "Solo se puede editar un pedido cuando está en creación."
+        }, status=403)
 
     if request.method == 'POST':
-
         nueva_mesa_id = request.POST.get('mesa')
         mesa_anterior_id = pedido.mesa_id
 
-        # ---------------------------------------------
-        # 1. CAMBIO DE MESA → Liberar anterior y ocupar nueva
-        # ---------------------------------------------
+        if not nueva_mesa_id:
+            return JsonResponse({"success": False, "mensaje": "Debe seleccionar una mesa."}, status=400)
+
+        # 1) CAMBIO DE MESA → Liberar anterior y ocupar nueva
         if str(mesa_anterior_id) != str(nueva_mesa_id):
 
-            # Liberar mesa anterior
             if mesa_anterior_id:
                 mesa_old = Mesa.objects.get(id=mesa_anterior_id)
                 mesa_old.estado = "libre"
-                mesa_old.save()
+                mesa_old.save(update_fields=["estado"])
 
-            # Ocupar nueva mesa
             mesa_new = Mesa.objects.get(id=nueva_mesa_id)
             mesa_new.estado = "ocupada"
-            mesa_new.save()
+            mesa_new.save(update_fields=["estado"])
 
             pedido.mesa_id = nueva_mesa_id
 
-        # ---------------------------------------------
-        # 2. Estado siempre vuelve a en preparación
-        # ---------------------------------------------
-        pedido.estado = "en preparacion"
-        pedido.save()
+        # 2) NO CAMBIAR ESTADO
+        pedido.save(update_fields=["mesa_id"])
 
-        # ---------------------------------------------
-        # 3. ENVIAR ACTUALIZACIÓN A COCINA
-        # ---------------------------------------------
+        # 3) Enviar actualización a cocina (manteniendo estado en_creacion)
         enviar_actualizacion_cocina(pedido)
 
         return JsonResponse({
@@ -933,16 +1093,15 @@ def editar_pedido(request, pedido_id):
             "pedido_id": pedido.id
         })
 
-    # SOLO MESAS LIBRES + LA MESA ACTUAL
     mesas = Mesa.objects.filter(estado="libre") | Mesa.objects.filter(id=pedido.mesa_id)
-    productos = Producto.objects.filter(activo=True)
-
+    productos = Producto.objects.filter(activo=True).order_by("nombre")
 
     return render(request, 'mesero/pedidos/editar_pedido.html', {
         'pedido': pedido,
         'mesas': mesas,
         'productos': productos
     })
+
 
 def enviar_actualizacion_cocina(pedido):
     channel_layer = get_channel_layer()
@@ -979,10 +1138,19 @@ def enviar_actualizacion_cocina(pedido):
 @login_required(login_url='login')
 @rol_requerido('mesero')
 def eliminar_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        mesero=request.user,
+        tipo_pedido="restaurante"
+    )
 
-    if pedido.estado != 'en preparacion':
-        return JsonResponse({"success": False, "message": "No se puede eliminar un pedido listo o finalizado."})
+
+    if pedido.estado != 'en_creacion':
+        return JsonResponse({
+            "success": False,
+            "message": "Solo se puede eliminar un pedido cuando está en creación."
+        })
 
     if request.method == 'POST':
 
@@ -1043,7 +1211,7 @@ def agregar_detalles(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     
     # SOLO productos activos
-    productos = Producto.objects.filter(activo=True)
+    productos = Producto.objects.filter(activo=True).order_by("nombre")
 
     return render(request, 'mesero/pedidos/agregar_detalles.html', {
         'pedido': pedido,
@@ -1061,14 +1229,23 @@ def agregar_detalle_ajax(request, pedido_id):
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
 
-        # 🔹 1) VERIFICAR SI YA EXISTE ESE PRODUCTO EN EL PEDIDO
+        # VALIDAR: NO permitir agregar si está agotado hoy
+        producto = get_object_or_404(Producto, id=producto_id)
+        if producto.agotado_hoy:
+            return JsonResponse({
+                "success": False,
+                "mensaje": f'El producto "{producto.nombre}" está AGOTADO hoy y no se puede agregar.'
+            })
+
+
+        # 1) VERIFICAR SI YA EXISTE ESE PRODUCTO EN EL PEDIDO
         if DetallePedido.objects.filter(pedido_id=pedido_id, producto_id=producto_id).exists():
             return JsonResponse({
                 'success': False,
                 'mensaje': 'Este producto ya fue agregado al pedido. Edítelo en la tabla.'
             })
 
-        # 🔹 2) CREAR DETALLE (SIN RECARGOS)
+        # 2) CREAR DETALLE (SIN RECARGOS)
         detalle = DetallePedido.objects.create(
             pedido_id=pedido_id,
             producto_id=producto_id,
@@ -1076,11 +1253,11 @@ def agregar_detalle_ajax(request, pedido_id):
             observacion=observacion
         )
 
-        # 🔹 3) ACTUALIZAR TOTALES
+        # 3) ACTUALIZAR TOTALES
         pedido = get_object_or_404(Pedido, id=pedido_id)
         pedido.calcular_totales()
 
-        # 🔹 4) ORDENAR DETALLES POR ORDEN DE REGISTRO
+        # 4) ORDENAR DETALLES POR ORDEN DE REGISTRO
         detalles = pedido.detalles.order_by('id')
 
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
@@ -1111,10 +1288,10 @@ def editar_detalle_ajax(request, detalle_id):
 
         detalle.save()
 
-        # 🔹 RECALCULAR TOTALES
+        # RECALCULAR TOTALES
         pedido.calcular_totales()
 
-        # 🔹 ORDENAR DETALLES POR ID (ORDEN DE REGISTRO)
+        # ORDENAR DETALLES POR ID (ORDEN DE REGISTRO)
         detalles = pedido.detalles.order_by('id')
 
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
@@ -1139,10 +1316,10 @@ def eliminar_detalle_ajax(request, detalle_id):
     if request.method == 'POST':
         detalle.delete()
 
-        # 🔹 RECALCULAR TOTALES
+        # RECALCULAR TOTALES
         pedido.calcular_totales()
 
-        # 🔹 ORDENAR DETALLES POR ID
+        # ORDENAR DETALLES POR ID
         detalles = pedido.detalles.order_by('id')
 
         tabla_html = render_to_string('mesero/pedidos/tabla_detalles.html', {
@@ -1158,6 +1335,138 @@ def eliminar_detalle_ajax(request, detalle_id):
 
     return JsonResponse({'success': False, 'mensaje': 'Error al eliminar producto.'})
 
+@login_required(login_url='login')
+@rol_requerido('mesero')
+@require_POST
+def mesero_cancelar_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        tipo_pedido='restaurante',
+        mesero=request.user
+    )
+
+    # Si quieres limitar qué estados se pueden cancelar, usa esto:
+    # if pedido.estado not in ["en_creacion", "en preparacion", "listo"]:
+    #     messages.error(request, "No se puede cancelar este pedido en su estado actual.")
+    #     return redirect('listar_pedidos')
+
+    # 1) Liberar mesa
+    if pedido.mesa:
+        pedido.mesa.estado = "libre"
+        pedido.mesa.save(update_fields=["estado"])
+
+    # 2) Guardar id para avisar por WS antes de borrar
+    pid = pedido.id
+
+    # 3) Eliminar pedido (borra detalles por cascade)
+    pedido.delete()
+
+    # 4) Avisar a cocina en tiempo real para quitarlo de pantalla
+    channel_layer = get_channel_layer()
+    try:
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_activos",
+            {
+                "type": "eliminar_pedido",
+                "pedido_id": pid
+            }
+        )
+    except Exception:
+        pass
+
+    messages.info(request, "Pedido cancelado correctamente.")
+    return redirect('listar_pedidos')
+
+# ----------------------------
+# Cocinero - Perfil
+# ----------------------------
+@login_required(login_url='login')
+@rol_requerido('cocinero')
+def perfil_cocinero(request):
+    usuario = request.user
+    return render(request, "cocinero/perfil/perfil_cocinero.html", {
+        "usuario": usuario
+    })
+
+
+@login_required(login_url='login')
+@rol_requerido('cocinero')
+def editar_perfil_cocinero(request):
+    usuario = request.user
+
+    if request.method == "POST":
+        nombre = request.POST.get("nombre", "").strip()
+        apellido = request.POST.get("apellido", "").strip()
+        correo = request.POST.get("correo", "").strip()
+        telefono = request.POST.get("telefono", "").strip()
+        direccion = request.POST.get("direccion", "").strip()
+
+        password = request.POST.get("password", "").strip()
+        password2 = request.POST.get("password2", "").strip()
+
+        # =========================
+        # VALIDACIONES BACKEND
+        # =========================
+
+        # Nombre y apellido solo letras y espacios (con tildes)
+        patron_letras = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$"
+        if not re.match(patron_letras, nombre):
+            messages.error(request, "El nombre solo debe contener letras.")
+            return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+        if not re.match(patron_letras, apellido):
+            messages.error(request, "El apellido solo debe contener letras.")
+            return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+        # Correo válido
+        try:
+            validate_email(correo)
+        except ValidationError:
+            messages.error(request, "Ingrese un correo válido.")
+            return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+        # Teléfono: solo dígitos y exactamente 10
+        if not telefono.isdigit():
+            messages.error(request, "El teléfono solo debe contener números.")
+            return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+        if len(telefono) != 10:
+            messages.error(request, "El teléfono debe tener exactamente 10 dígitos.")
+            return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+        # =========================
+        # ASIGNAR CAMPOS
+        # =========================
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.correo = correo
+        usuario.telefono = telefono
+        usuario.direccion = direccion
+
+        # Password opcional
+        if password or password2:
+            if password != password2:
+                messages.error(request, "Las contraseñas no coinciden.")
+                return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener mínimo 6 caracteres.")
+                return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+            usuario.set_password(password)
+            usuario.save()
+            update_session_auth_hash(request, usuario)
+        else:
+            usuario.save()
+
+        messages.success(request, "Perfil actualizado correctamente.")
+        return redirect("perfil_cocinero")
+
+    return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
+
+
 # ----------------------------
 # Cocinero marca pedido como listo
 # ----------------------------
@@ -1166,15 +1475,16 @@ def eliminar_detalle_ajax(request, detalle_id):
 @rol_requerido('cocinero')
 def vista_cocina(request):
     hoy = timezone.localdate()
+    estados = ["en_creacion", "en preparacion"]
 
     pedidos_restaurante = Pedido.objects.filter(
-        estado='en preparacion',
+        estado__in=estados,
         tipo_pedido='restaurante',
         fecha_hora__date=hoy
     ).order_by('id')
 
     pedidos_domicilio = Pedido.objects.filter(
-        estado='en preparacion',
+        estado__in=estados,
         tipo_pedido='domicilio',
         fecha_hora__date=hoy
     ).order_by('id')
@@ -1182,37 +1492,53 @@ def vista_cocina(request):
     meseros = Usuario.objects.filter(rol='mesero')
     cajeros = Usuario.objects.filter(rol='cajero')
 
+    # NUEVO: menú
+    productos_menu = Producto.objects.filter(activo=True).order_by('nombre')  # ajusta "activo" si no existe
+
     return render(request, 'cocinero/pedido.html', {
         'pedidos_restaurante': pedidos_restaurante,
-        'pedidos_domicilio': pedidos_domicilio, 
+        'pedidos_domicilio': pedidos_domicilio,
         'meseros': meseros,
         'cajeros': cajeros,
+        'productos_menu': productos_menu,  # NUEVO
     })
+
 
 @login_required(login_url='login')
 @rol_requerido('cocinero')
 @csrf_protect
+@require_POST
 def marcar_pedido_listo(request, pedido_id):
-    if request.method == "POST":
-        pedido = get_object_or_404(Pedido, id=pedido_id)
-        pedido.estado = "listo"
-        pedido.save()
+    pedido = get_object_or_404(Pedido, id=pedido_id)
 
-        # Destinatario de la notificación (mesero si restaurante, cajero si domicilio)
-        destinatario = pedido.mesero if pedido.tipo_pedido == 'restaurante' else pedido.cajero
+    if pedido.estado != "en preparacion":
+        return JsonResponse({"success": False, "mensaje": "Solo se puede marcar listo si está en preparación."})
 
-        # Guardar y obtener la instancia de la notificación
-        notif = Notificacion.objects.create(
-            usuario_destino=destinatario,
-            tipo="pedido_listo",
-            mensaje=f"El pedido {pedido.codigo_pedido} está listo.",
-            pedido=pedido
-        )
+    pedido.estado = "listo"
+    pedido.save()
 
-        # ==========================================
-        # 1) NOTIFICACIÓN NORMAL (mesero / cajero)
-        # ==========================================
-        channel_layer = get_channel_layer()
+    channel_layer = get_channel_layer()
+
+    # 1) Actualizar en tiempo real (cocina + cajero)
+    try:
+        enviar_actualizacion_cocina(pedido)  # este manda al grupo pedidos_activos
+    except Exception:
+        # para que NO te salga “error de conexión” por WS si algo falla
+        pass
+
+    # 2) Notificación (mesero o cajero)
+    destinatario = pedido.mesero if pedido.tipo_pedido == 'restaurante' else pedido.cajero
+    if not destinatario:
+        return JsonResponse({"success": False, "mensaje": "No se encontró el destinatario del pedido."})
+
+    notif = Notificacion.objects.create(
+        usuario_destino=destinatario,
+        tipo="pedido_listo",
+        mensaje=f"El pedido {pedido.codigo_pedido} está listo.",
+        pedido=pedido
+    )
+
+    try:
         async_to_sync(channel_layer.group_send)(
             f"notificaciones_{destinatario.id}",
             {
@@ -1221,62 +1547,98 @@ def marcar_pedido_listo(request, pedido_id):
                 "mensaje": f"El pedido {pedido.codigo_pedido} está listo.",
                 "mesa": pedido.mesa.numero if pedido.mesa else None,
                 "pedido": pedido.id,
-                # 👇 NUEVO: mandamos también el código
                 "codigo_pedido": pedido.codigo_pedido,
                 "id": notif.id,
                 "fecha": localtime(notif.fecha_hora).strftime("%d/%m/%Y %H:%M"),
             }
         )
+    except Exception:
+        pass
 
-        # ==========================================
-        # 2) EVENTO PARA LA TABLA DE COBROS (cajero)
-        #    → nuevo_cobro (WebSocket)
-        # ==========================================
+    # 3) Evento cobro (para que aparezca en "Pedidos a Cobrar")
+    mesa_texto = pedido.mesa.numero if pedido.mesa else "Domicilio"
 
-        # Nombre que se mostrará en "mesa"
-        mesa_texto = pedido.mesa.numero if pedido.mesa else "Domicilio"
+    if pedido.tipo_pedido == 'restaurante' and pedido.mesero:
+        nombre_atendio = pedido.mesero.nombre
+    elif pedido.tipo_pedido == 'domicilio' and pedido.cajero:
+        nombre_atendio = f"Cajero: {pedido.cajero.nombre}"
+    else:
+        nombre_atendio = "N/A"
 
-        # Quien aparece como "mesero" en la tabla de cobro
-        if pedido.tipo_pedido == 'restaurante' and pedido.mesero:
-            nombre_atendio = pedido.mesero.nombre
-        elif pedido.tipo_pedido == 'domicilio' and pedido.cajero:
-            nombre_atendio = f"Cajero: {pedido.cajero.nombre}"
-        else:
-            nombre_atendio = "N/A"
+    # ESTE ES EL NOMBRE CORRECTO DEL CLIENTE
+    nombre_cliente = pedido.cliente_nombre  # usa tu @property
 
+    try:
         async_to_sync(channel_layer.group_send)(
             "pedidos_activos",
             {
                 "type": "nuevo_cobro",
                 "origen": "domicilio" if pedido.tipo_pedido == "domicilio" else "restaurante",
                 "pedido_id": pedido.id,
-                # también aquí mandamos el código
                 "codigo_pedido": pedido.codigo_pedido,
                 "mesa": mesa_texto,
                 "mesero": nombre_atendio,
-                "total": float(pedido.total),
+
+                # cliente correcto
+                "cliente": nombre_cliente,
+
+                "total": float(pedido.total or 0),
                 "estado_pago": "pendiente",
+
+                # para filtrar en frontend y que no lo vean otros cajeros
+                "cajero_id": pedido.cajero_id if pedido.tipo_pedido == "domicilio" else None,
             }
         )
+    except Exception:
+        pass
 
-        return JsonResponse({"success": True})
 
+    return JsonResponse({"success": True})
 
 def _payload_pedido_cocina(pedido):
     return {
         "id": pedido.id,
         "codigo_pedido": pedido.codigo_pedido,
         "tipo": pedido.tipo_pedido,
+        "estado": pedido.estado,
+
+        # restaurante
         "mesa": pedido.mesa.numero if pedido.mesa else None,
         "mesero": pedido.mesero.nombre if pedido.mesero else None,
+
+        # domicilio (PARA LA TABLA DEL CAJERO)
+        "nombre_cliente": pedido.nombre_cliente or "",
+        "contacto_cliente": pedido.contacto_cliente or "",
+        "total": float(pedido.total or 0),
+
         "cajero": pedido.cajero.nombre if pedido.cajero else None,
+
         "productos": [
-            {
-                "nombre": d.producto.nombre,
-                "cantidad": d.cantidad,
-                "observacion": d.observacion or ""
-            }
-            for d in pedido.detalles.all()
+            {"nombre": d.producto.nombre, "cantidad": d.cantidad, "observacion": d.observacion or ""}
+            for d in pedido.detalles.select_related("producto").all()
+        ]
+    }
+def _payload_pedido_cocina(pedido):
+    return {
+        "id": pedido.id,
+        "codigo_pedido": pedido.codigo_pedido,
+        "tipo": pedido.tipo_pedido,
+        "estado": pedido.estado,
+
+        # restaurante
+        "mesa": pedido.mesa.numero if pedido.mesa else None,
+        "mesero": pedido.mesero.nombre if pedido.mesero else None,
+
+        # domicilio (PARA LA TABLA DEL CAJERO)
+        "nombre_cliente": pedido.nombre_cliente or "",
+        "contacto_cliente": pedido.contacto_cliente or "",
+        "total": float(pedido.total or 0),
+
+        "cajero": pedido.cajero.nombre if pedido.cajero else None,
+
+        "productos": [
+            {"nombre": d.producto.nombre, "cantidad": d.cantidad, "observacion": d.observacion or ""}
+            for d in pedido.detalles.select_related("producto").all()
         ]
     }
 
@@ -1344,41 +1706,96 @@ def enviar_mensaje_mesero(request):
 
     return JsonResponse({"success": True})
 
-#-------------------------------------
-# MESERO - MODULO NOTIFICACIONES
-#-------------------------------------
+@login_required(login_url='login')
+@rol_requerido('cocinero')
+@require_POST
+@csrf_protect
+def marcar_pedido_preparacion(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
 
-def notificaciones_mesero(request):
-    notificaciones = Notificacion.objects.filter(
-        usuario_destino=request.user
-    ).order_by('-fecha_hora')
+    if pedido.estado == "en preparacion":
+        return JsonResponse({"success": False, "mensaje": "Este pedido ya está siendo preparado."})
 
-    return render(request, "mesero/notificacion/notificaciones.html", {
-        "notificaciones": notificaciones
-    })
+    if pedido.estado != "en_creacion":
+        return JsonResponse({"success": False, "mensaje": "Este pedido no está en creación."})
 
-def obtener_notificaciones(request):
-    notifs = Notificacion.objects.filter(usuario_destino=request.user).order_by('-fecha_hora')
-    return JsonResponse([
-        {
-            "id": n.id,
-            "tipo": n.tipo,
-            "mensaje": n.mensaje,
-            "pedido": n.pedido_id if n.pedido else None,
-            "mesa": n.pedido.mesa.numero if n.pedido and n.pedido.mesa else None,
-            "fecha": localtime(n.fecha_hora).strftime("%d/%m/%Y %H:%M"),
-        }
-        for n in notifs
-    ], safe=False)
+    # (Opcional recomendado) evitar N+1 luego
+    # pedido = Pedido.objects.prefetch_related('detalles__producto').get(id=pedido_id)
 
-@csrf_exempt
-def eliminar_notificacion(request, notif_id):
-    if request.method == "POST":
-        notif = get_object_or_404(Notificacion, id=notif_id)
-        notif.delete()
-        return JsonResponse({"success": True})
+    pedido.estado = "en preparacion"
+    pedido.save(update_fields=["estado"])
 
-    return JsonResponse({"success": False}, status=400)
+    # SOLO esto (manda productos)
+    try:
+        enviar_actualizacion_cocina(pedido)
+    except Exception:
+        pass
+
+    return JsonResponse({"success": True})
+
+@login_required(login_url='login')
+@rol_requerido('cocinero')
+@require_POST
+@csrf_protect
+def avisar_no_hay_producto(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"success": False, "mensaje": "JSON inválido."}, status=400)
+
+    producto_id = data.get("producto_id")
+    if not producto_id:
+        return JsonResponse({"success": False, "mensaje": "Falta producto_id."}, status=400)
+
+    producto = Producto.objects.filter(id=producto_id).first()
+    if not producto:
+        return JsonResponse({"success": False, "mensaje": "Producto no encontrado."}, status=404)
+
+    # Si ya está agotado hoy, no re-enviar (y mantiene “Enviado” al recargar)
+    hoy = timezone.localdate()
+    if producto.agotado_fecha == hoy:
+        return JsonResponse({"success": True, "mensaje": f'Ya estaba marcado como agotado hoy: {producto.nombre}.'})
+
+    # Marcar agotado HOY (persistente)
+    producto.agotado_fecha = hoy
+    producto.agotado_hora = timezone.now()
+    producto.save(update_fields=["agotado_fecha", "agotado_hora"])
+
+    destinatarios = Usuario.objects.filter(rol__in=["mesero", "cajero"]).only("id", "rol")
+    if not destinatarios.exists():
+        return JsonResponse({"success": False, "mensaje": "No hay destinatarios (meseros/cajeros)."}, status=404)
+
+    mensaje = f'AGOTADO HOY: "{producto.nombre}". No ofrecer ni agregar a pedidos.'
+
+    channel_layer = get_channel_layer()
+
+    # Guardar notificaciones
+    notifs = [Notificacion(usuario_destino=u, tipo="producto_no_hay", mensaje=mensaje) for u in destinatarios]
+    Notificacion.objects.bulk_create(notifs)
+
+    # Guardar mensajes (opcional)
+    msgs = [Mensaje(remitente=request.user, destinatario=u, contenido=mensaje) for u in destinatarios]
+    Mensaje.objects.bulk_create(msgs)
+
+    # Enviar WS + incluir producto_id para bloquear en UI en tiempo real
+    for u in destinatarios:
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"notificaciones_{u.id}",
+                {
+                    "type": "enviar_notificacion",
+                    "tipo": "producto_no_hay",
+                    "mensaje": mensaje,
+                    "producto_id": producto.id,
+                    "producto_nombre": producto.nombre,
+                    "pedido": None,
+                    "mesa": None,
+                }
+            )
+        except Exception:
+            pass
+
+    return JsonResponse({"success": True, "mensaje": f'Aviso enviado: {producto.nombre}.'})
 
 # ----------------------------
 # Cajero - Pedidos a domicilio
@@ -1386,18 +1803,16 @@ def eliminar_notificacion(request, notif_id):
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_listar_pedidos(request):
-
     hoy = timezone.localdate()
 
     pedidos = Pedido.objects.filter(
         tipo_pedido='domicilio',
         cajero=request.user,
         fecha_hora__date=hoy
-    ).exclude(estado__in=['borrador', 'en_creacion']).order_by('-id')
+    ).exclude(estado='borrador').order_by('id')
 
-    return render(request, 'cajero/pedidos/listar_pedidos.html', {
-        'pedidos': pedidos
-    })
+
+    return render(request, 'cajero/pedidos/listar_pedidos.html', {'pedidos': pedidos})
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -1449,7 +1864,7 @@ def cajero_agregar_detalles(request, pedido_id):
         cajero=request.user,
         estado__in=['borrador', 'en_creacion']
     )
-    productos = Producto.objects.filter(activo=True)
+    productos = Producto.objects.filter(activo=True).order_by("nombre")
     
     # CALCULAR RECARGOS AQUi
     total_recargos = pedido.detalles.aggregate(
@@ -1476,6 +1891,15 @@ def cajero_agregar_detalle_ajax(request, pedido_id):
         producto_id = data.get('producto_id')
         cantidad = int(data.get('cantidad', 1))
         observacion = data.get("observacion", '')
+
+        # VALIDAR: NO permitir agregar si está agotado hoy
+        producto = get_object_or_404(Producto, id=producto_id)
+        if producto.agotado_hoy:
+            return JsonResponse({
+                "success": False,
+                "mensaje": f'El producto "{producto.nombre}" está AGOTADO hoy y no se puede agregar.'
+            })
+
 
         recargo_unitario = float(data.get("recargo_unitario", 0))
         recargo_total = float(data.get("recargo_total", 0))  # (no es necesario guardarlo)
@@ -1617,10 +2041,12 @@ def cajero_ver_pedido(request, pedido_id):
         return redirect('cajero_agregar_detalles', pedido_id=pedido.id)
 
     # Solo la PRIMERA vez lo mando a cocina
-    if pedido.estado in ['borrador', 'en_creacion']:
-        pedido.estado = 'en preparacion'
-        pedido.save()
-        enviar_pedido_cocina(pedido)   # solo una vez
+    if pedido.estado in ["borrador", "en_creacion"] and not pedido.enviado_cocina:
+        pedido.estado = "en_creacion"
+        pedido.enviado_cocina = True
+        pedido.save(update_fields=["estado", "enviado_cocina"])
+        enviar_pedido_cocina(pedido)
+   # solo una vez
     # si ya está en preparación/listo/finalizado, NO lo vuelves a mandar
 
     return render(request, 'cajero/pedidos/ver_pedido.html', {
@@ -1630,13 +2056,16 @@ def cajero_ver_pedido(request, pedido_id):
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_api_estados_pedidos(request):
+    hoy = timezone.localdate()
+
     pedidos = Pedido.objects.filter(
         tipo_pedido='domicilio',
-        cajero=request.user
-    ).values(
-        'id',
-        'estado'
+        cajero=request.user,
+        fecha_hora__date=hoy
+    ).exclude(estado='borrador').values(
+        'id', 'estado', 'codigo_pedido', 'nombre_cliente', 'contacto_cliente', 'total'
     )
+
     return JsonResponse(list(pedidos), safe=False)
 
 @login_required(login_url='login')
@@ -1688,7 +2117,6 @@ def cajero_finalizar_pedido(request, pedido_id):
         cajero=request.user
     )
 
-    # (opcional) solo permitir si ya está "listo"
     if pedido.estado != "listo":
         return JsonResponse({
             "success": False,
@@ -1696,12 +2124,19 @@ def cajero_finalizar_pedido(request, pedido_id):
         })
 
     pedido.estado = "finalizado"
-    pedido.save()
+    pedido.save(update_fields=["estado"])
+
+    # SOLO enviar payload completo con productos
+    try:
+        enviar_actualizacion_cocina(pedido)
+    except Exception:
+        pass
 
     return JsonResponse({
         "success": True,
-        "message": f"El pedido #{pedido.id} ha sido finalizado."
+        "message": f"El pedido #{pedido.codigo_pedido} ha sido finalizado."
     })
+
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -1715,7 +2150,7 @@ def cajero_editar_pedido(request, pedido_id):
     )
 
     # NECESARIOS PARA QUE SE VEAN LOS PRODUCTOS Y DETALLES
-    productos = Producto.objects.filter(activo=True)
+    productos = Producto.objects.filter(activo=True).order_by("nombre")
     detalles = pedido.detalles.all()
 
     if request.method == "POST":
@@ -1760,8 +2195,8 @@ def cajero_editar_pedido(request, pedido_id):
     # SE ENVÍAN LOS PRODUCTOS Y DETALLES AQUÍ
     return render(request, 'cajero/pedidos/editar_pedido.html', {
         'pedido': pedido,
-        'productos': productos,    # ← NECESARIO
-        'detalles': detalles       # ← NECESARIO
+        'productos': productos,    
+        'detalles': detalles      
     })
 
 @login_required(login_url='login')
@@ -1781,17 +2216,31 @@ def cajero_cancelar_pedido(request, pedido_id):
     messages.info(request, "Pedido cancelado correctamente.")
     return redirect('cajero_listar_pedidos')
 
-@login_required(login_url='login')
-@rol_requerido('cajero')
-def cajero_notificaciones(request):
-    notificaciones = Notificacion.objects.filter(
-        usuario_destino=request.user
-    ).order_by('-fecha_hora')
+def pedido_to_dict(pedido):
+    return {
+        "id": pedido.id,
+        "codigo_pedido": pedido.codigo_pedido,
+        "tipo": pedido.tipo_pedido,
+        "estado": pedido.estado,
 
-    return render(request, "cajero/notificaciones/listar.html", {
-        "notificaciones": notificaciones
-    })
+        "mesa": pedido.mesa.numero if pedido.mesa else None,
+        "mesero": pedido.mesero.nombre if pedido.mesero else None,
 
+        "nombre_cliente": pedido.nombre_cliente or "",
+        "contacto_cliente": pedido.contacto_cliente or "",
+        "total": float(pedido.total or 0),
+
+        "cajero": pedido.cajero.nombre if pedido.cajero else None,
+
+        "productos": [
+            {"nombre": d.producto.nombre, "cantidad": d.cantidad, "observacion": d.observacion or ""}
+            for d in pedido.detalles.select_related("producto").all()
+        ]
+    }
+
+#-------------------------------
+# CAJERO - COBROS
+#-------------------------------
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_restaurante_cobros(request):
@@ -1813,7 +2262,7 @@ def cajero_restaurante_cobros(request):
         )
         .annotate(tiene_pago=Exists(pagos_confirmados))
         .filter(tiene_pago=False)
-        .order_by('-id')
+        .order_by('id')
     )
 
     # ---------- PEDIDOS PAGADOS (SOLO HOY) + COMPROBANTES ----------
@@ -1826,7 +2275,7 @@ def cajero_restaurante_cobros(request):
         )
         .prefetch_related('pagos__comprobante_set')  # para acceder a los PDFs
         .distinct()
-        .order_by('-id')
+        .order_by('id')
     )
 
     # añadir el último pago confirmado a cada pedido (igual que domicilio)
@@ -1834,7 +2283,7 @@ def cajero_restaurante_cobros(request):
         p.pago_confirmado = (
             p.pagos
              .filter(estado_pago='confirmado')
-             .order_by('-id')
+             .order_by('id')
              .first()
         )
 
@@ -1846,141 +2295,180 @@ def cajero_restaurante_cobros(request):
 # ============================================================
 #                    REGISTRAR PAGO DEL PEDIDO
 # ============================================================
+
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_restaurante_pagar(request, pedido_id):
 
     if request.method != "POST":
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "Método no permitido."})
 
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-
-    data = json.loads(request.body)
-    metodo = data.get("metodo")
-    recibido_raw = data.get("recibido", "")
-    referencia = data.get("referencia", "")
+    pedido = get_object_or_404(Pedido, id=pedido_id, tipo_pedido="restaurante")
 
     # Solo permitir cobrar pedidos listos o finalizados
-    if pedido.estado not in ['listo', 'finalizado']:
+    if pedido.estado not in ["listo", "finalizado"]:
         return JsonResponse({"success": False, "message": "El pedido no puede ser pagado."})
 
-    # Convertir valores en Decimal (sin errores de float)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Datos inválidos."})
+
+    metodo = (data.get("metodo") or "").strip()
+    recibido_raw = data.get("recibido", None)
+    referencia = (data.get("referencia") or "").strip()
+
+    cliente_nombre = (data.get("cliente_nombre") or "").strip()
+    cliente_direccion = (data.get("cliente_direccion") or "").strip()
+
+    # Convertir a Decimal seguro
     try:
         total = Decimal(str(pedido.total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-        if recibido_raw not in ["", None]:
-            recibido = Decimal(str(recibido_raw)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        else:
+        if recibido_raw in ["", None]:
             recibido = None
-
-    except:
+        else:
+            recibido = Decimal(str(recibido_raw)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except Exception:
         return JsonResponse({"success": False, "message": "El monto ingresado no es válido."})
 
-    # =====================================================
-    #                VALIDACIONES SEGÚN MÉTODO
-    # =====================================================
-
-    # TRANSFERENCIA
+    # regla >= 50
+    if total >= Decimal("50.00"):
+        if not cliente_nombre or not cliente_direccion:
+            return JsonResponse({
+                "success": False,
+                "message": "Total >= $50: debe ingresar Nombre y Dirección del cliente."
+            })
+    # Validaciones por método
     if metodo == "transferencia":
-
         if recibido is None:
             return JsonResponse({"success": False, "message": "Debe ingresar el monto de la transferencia."})
-
         if recibido != total:
             return JsonResponse({"success": False, "message": "El monto debe ser EXACTO para transferencias."})
-
         if not referencia:
             return JsonResponse({"success": False, "message": "Debe ingresar el número de comprobante."})
-
         cambio = Decimal("0.00")
 
-    # EFECTIVO
     elif metodo == "efectivo":
-
         if recibido is None:
             return JsonResponse({"success": False, "message": "Debe ingresar el monto recibido."})
-
         if recibido < total:
             return JsonResponse({"success": False, "message": "El cliente no puede pagar menos del total."})
-
-        cambio = recibido - total
+        cambio = (recibido - total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     else:
         return JsonResponse({"success": False, "message": "Método de pago no válido."})
 
-    # =====================================================
-    #                 REGISTRAR EL PAGO
-    # =====================================================
-    pago = Pago.objects.create(
-        pedido=pedido,
-        total=total,
-        monto_recibido=recibido,
-        metodo_pago=metodo,
-        referencia_transferencia=referencia if metodo == "transferencia" else "",
-        cambio=cambio,
-        estado_pago="confirmado"
-    )
+    # ==========================================================
+    # GUARDADO EN BD (atómico) + liberar mesa
+    # ==========================================================
+    with transaction.atomic():
 
-    # =====================================================
-    #     CREAR COMPROBANTE AUTOMÁTICAMENTE
-    # =====================================================
-    numero = f"C-{pedido.id}-{pago.id}"
+        # Registrar pago
+        pago = Pago.objects.create(
+            pedido=pedido,
+            total=total,
+            monto_recibido=recibido,
+            metodo_pago=metodo,
+            referencia_transferencia=referencia if metodo == "transferencia" else "",
+            cambio=cambio,
+            estado_pago="confirmado"
+        )
 
-    comprobante = Comprobante.objects.create(
-        pago=pago,
-        numero_comprobante=numero,
-        nombre_cliente="Consumidor final",
-        direccion_cliente=pedido.direccion_entrega if pedido.direccion_entrega else "N/A",
-        correo_cliente=None
-    )
+        # Finalizar pedido (si no lo está)
+        if pedido.estado != "finalizado":
+            pedido.estado = "finalizado"
+            pedido.save(update_fields=["estado"])
 
-    generar_comprobante_pdf(comprobante)
+        #  LIBERAR MESA (solo restaurante)
+        if pedido.mesa_id:
+            Mesa.objects.filter(id=pedido.mesa_id).update(estado="libre")
 
-    # URL segura del PDF
-    comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
+        # Comprobante
+        numero = f"C-{pedido.id}-{pago.id}"
 
-    # =====================================================
-    #               WEBSOCKET: ACTUALIZAR TABLAS
-    # =====================================================
+        if total >= Decimal("50.00"):
+            nombre_comp = cliente_nombre
+            direccion_comp = cliente_direccion
+        else:
+            nombre_comp = "Consumidor final"
+            direccion_comp = ""
+
+        comprobante = Comprobante.objects.create(
+            pago=pago,
+            numero_comprobante=numero,
+            nombre_cliente=nombre_comp,
+            direccion_cliente=direccion_comp,
+            correo_cliente=None
+        )
+
+    # Generar PDF (fuera del atomic por si tarda)
+    comprobante_url = ""
+    try:
+        generar_comprobante_pdf(comprobante)
+        comprobante.refresh_from_db()
+        comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
+    except Exception as e:
+        # IMPORTANTE: no rompas el cobro por el PDF
+        print("ERROR generando PDF comprobante:", e)
+        comprobante_url = ""  # quedará "No disponible" pero el cobro y WS sí salen
+        
+    # ==========================================================
+    # WEBSOCKETS
+    # ==========================================================
     channel_layer = get_channel_layer()
 
-    # eliminar de pendientes
+    # 1) SOLO CAJERO: quitarlo de "Pedidos a Cobrar"
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
         {
             "type": "eliminar_pedido",
-            "pedido_id": pedido.id
+            "origen": "restaurante",
+            "pedido_id": pedido.id,
+            "accion": "quitar_de_cobros"
         }
     )
 
-    # agregar a pagados (con fecha en zona local)
+    # 2) MESERO (y cualquiera que muestre pedidos): actualizar estado a FINALIZADO
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "actualizar_pedido",
+            "pedido": {
+                "id": pedido.id,
+                "estado": "finalizado",
+                "tipo": "restaurante",
+            }
+        }
+    )
+
+    # 3) Cajero: tabla "Pagados"
     fecha_local = timezone.localtime(pago.fecha_hora).strftime("%d/%m/%Y %H:%M")
 
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
         {
             "type": "nuevo_pagado",
-            "origen": "restaurante",                      # IMPORTANTE
+            "origen": "restaurante",
             "pedido_id": pedido.id,
-            "codigo_pedido": pedido.codigo_pedido,        # para mostrar el código en tiempo real
-            "mesa": pedido.mesa.numero if pedido.mesa else "Domicilio",
+            "codigo_pedido": pedido.codigo_pedido,
+            "mesa": pedido.mesa.numero if pedido.mesa else "N/A",
             "mesero": pedido.mesero.nombre if pedido.mesero else "",
             "total": float(total),
             "fecha": fecha_local,
             "estado_pago": "confirmado",
-            "comprobante_url": comprobante_url,           # para el botón "Ver PDF"
+            "comprobante_url": comprobante_url,
         }
     )
 
-    # =====================================================
-    # RESPUESTA CON LINK PARA IMPRIMIR
-    # =====================================================
     return JsonResponse({
         "success": True,
         "message": "Pago registrado correctamente.",
         "comprobante_url": comprobante_url,
-        "codigo_pedido": pedido.codigo_pedido           # opcional pero útil en el JS del front
+        "codigo_pedido": pedido.codigo_pedido
     })
+
+
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -2002,7 +2490,7 @@ def cajero_domicilio_cobros(request):
         fecha_hora__date=hoy  
     ).annotate(
         tiene_pago=Exists(pagos_confirmados)
-    ).filter(tiene_pago=False).order_by('-id')
+    ).filter(tiene_pago=False).order_by('id')
 
     # AQUÍ ESTABA EL PROBLEMA:
     # antes solo hacías un filter simple.
@@ -2018,7 +2506,7 @@ def cajero_domicilio_cobros(request):
         )
         .prefetch_related('pagos__comprobante_set')  # para acceder a los comprobantes sin más queries
         .distinct()
-        .order_by('-id')
+        .order_by('id')
     )
 
     # añadir el último pago confirmado a cada pedido
@@ -2026,7 +2514,7 @@ def cajero_domicilio_cobros(request):
         p.pago_confirmado = (
             p.pagos
             .filter(estado_pago='confirmado')
-            .order_by('-id')
+            .order_by('id')
             .first()
         )
 
@@ -2044,19 +2532,23 @@ def cajero_domicilio_pagar(request, pedido_id):
 
     try:
         data = json.loads(request.body)
-    except:
+    except Exception:
         return JsonResponse({"success": False, "message": "Datos inválidos."})
 
     metodo = data.get("metodo")
     recibido = data.get("recibido")
-    referencia = data.get("referencia", "")
+    referencia = (data.get("referencia") or "").strip()
 
     try:
-        pedido = Pedido.objects.get(id=pedido_id, tipo_pedido="domicilio")
+        pedido = Pedido.objects.get(
+            id=pedido_id,
+            tipo_pedido="domicilio",
+            cajero=request.user
+        )
     except Pedido.DoesNotExist:
         return JsonResponse({"success": False, "message": "Pedido no encontrado."})
 
-    total = float(pedido.total)
+    total = float(pedido.total or 0)
 
     # ================================
     # VALIDACIÓN DE MÉTODO DE PAGO
@@ -2066,8 +2558,8 @@ def cajero_domicilio_pagar(request, pedido_id):
 
     if metodo == "efectivo":
         try:
-            recibido = float(recibido)
-        except:
+            recibido = float(str(recibido).replace(",", "."))
+        except Exception:
             return JsonResponse({"success": False, "message": "Monto recibido inválido."})
 
         if recibido < total:
@@ -2078,51 +2570,42 @@ def cajero_domicilio_pagar(request, pedido_id):
             return JsonResponse({"success": False, "message": "Debe ingresar número de comprobante."})
 
         try:
-            recibido = float(recibido)
-        except:
+            recibido = float(str(recibido).replace(",", "."))
+        except Exception:
             return JsonResponse({"success": False, "message": "Monto transferido inválido."})
 
+        # Si quieres EXACTO igual al total, cambia por: if recibido != total:
         if recibido < total:
             return JsonResponse({"success": False, "message": "El monto transferido es insuficiente."})
 
+    # Fecha local
     fecha_local = timezone.localtime(timezone.now())
 
     # ================================
-    # REGISTRO DEL PAGO (CORREGIDO)
+    # REGISTRO DEL PAGO
     # ================================
     with transaction.atomic():
+
         pago = Pago.objects.create(
             pedido=pedido,
-            total=total,                    
-            metodo_pago=metodo,             
+            total=total,
+            metodo_pago=metodo,
             monto_recibido=recibido,
             cambio=recibido - total if metodo == "efectivo" else 0,
-            referencia_transferencia=referencia if metodo == "transferencia" else "",  # <-- CAMBIO AQUÍ
+            referencia_transferencia=referencia if metodo == "transferencia" else "",
             estado_pago="confirmado",
             fecha_hora=fecha_local,
         )
 
-        # Cambiar estado del pedido
+        # Cambiar estado del pedido (si así lo manejas en domicilio)
         pedido.estado = "finalizado"
-        pedido.save()
+        pedido.save(update_fields=["estado"])
 
-    # ================================
-    # WEBSOCKET → NOTIFICAR AL CAJERO
-    # ================================
-    channel_layer = get_channel_layer()
-
-    async_to_sync(channel_layer.group_send)(
-        "pedidos_activos",
-        {
-            "type": "nuevo_pagado",
-            "origen": "domicilio",
-            "pedido_id": pedido.id,
-            "cliente": pedido.nombre_cliente,
-            "total": float(total),
-            "fecha": fecha_local.strftime("%d/%m/%Y %H:%M"),
-            "estado_pago": "confirmado",
-        }
-    )
+        # Enviar actualización a cocina (opcional)
+        try:
+            enviar_actualizacion_cocina(pedido)
+        except Exception:
+            pass
 
     # ================================
     # COMPROBANTE
@@ -2137,23 +2620,57 @@ def cajero_domicilio_pagar(request, pedido_id):
         correo_cliente=None
     )
 
+    # Generar PDF y guardarlo en archivo_pdf
     generar_comprobante_pdf(comprobante)
 
+    # URL del PDF (YA existe porque ya se generó)
+    comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
+
+    # ================================
+    # WEBSOCKET → NOTIFICAR TABLA PAGADOS (CON PDF)
+    # ================================
+    channel_layer = get_channel_layer()
+
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "nuevo_pagado",
+            "origen": "domicilio",
+            "pedido_id": pedido.id,
+            "cliente": pedido.nombre_cliente,
+            "total": float(total),
+            "fecha": fecha_local.strftime("%d/%m/%Y %H:%M"),
+            "estado_pago": "confirmado",
+            "comprobante_url": comprobante_url,  
+        }
+    )
+
+    # ================================
+    # RESPUESTA
+    # ================================
     return JsonResponse({
         "success": True,
         "message": "Pago registrado correctamente.",
-        "comprobante_url": comprobante.archivo_pdf.url
+        "comprobante_url": comprobante_url
     })
+
 
 @login_required(login_url='login')
 def ver_comprobante(request, comp_id):
-
     comprobante = get_object_or_404(Comprobante, id=comp_id)
     pago = comprobante.pago
     pedido = pago.pedido
     detalles = pedido.detalles.all()
 
-    # Seleccionar comprobante según tipo de pedido
+    requiere_datos = pedido.total >= Decimal("50.00")
+
+    # Datos sugeridos
+    nombre_impreso = pedido.cliente_nombre  # ya te devuelve nombre de FK o nombre_cliente
+    direccion_impresa = (
+        (pedido.direccion_entrega or "").strip() or
+        (pedido.cliente.direccion.strip() if pedido.cliente and pedido.cliente.direccion else "")
+    )
+
     if pedido.tipo_pedido == "restaurante":
         template = "cajero/comprobantes/comprobante_restaurante.html"
     else:
@@ -2163,7 +2680,10 @@ def ver_comprobante(request, comp_id):
         "comprobante": comprobante,
         "pago": pago,
         "pedido": pedido,
-        "detalles": detalles
+        "detalles": detalles,
+        "requiere_datos": requiere_datos,
+        "nombre_impreso": nombre_impreso,
+        "direccion_impresa": direccion_impresa,
     })
 
 def generar_comprobante_pdf(comprobante):
@@ -2171,27 +2691,39 @@ def generar_comprobante_pdf(comprobante):
     pedido = pago.pedido
     detalles = pedido.detalles.all()
 
-    # seleccionar plantilla
-    if pedido.tipo_pedido == "restaurante":
-        template = "cajero/comprobantes/comprobante_restaurante.html"
+    requiere_datos = pago.total >= Decimal("50.00")
+
+    # USA LO GUARDADO EN EL COMPROBANTE (NO el pedido)
+    nombre_impreso = (comprobante.nombre_cliente or "").strip()
+    direccion_impresa = (comprobante.direccion_cliente or "").strip()
+
+    if requiere_datos:
+        if not nombre_impreso or not direccion_impresa:
+            raise ValueError("Pedido >= $50 requiere nombre y dirección del cliente.")
     else:
-        template = "cajero/comprobantes/comprobante_domicilio.html"
+        nombre_impreso = "Consumidor final"
+        direccion_impresa = ""
+
+    # (opcional) asegúrate de persistir lo final
+    comprobante.nombre_cliente = nombre_impreso
+    comprobante.direccion_cliente = direccion_impresa
+    comprobante.save(update_fields=["nombre_cliente", "direccion_cliente"])
+
+    template = "cajero/comprobantes/comprobante_restaurante.html" if pedido.tipo_pedido == "restaurante" else "cajero/comprobantes/comprobante_domicilio.html"
 
     html_string = render_to_string(template, {
         "comprobante": comprobante,
         "pago": pago,
         "pedido": pedido,
-        "detalles": detalles
+        "detalles": detalles,
+        "requiere_datos": requiere_datos,
+        "nombre_impreso": nombre_impreso,
+        "direccion_impresa": direccion_impresa,
     })
 
     pdf_file = HTML(string=html_string).write_pdf()
-
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
-    comprobante.archivo_pdf.save(
-        nombre_archivo,
-        ContentFile(pdf_file),
-        save=True
-    )
+    comprobante.archivo_pdf.save(nombre_archivo, ContentFile(pdf_file), save=True)
 
 #-----------------------------
 # Reportes
@@ -2271,15 +2803,18 @@ def reporte_pagos_domicilio(request):
         "cajeros": cajeros,
     })
 
+
 @login_required(login_url='login')
 @rol_requerido('admin')
 def reporte_pedidos_restaurante(request):
 
-    pedidos = Pedido.objects.filter(
-        tipo_pedido='restaurante'
-    ).select_related('mesa', 'mesero').prefetch_related('detalles')
+    pedidos = (
+        Pedido.objects
+        .filter(tipo_pedido='restaurante')
+        .select_related('mesa', 'mesero')
+        .prefetch_related('detalles')
+    )
 
-    # ----------- FILTROS -----------
     fecha_inicio = request.GET.get("inicio")
     fecha_fin = request.GET.get("fin")
     estado = request.GET.get("estado")
@@ -2297,7 +2832,6 @@ def reporte_pedidos_restaurante(request):
     if mesero_id and mesero_id != "todos":
         pedidos = pedidos.filter(mesero_id=mesero_id)
 
-    # ----------- RESÚMENES -----------
     total_pedidos = pedidos.count()
     total_ventas = pedidos.aggregate(total=Sum('total'))['total'] or 0
 
@@ -2309,6 +2843,7 @@ def reporte_pedidos_restaurante(request):
         "total_ventas": total_ventas,
         "meseros": meseros,
     })
+
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -2357,109 +2892,88 @@ def obtener_logo():
 #-----------------------------
 #Exportar en pdf
 #-----------------------------
+
 @login_required
 @rol_requerido('admin')
-def exportar_pedidos_restaurante_pdf(request):
+def exportar_pedidos_restaurante_excel(request):
 
-    pedidos = Pedido.objects.filter(
-        tipo_pedido='restaurante'
-    ).select_related('mesa', 'mesero')
+    pedidos = (
+        Pedido.objects
+        .filter(tipo_pedido='restaurante')
+        .select_related('mesa', 'mesero')
+    )
 
-    # ======= FILTROS (IGUAL QUE EL REPORTE HTML) =======
-    inicio = request.GET.get("inicio")
-    fin = request.GET.get("fin")
-    estado = request.GET.get("estado")
-    mesero = request.GET.get("mesero")
+    # -------- FILTROS --------
+    if request.GET.get('inicio'):
+        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['inicio'])
+    if request.GET.get('fin'):
+        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fin'])
+    if request.GET.get('estado') and request.GET['estado'] != 'todos':
+        pedidos = pedidos.filter(estado=request.GET['estado'])
+    if request.GET.get('mesero') and request.GET['mesero'] != 'todos':
+        pedidos = pedidos.filter(mesero_id=request.GET['mesero'])
 
-    if inicio:
-        pedidos = pedidos.filter(fecha_hora__date__gte=inicio)
-    if fin:
-        pedidos = pedidos.filter(fecha_hora__date__lte=fin)
-    if estado and estado != "todos":
-        pedidos = pedidos.filter(estado=estado)
-    if mesero and mesero != "todos":
-        pedidos = pedidos.filter(mesero_id=mesero)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Restaurante"
 
-    total_final = pedidos.aggregate(total=Sum('total'))['total'] or 0
-    fecha_reporte = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+    header_fill, header_font, center, border = estilos_tabla()
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="pedidos_restaurante.pdf"'
-    doc = SimpleDocTemplate(response, pagesize=A4)
+    # -------- LOGO --------
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        logo = ExcelImage(logo_path)
+        logo.width = 120
+        logo.height = 60
+        ws.add_image(logo, "A1")
 
-    elementos = []
+    # -------- TITULOS --------
+    ws.merge_cells("A3:F3")
+    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
+    ws["A3"].font = Font(bold=True, size=14)
+    ws["A3"].alignment = center
 
-    # LOGO
-    logo = obtener_logo()
-    if logo:
-        elementos.append(logo)
+    ws.merge_cells("A4:F4")
+    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
+    ws["A4"].alignment = center
 
-    elementos.append(Spacer(1, 8))
+    # -------- ENCABEZADOS --------
+    headers = ["Código", "Fecha", "Mesa", "Mesero", "Estado", "Total"]
+    ws.append([])
+    ws.append(headers)
 
-    elementos.append(Table(
-        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
-        colWidths=[480],
-        style=[
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 14),
-        ]
-    ))
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=6, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
 
-    elementos.append(Spacer(1, 6))
-    elementos.append(Table([[f"Fecha de reporte: {fecha_reporte}"]], colWidths=[480]))
-    elementos.append(Spacer(1, 10))
-
-    elementos.append(Table(
-        [["REPORTE DE PEDIDOS - RESTAURANTE"]],
-        colWidths=[480],
-        style=[
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
-            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,-1), 13),
-        ]
-    ))
-
-    elementos.append(Spacer(1, 10))
-
-    data = [["Pedido", "Fecha", "Mesa", "Mesero", "Estado", "Total"]]
-
+    # -------- DATOS --------
     for p in pedidos:
-        data.append([
+        ws.append([
             p.codigo_pedido,
-            p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
-            p.mesa.numero if p.mesa else "—",
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
+            p.mesa.numero if p.mesa else "",
             p.mesero.nombre if p.mesero else "",
             p.estado.capitalize(),
-            f"$ {p.total:.2f}"
+            float(p.total)
         ])
 
-    tabla = Table(data, colWidths=[60, 90, 50, 90, 80, 60])
-    tabla.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
-    ]))
+    # -------- FORMATO --------
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=6):
+        for cell in row:
+            cell.border = border
+            cell.alignment = center
 
-    elementos.append(tabla)
-    elementos.append(Spacer(1, 12))
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 20
 
-    elementos.append(Table(
-        [["TOTAL GENERAL", f"$ {total_final:.2f}"]],
-        colWidths=[350, 130],
-        style=[
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
-            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
-            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
-            ('ALIGN', (1,0), (1,0), 'RIGHT'),
-        ]
-    ))
-
-    doc.build(elementos)
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="pedidos_restaurante.xlsx"'
+    wb.save(response)
     return response
 
 @login_required
@@ -2531,16 +3045,21 @@ def exportar_pedidos_domicilio_pdf(request):
     data = [["Pedido", "Cliente", "Cajero", "Estado", "Fecha", "Total"]]
 
     for p in pedidos:
+        cocinero = "—"
+        if p.cocinero_listo:
+            cocinero = f"{p.cocinero_listo.nombre} {p.cocinero_listo.apellido}"
+
         data.append([
             p.codigo_pedido,
-            p.nombre_cliente,
-            p.cajero.nombre if p.cajero else "",
-            p.estado.capitalize(),
             p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+            p.mesa.numero if p.mesa else "—",
+            p.mesero.nombre if p.mesero else "",
+            cocinero,
+            p.estado.capitalize(),
             f"$ {p.total:.2f}"
         ])
 
-    tabla = Table(data, colWidths=[60, 140, 90, 80, 90, 60])
+    tabla = Table(data, colWidths=[55, 85, 40, 85, 95, 55, 55])
     tabla.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 1, colors.black),
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
@@ -2803,86 +3322,114 @@ def estilos_tabla():
     )
     return header_fill, header_font, center, border
 
+
 @login_required
 @rol_requerido('admin')
-def exportar_pedidos_restaurante_excel(request):
+def exportar_pedidos_restaurante_pdf(request):
 
-    pedidos = Pedido.objects.filter(
-        tipo_pedido='restaurante'
-    ).select_related('mesa', 'mesero')
+    pedidos = (
+        Pedido.objects
+        .filter(tipo_pedido='restaurante')
+        .select_related('mesa', 'mesero')
+    )
 
-    # -------- FILTROS --------
-    if request.GET.get('inicio'):
-        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['inicio'])
-    if request.GET.get('fin'):
-        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fin'])
-    if request.GET.get('estado') and request.GET['estado'] != 'todos':
-        pedidos = pedidos.filter(estado=request.GET['estado'])
-    if request.GET.get('mesero') and request.GET['mesero'] != 'todos':
-        pedidos = pedidos.filter(mesero_id=request.GET['mesero'])
+    # ======= FILTROS =======
+    inicio = request.GET.get("inicio")
+    fin = request.GET.get("fin")
+    estado = request.GET.get("estado")
+    mesero = request.GET.get("mesero")
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Pedidos Restaurante"
+    if inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=inicio)
+    if fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fin)
+    if estado and estado != "todos":
+        pedidos = pedidos.filter(estado=estado)
+    if mesero and mesero != "todos":
+        pedidos = pedidos.filter(mesero_id=mesero)
 
-    header_fill, header_font, center, border = estilos_tabla()
+    total_final = pedidos.aggregate(total=Sum('total'))['total'] or 0
+    fecha_reporte = timezone.localtime().strftime("%d/%m/%Y %H:%M")
 
-    # -------- LOGO --------
-    logo_path = os.path.join(settings.MEDIA_ROOT, 'logo', 'logo.jpeg')
-    if os.path.exists(logo_path):
-        logo = ExcelImage(logo_path)
-        logo.width = 120
-        logo.height = 60
-        ws.add_image(logo, "A1")
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pedidos_restaurante.pdf"'
+    doc = SimpleDocTemplate(response, pagesize=A4)
 
-    # -------- TITULOS --------
-    ws.merge_cells("A3:F3")
-    ws["A3"] = "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"
-    ws["A3"].font = Font(bold=True, size=14)
-    ws["A3"].alignment = center
+    elementos = []
 
-    ws.merge_cells("A4:F4")
-    ws["A4"] = f"Reporte generado: {timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M')}"
-    ws["A4"].alignment = center
+    # LOGO
+    logo = obtener_logo()
+    if logo:
+        elementos.append(logo)
 
-    # -------- ENCABEZADOS --------
-    headers = ["Código", "Fecha", "Mesa", "Mesero", "Estado", "Total"]
-    ws.append([])
-    ws.append(headers)
+    elementos.append(Spacer(1, 8))
 
-    for col in range(1, len(headers) + 1):
-        cell = ws.cell(row=6, column=col)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = center
-        cell.border = border
+    elementos.append(Table(
+        [["CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO"]],
+        colWidths=[480],
+        style=[
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 14),
+        ]
+    ))
 
-    # -------- DATOS --------
+    elementos.append(Spacer(1, 6))
+    elementos.append(Table([[f"Fecha de reporte: {fecha_reporte}"]], colWidths=[480]))
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["REPORTE DE PEDIDOS - RESTAURANTE"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 13),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    data = [["Pedido", "Fecha", "Mesa", "Mesero", "Estado", "Total"]]
+
     for p in pedidos:
-        ws.append([
+        data.append([
             p.codigo_pedido,
-            p.fecha_hora.strftime('%d/%m/%Y %H:%M'),
-            p.mesa.numero if p.mesa else "",
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M"),
+            p.mesa.numero if p.mesa else "—",
             p.mesero.nombre if p.mesero else "",
             p.estado.capitalize(),
-            float(p.total)
+            f"$ {p.total:.2f}"
         ])
 
-    # -------- FORMATO --------
-    for row in ws.iter_rows(min_row=7, max_row=ws.max_row, max_col=6):
-        for cell in row:
-            cell.border = border
-            cell.alignment = center
+    tabla = Table(data, colWidths=[70, 95, 45, 105, 65, 70])
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
 
-    for col in ws.columns:
-        ws.column_dimensions[col[0].column_letter].width = 20
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 12))
 
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    response["Content-Disposition"] = 'attachment; filename="pedidos_restaurante.xlsx"'
-    wb.save(response)
+    elementos.append(Table(
+        [["TOTAL GENERAL", f"$ {total_final:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ]
+    ))
+
+    doc.build(elementos)
     return response
+
 
 @login_required
 @rol_requerido('admin')
@@ -3788,10 +4335,11 @@ def cajero_exportar_unificado_excel(request):
     wb.save(response)
     return response
 
+
 @login_required(login_url='login')
 @rol_requerido('cajero')
+@never_cache
 def tabla_pedidos_pagados_domicilio(request):
-
     hoy = timezone.localdate()
 
     pedidos_pagados = (
@@ -3800,18 +4348,16 @@ def tabla_pedidos_pagados_domicilio(request):
             tipo_pedido='domicilio',
             cajero=request.user,
             pagos__estado_pago='confirmado',
-            pagos__fecha_hora__date=hoy 
+            pagos__fecha_hora__date=hoy
         )
         .prefetch_related('pagos__comprobante_set')
         .distinct()
-        .order_by('-id')
+        .order_by('id')
     )
 
-    # añadimos el último pago confirmado manualmente
     for p in pedidos_pagados:
         p.pago_confirmado = (
-            p.pagos
-            .filter(estado_pago='confirmado')
+            p.pagos.filter(estado_pago='confirmado')
             .order_by('-id')
             .first()
         )
@@ -3822,7 +4368,12 @@ def tabla_pedidos_pagados_domicilio(request):
         request=request
     )
 
-    return JsonResponse({"html": html})
+    resp = JsonResponse({"html": html})
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Pragma"] = "no-cache"
+    resp["Expires"] = "0"
+    return resp
+
 
 # ----------------------------
 # Cajero - Perfil
@@ -3973,10 +4524,14 @@ def editar_perfil_mesero(request):
 
     return render(request, "mesero/editar_perfil_mesero.html", {"usuario": usuario})
 
-
-
 def service_worker(request):
     sw_path = Path(settings.BASE_DIR) / "Restaurante" / "static" / "pwa" / "sw.js"
     if not sw_path.exists():
         return HttpResponseNotFound("sw.js no encontrado")
     return FileResponse(open(sw_path, "rb"), content_type="application/javascript")
+
+
+from django.http import HttpResponse
+
+def ping_eliminar(request, notif_id):
+    return HttpResponse("ok eliminar " + str(notif_id))

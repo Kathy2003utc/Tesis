@@ -20,6 +20,7 @@
         --rojo-alerta: #C14949;
         --rojo-oscuro: #8C2F39;
         --rojo-claro: #EA9A9A;
+        --rojo-inactivo: #e04d4d;
 
         --cafe-profundo: #8A5A3C;
         --cafe-tostado: #A66E4A;
@@ -54,7 +55,8 @@
     /* Fondo general */
     html,
     body {
-        height: 100%;
+        min-height: 100%;
+        height: auto;
         margin: 0;
         background: linear-gradient(135deg,
                 var(--crema-suave),
@@ -280,10 +282,49 @@
     #tbl_trabajadores tbody tr:hover {
         background-color: var(--gris-suave);
     }
+
+    .badge-horario{
+        background: var(--dorado-suave) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    .content-card{
+        max-width: 1400px;   
+        margin: 0 auto;      
+    }
+
+    @media (min-width: 1200px){
+    .main-content-wrapper{
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+    }
+    
+    .badge.bg-activo {
+        background-color: var(--verde-musgo) !important;
+    }
+
+    .badge.bg-inactivo {
+        background-color: var(--rojo-inactivo) !important;
+    }
+
+    .btn-activar{
+        background-color: var(--exito) !important;
+        border-color: var(--exito) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    .btn-activar:hover{
+        background-color: var(--verde-menta) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
 </style>
 
 <div class="main-content-wrapper">
-    <div class="container mt-5">
+    <div class="container-fluid mt-5">
         <div class="content-card">
 
             <h1 class="text-center">Listado de Trabajadores</h1>
@@ -299,13 +340,13 @@
                 <table class="table table-bordered table-striped table-hover" id="tbl_trabajadores">
                     <thead class="table-primary">
                         <tr>
-                            <th>ID</th>
                             <th>Nombre</th>
                             <th>Apellido</th>
                             <th>Correo</th>
                             <th>Teléfono</th>
                             <th>Dirección</th>
                             <th>Rol</th>
+                            <th>Horario</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -313,7 +354,6 @@
                     <tbody>
                         {% for trabajador in trabajadores %}
                         <tr>
-                            <td>{{ trabajador.id }}</td>
                             <td>{{ trabajador.nombre }}</td>
                             <td>{{ trabajador.apellido }}</td>
                             <td>{{ trabajador.correo }}</td>
@@ -330,33 +370,52 @@
                             </td>
 
                             <td>
-                                {% if trabajador.is_active %}
-                                <span class="badge bg-success">Activo</span>
+                                {% if trabajador.horario %}
+                                    <span class="badge badge-horario">{{ trabajador.get_horario_display }}</span>
                                 {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
+                                    —
+                                {% endif %}
+                            </td>
+
+
+                            <td>
+                                {% if trabajador.is_active %}
+                                <span class="badge bg-activo">Activo</span>
+                                {% else %}
+                                <span class="badge bg-inactivo">Inactivo</span>
                                 {% endif %}
                             </td>
 
                             <td>
-                                <a href="{% url 'editar_trabajador' trabajador.id %}"
-                                    class="btn btn-warning btn-sm w-100 mb-2">
-                                    <i class="fa fa-pen"></i> Editar
+                                <a href="{% url 'editar_trabajador' trabajador.id %}" class="btn btn-warning btn-sm w-100 mb-2">
+                                    Editar
                                 </a>
 
-                                <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm w-100"
-                                        data-modo="{% if trabajador.tiene_interacciones %}desactivar{% else %}eliminar{% endif %}"
-                                        onclick="return confirmarAccionTrabajador(event);">
-                                        <i class="fa fa-trash"></i>
-                                        {% if trabajador.tiene_interacciones %}
-                                        Desactivar
-                                        {% else %}
-                                        Eliminar
-                                        {% endif %}
-                                    </button>
-                                </form>
+                                {% if trabajador.is_active %}
+                                    <!-- Activo: Desactivar o Eliminar -->
+                                    <form method="post" action="{% url 'eliminar_trabajador' trabajador.id %}" class="form-trabajador m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm w-100"
+                                            data-modo="{% if trabajador.tiene_interacciones %}desactivar{% else %}eliminar{% endif %}"
+                                            onclick="return confirmarAccionTrabajador(event);">
+                                            {% if trabajador.tiene_interacciones %}
+                                                Desactivar
+                                            {% else %}
+                                                Eliminar
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <!-- Inactivo: Activar -->
+                                    <form method="post" action="{% url 'activar_trabajador' trabajador.id %}" class="form-activar-trabajador m-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-activar btn-sm w-100">
+                                            Activar
+                                        </button>
+                                    </form>
+                                {% endif %}
                             </td>
+
 
 
 
@@ -382,11 +441,11 @@
         if (modo === 'desactivar') {
             title = '¿Desactivar trabajador?';
             text = 'El trabajador no podrá iniciar sesión, pero sus registros se mantendrán en el sistema.';
-            confirmText = 'Sí, desactivar';
+            confirmText = 'Desactivar';
         } else {
             title = '¿Eliminar trabajador?';
             text = 'Este trabajador no tiene registros asociados. Se eliminará definitivamente.';
-            confirmText = 'Sí, eliminar';
+            confirmText = 'Eliminar';
         }
 
         Swal.fire({

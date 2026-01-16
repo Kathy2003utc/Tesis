@@ -1,7 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-    
+
 <head>
 
     <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
@@ -41,6 +41,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <style>
         /* ================= PALETA ================= */
@@ -76,7 +77,8 @@
             border-bottom: 1px solid var(--gris-suave);
             display: flex;
             align-items: center;
-            justify-content: center; /* título centrado */
+            justify-content: center;
+            /* título centrado */
             padding: 0 14px;
             position: sticky;
             top: 0;
@@ -129,26 +131,61 @@
             min-width: 0;
             overflow-x: visible;
         }
+
         /* ================= FORZAR BOTÓN LOGOUT IGUAL AL CAJERO ================= */
         .btn-logout {
-        border: 1px solid var(--rojo-alerta) !important;
-        color: var(--rojo-alerta) !important;
-        background: transparent !important;
-        font-weight: 600;
-        border-radius: 0.25rem; /* igual al outline default bootstrap */
-        padding: .25rem .5rem;  /* igual al btn-sm */
-        line-height: 1.5;
+            border: 1px solid var(--rojo-alerta) !important;
+            color: var(--rojo-alerta) !important;
+            background: transparent !important;
+            font-weight: 600;
+            border-radius: 0.25rem;
+            /* igual al outline default bootstrap */
+            padding: .25rem .5rem;
+            /* igual al btn-sm */
+            line-height: 1.5;
         }
 
         .btn-logout:hover {
-        background: var(--rojo-alerta) !important;
-        color: #fff !important;
+            background: var(--rojo-alerta) !important;
+            color: #fff !important;
         }
 
         .btn-logout:focus,
         .btn-logout:active {
-        box-shadow: 0 0 0 .2rem rgba(193, 73, 73, .25) !important;
+            box-shadow: 0 0 0 .2rem rgba(193, 73, 73, .25) !important;
         }
+
+        .btn-ver-pedidos {
+            background: var(--verde) !important;
+            color: #fff !important;
+            border: 1px solid var(--verde) !important;
+            font-weight: 600;
+            border-radius: 0.25rem;
+            padding: .25rem .5rem;
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+
+        .btn-ver-pedidos:hover {
+            background: var(--verde-claro) !important;
+            color: var(--texto-oscuro) !important;
+            border-color: var(--verde-claro) !important;
+        }
+
+        .btn-ver-pedidos:focus,
+        .btn-ver-pedidos:active {
+            box-shadow: 0 0 0 .2rem rgba(62, 122, 63, .25) !important;
+        }
+
+        /* Acciones izquierda (como icono de menú) */
+        .topbar-left {
+            position: absolute;
+            left: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
     </style>
 </head>
 
@@ -158,20 +195,29 @@
 
         <!-- ================= TOPBAR ================= -->
         <div class="topbar">
+
+            <div class="topbar-left">
+                <a href="{% url 'vista_cocina' %}" class="btn btn-sm btn-ver-pedidos">
+                    Ver pedidos
+                </a>
+            </div>
+
             <div class="topbar-title">
                 Panel Cocina
             </div>
 
             <div class="topbar-actions">
-                <a href="{% url 'perfil_admin' %}" class="text-dark">
+                <a href="{% url 'perfil_cocinero' %}" class="text-dark" title="Perfil">
                     <i class="bi bi-person-circle fs-4"></i>
                 </a>
-                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger btn-logout">
-                Cerrar Sesión
-                </a>
 
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger btn-logout">
+                    Cerrar Sesión
+                </a>
             </div>
+
         </div>
+
 
         <!-- ================= MAIN CONTENT ================= -->
         <main class="content">
@@ -187,9 +233,9 @@
 
     <!-- ================= MENSAJES DJANGO + SWEETALERT ================= -->
     {% if messages %}
-        {% for message in messages %}
-            <div class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}"></div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}"></div>
+    {% endfor %}
     {% endif %}
 
     <script>
@@ -234,11 +280,11 @@
     </script>
 
     <script>
-    if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js", { scope: "/" });
-        });
-    }
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js", { scope: "/" });
+            });
+        }
     </script>
 
 
