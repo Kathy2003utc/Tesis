@@ -12,9 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-import os
-from pathlib import Path
 from django.core.management.utils import get_random_secret_key
+import dj_database_url
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,10 +34,14 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv(
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 if DATABASE_URL:
-    import dj_database_url
     DATABASES = {
-        "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
 else:
     DATABASES = {
@@ -45,16 +49,11 @@ else:
             "ENGINE": "django.db.backends.postgresql",
             "NAME": "restaurante_db",
             "USER": "postgres",
-            "PASSWORD": os.getenv("root", ""),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": "localhost",
             "PORT": "5432",
         }
     }
-
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-if DEBUG:
-    STATICFILES_DIRS = [BASE_DIR / "Restaurante" / "static"]
 
 
 
@@ -105,16 +104,7 @@ WSGI_APPLICATION = 'Restaurante.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'restaurante_db',
-        'USER': 'postgres',
-        'PASSWORD': 'K@thy2003',  # la contraseña que pusiste
-        'HOST': 'localhost',            # si está en la misma máquina
-        'PORT': '5432',  
-    }
-}
+
 
 
 # Password validation
@@ -151,8 +141,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "Restaurante" / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
