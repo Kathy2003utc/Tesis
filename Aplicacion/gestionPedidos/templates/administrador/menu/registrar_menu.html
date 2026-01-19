@@ -168,7 +168,7 @@ label {
             <!-- PRECIO -->
             <div class="mb-3">
                 <label class="form-label">Precio ($):</label>
-                <input type="number" name="precio" step="0.01" min="0.1" class="form-control" required>
+                <input type="number" name="precio" step="0.01" min="0.50" max="15.99" inputmode="decimal" class="form-control" required>
             </div>
 
             <!-- TIPO -->
@@ -213,7 +213,12 @@ $("#frm_producto").validate({
             soloLetras: true
         },
         descripcion: { required: true },
-        precio: { required: true, number: true, min: 0.1 },
+        precio: { 
+            required: true, 
+            number: true, 
+            min: 0.50,
+            max: 15.99
+        },
         tipo: { required: true }
     },
     messages: {
@@ -225,8 +230,10 @@ $("#frm_producto").validate({
         precio: {
             required: "Campo obligatorio",
             number: "Debe ser un número válido",
-            min: "Debe ser mayor a 0"
+            min: "Debe ser mayor a 0.50",
+            max: "No puede superar 15.99"
         },
+
         tipo: { required: "Seleccione un tipo válido" }
     }
 });

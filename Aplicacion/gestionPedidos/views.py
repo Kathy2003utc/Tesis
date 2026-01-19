@@ -32,7 +32,6 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Image
 import os
-from django.conf import settings
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.drawing.image import Image as ExcelImage
@@ -780,16 +779,17 @@ def registrar_menu(request):
         # 3. VALIDAR PRECIO
         try:
             precio = float(precio)
-            if precio <= 0:
+            if precio < 0.50 or precio > 15.99:
                 raise ValueError
         except ValueError:
-            messages.error(request, "El precio debe ser un número válido mayor a 0.")
+            messages.error(request, "El precio debe ser un número válido entre 0.50 y 15.99.")
             return render(request, 'administrador/menu/registrar_menu.html', {
                 'nombre': nombre,
                 'descripcion': descripcion,
-                'precio': precio,
+                'precio': request.POST.get('precio', ''),
                 'tipo': tipo,
             })
+
 
         # 4. VALIDAR NOMBRE DUPLICADO
         if Producto.objects.filter(nombre__iexact=nombre).exists():
@@ -849,13 +849,13 @@ def editar_menu(request, producto_id):
                 'tipo': tipo,
             })
 
-        # Validar precio numérico > 0
+        # Validar precio
         try:
             precio_float = float(precio)
-            if precio_float <= 0:
+            if precio < 0.50 or precio > 15.99:
                 raise ValueError
         except ValueError:
-            messages.error(request, "El precio debe ser un número válido mayor a 0.")
+            messages.error(request, "El precio debe ser un número válido entre 0.50 y 15.99.")
             return render(request, 'administrador/menu/editar_menu.html', {
                 'producto': producto,
                 'nombre': nombre,
@@ -863,6 +863,7 @@ def editar_menu(request, producto_id):
                 'precio': precio,
                 'tipo': tipo,
             })
+
 
         # Validar nombre repetido excepto el item actual
         if Producto.objects.exclude(id=producto.id).filter(nombre__iexact=nombre).exists():
@@ -1465,7 +1466,6 @@ def editar_perfil_cocinero(request):
         return redirect("perfil_cocinero")
 
     return render(request, "cocinero/perfil/editar_perfil_cocinero.html", {"usuario": usuario})
-
 
 # ----------------------------
 # Cocinero marca pedido como listo
@@ -2078,18 +2078,16 @@ def cajero_eliminar_pedido(request, pedido_id):
         cajero=request.user
     )
 
-    # Solo dejar eliminar si está en preparación
-    if pedido.estado != 'en preparacion':
+    if pedido.estado not in ['borrador', 'en_creacion']:
         return JsonResponse({
             "success": False,
-            "message": "Solo se puede eliminar un pedido que esté en preparación."
+            "message": "Solo se puede eliminar un pedido que aún no esté en preparación."
         })
 
     if request.method == 'POST':
         pedido_id = pedido.id
         pedido.delete()
 
-        # Avisar a cocina que se eliminó (opcional)
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             "pedidos_activos",
@@ -2102,6 +2100,7 @@ def cajero_eliminar_pedido(request, pedido_id):
         return JsonResponse({"success": True})
 
     return JsonResponse({"success": False})
+
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -2407,7 +2406,10 @@ def cajero_restaurante_pagar(request, pedido_id):
     try:
         generar_comprobante_pdf(comprobante)
         comprobante.refresh_from_db()
-        comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
+        if comprobante.archivo_pdf:
+            comprobante_url = settings.STATIC_URL + str(comprobante.archivo_pdf)
+        else:
+            comprobante_url = ""
     except Exception as e:
         # IMPORTANTE: no rompas el cobro por el PDF
         print("ERROR generando PDF comprobante:", e)
@@ -2624,8 +2626,10 @@ def cajero_domicilio_pagar(request, pedido_id):
     generar_comprobante_pdf(comprobante)
 
     # URL del PDF (YA existe porque ya se generó)
-    comprobante_url = comprobante.archivo_pdf.url if comprobante.archivo_pdf else ""
-
+    if comprobante.archivo_pdf:
+        comprobante_url = settings.STATIC_URL + str(comprobante.archivo_pdf)
+    else:
+        comprobante_url = ""
     # ================================
     # WEBSOCKET → NOTIFICAR TABLA PAGADOS (CON PDF)
     # ================================
@@ -2721,10 +2725,22 @@ def generar_comprobante_pdf(comprobante):
         "direccion_impresa": direccion_impresa,
     })
 
+    
     pdf_file = HTML(string=html_string).write_pdf()
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
-    comprobante.archivo_pdf.save(nombre_archivo, ContentFile(pdf_file), save=True)
 
+    # Crear carpeta staticfiles/comprobantes si no existe
+    carpeta = os.path.join(settings.STATIC_ROOT, "comprobantes")
+    os.makedirs(carpeta, exist_ok=True)
+
+    ruta = os.path.join(carpeta, nombre_archivo)
+
+    with open(ruta, "wb") as f:
+        f.write(pdf_file)
+
+    # Guardar solo la ruta relativa en la BD
+    comprobante.archivo_pdf = f"comprobantes/{nombre_archivo}"
+    comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
 #-----------------------------

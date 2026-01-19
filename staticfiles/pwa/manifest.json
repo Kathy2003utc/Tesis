@@ -1,0 +1,21 @@
+{
+  "name": "Pedidos - Productos Carlos Gerardo",
+  "short_name": "Pedidos",
+  "start_url": "/login/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF4EC",
+  "theme_color": "#8A5A3C",
+  "icons": [
+    {
+      "src": "/static/pwa/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/pwa/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -49,13 +49,11 @@ else:
             "ENGINE": "django.db.backends.postgresql",
             "NAME": "restaurante_db",
             "USER": "postgres",
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "PASSWORD": "K@thy2003",
             "HOST": "localhost",
             "PORT": "5432",
         }
     }
-
-
 
 # Application definition
 
