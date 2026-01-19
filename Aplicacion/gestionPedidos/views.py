@@ -3,6 +3,8 @@ import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+
+from Restaurante.settings import BASE_DIR
 from .decorators import rol_requerido
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
@@ -2730,7 +2732,7 @@ def generar_comprobante_pdf(comprobante):
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
 
     # Crear carpeta staticfiles/comprobantes si no existe
-    carpeta = os.path.join(settings.STATIC_ROOT, "comprobantes")
+    carpeta = os.path.join(BASE_DIR, "Restaurante", "static", "comprobantes_generados")
     os.makedirs(carpeta, exist_ok=True)
 
     ruta = os.path.join(carpeta, nombre_archivo)
@@ -2739,8 +2741,9 @@ def generar_comprobante_pdf(comprobante):
         f.write(pdf_file)
 
     # Guardar solo la ruta relativa en la BD
-    comprobante.archivo_pdf = f"comprobantes/{nombre_archivo}"
+    comprobante.archivo_pdf = f"comprobantes_generados/{nombre_archivo}"
     comprobante.save(update_fields=["archivo_pdf"])
+
 #-----------------------------
 # Reportes
 #-----------------------------

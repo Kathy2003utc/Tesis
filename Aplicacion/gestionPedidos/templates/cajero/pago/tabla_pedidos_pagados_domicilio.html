@@ -1,3 +1,4 @@
+{% load static %}
 <div class="table-responsive shadow p-3 bg-white rounded">
     <table class="table table-hover align-middle" id="tabla-pagados">
         <thead class="table-primary text-center">
@@ -25,25 +26,26 @@
                 {# ------- COMPROBANTE PDF ------- #}
                 <td class="text-center">
                     {% if p.pago_confirmado %}
-                    {% with comps=p.pago_confirmado.comprobante_set.all %}
-                    {% if comps %}
-                    {% with comp=comps.0 %}
-                    {% if comp.archivo_pdf %}
-                    <a href="{{ comp.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-danger">
-                        Ver PDF
-                    </a>
+                        {% with comps=p.pago_confirmado.comprobante_set.all %}
+                            {% if comps %}
+                                {% with comp=comps.0 %}
+                                    {% if comp.archivo_pdf %}
+                                        <a href="{% static comp.archivo_pdf %}" target="_blank" class="btn btn-sm btn-danger">
+                                            Ver PDF
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No disponible</span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">No disponible</span>
+                            {% endif %}
+                        {% endwith %}
                     {% else %}
-                    <span class="text-muted">No disponible</span>
-                    {% endif %}
-                    {% endwith %}
-                    {% else %}
-                    <span class="text-muted">No disponible</span>
-                    {% endif %}
-                    {% endwith %}
-                    {% else %}
-                    <span class="text-muted">No disponible</span>
+                        <span class="text-muted">No disponible</span>
                     {% endif %}
                 </td>
+
 
                 {# ------- FECHA DEL PAGO CONFIRMADO ------- #}
                 <td class="text-center">
