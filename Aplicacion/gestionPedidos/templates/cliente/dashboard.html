@@ -1,0 +1,164 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+
+{% block contenido %}
+<br>
+
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-tostado: #A66E4A;
+
+        --crema-suave: #FAF4EC;
+        --gris-oscuro-calido: #4A3F38;
+    }
+
+    html,
+    body {
+        background: linear-gradient(
+            135deg,
+            var(--crema-suave),
+            var(--cafe-suave) 45%,
+            var(--blanco-calido)
+        );
+        color: var(--texto-oscuro);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .container {
+        max-width: 1200px;
+        padding-inline: 10px;
+        text-align: center;
+    }
+
+    /* Cards */
+    .card {
+        border-radius: 1rem;
+        background: var(--blanco-calido);
+        border: 1px solid var(--gris-suave);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        height: 100%;
+    }
+
+    .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+        border-color: var(--cafe-medio);
+        background: var(--crema-suave);
+    }
+
+    .icono {
+        font-size: 2.8rem;
+        color: var(--cafe-profundo);
+        transition: 0.3s;
+    }
+
+    .card:hover .icono {
+        color: var(--verde);
+        transform: scale(1.1);
+    }
+
+    .card-title {
+        color: var(--texto-oscuro);
+    }
+
+    .text-muted {
+        color: var(--gris-oscuro-calido) !important;
+    }
+
+    .btn-outline-success {
+        padding: 8px 20px;
+        border-radius: 10px;
+        border: 2px solid var(--verde);
+        color: var(--verde);
+        font-weight: bold;
+        background-color: transparent;
+    }
+
+    .btn-outline-success:hover {
+        background-color: var(--verde);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        h1.display-5 {
+            font-size: 1.7rem;
+        }
+
+        .icono {
+            font-size: 2.3rem;
+        }
+    }
+</style>
+
+<div class="container my-5">
+
+    <!-- ENCABEZADO -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-success">
+            ¡Bienvenido/a, {{ request.user.nombre }}!
+        </h1>
+        <p class="text-muted">
+            Gestiona tus pedidos y revisa tu historial desde este panel.
+        </p>
+    </div>
+
+    <!-- TARJETAS -->
+    <div class="row g-4 justify-content-center">
+
+        <!-- NUEVO PEDIDO -->
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-cart-plus icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Nuevo Pedido</h5>
+                    <p class="text-muted">
+                        Realiza un pedido a domicilio.
+                    </p>
+                    <a href="{% url 'cliente_listar_pedidos' %}"
+                       class="btn btn-outline-success">
+                        Crear Pedido
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-clock-rotate-left icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Historial</h5>
+                    <p class="text-muted">
+                        Revisa tus pedidos anteriores.
+                    </p>
+                    <a href="{% url 'cliente_historial_pedidos' %}"
+                       class="btn btn-outline-success">
+                        Ver Historial
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<br>
+{% endblock %}

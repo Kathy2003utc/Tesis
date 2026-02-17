@@ -4,6 +4,37 @@ from django.db.models import Sum, F, DecimalField
 from django.utils import timezone    
 from django.db.models import Max  
 from django.conf import settings
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
+from decimal import Decimal
+
+# ----------------------------
+# Horario de Trabajo
+# ----------------------------
+class Horario(models.Model):
+    codigo = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=100)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    dias = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if not self.codigo:
+            last = Horario.objects.order_by('-id').first()
+            if last and last.codigo.startswith("H-"):
+                numero = int(last.codigo.split('-')[1]) + 1
+            else:
+                numero = 1
+            self.codigo = f"H-{numero:03d}"
+        super().save(*args, **kwargs)
+
+    def tiene_trabajadores_asignados(self):
+        # Usar el related_name del FK
+        return self.usuarios.exists()
+
+    def __str__(self):
+        return f"{self.nombre} ({self.hora_inicio} - {self.hora_fin})"
 
 
 # ----------------------------
@@ -14,17 +45,9 @@ ROL_CHOICES = (
     ('mesero', 'Mesero'),
     ('cocinero', 'Cocinero'),
     ('cajero', 'Cajero'),
+    ('cliente', 'Cliente'),
 )
 
-HORARIO_CHOICES = (
-    ('lv_manana', 'L-V Mañana (06:00 - 14:00)'),
-    ('lv_tarde',  'L-V Tarde (14:00 - 22:00)'),
-    ('lv_noche',  'L-V Noche (22:00 - 06:00)'),
-
-    ('sab_manana', 'Sábado Mañana (06:00 - 12:00)'),
-    ('sab_tarde',  'Sábado Tarde (11:00 - 15:00)'),
-    ('dom_unico',  'Domingo Único (06:00 - 13:00)'),
-)
 
 class Usuario(AbstractUser):
     nombre = models.CharField(max_length=100)
@@ -34,7 +57,13 @@ class Usuario(AbstractUser):
     correo = models.EmailField(unique=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES)
 
-    horario = models.CharField(max_length=20, choices=HORARIO_CHOICES, blank=True, null=True)
+    horario = models.ForeignKey(
+        Horario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usuarios"
+    )
 
     cambio_password = models.BooleanField(default=False)
 
@@ -126,8 +155,6 @@ class Producto(models.Model):
     def tiene_pedidos(self):
         # Usa el related_name por defecto del FK en DetallePedido
         return self.detallepedido_set.exists()
-
-
 # ----------------------------
 # Pedido
 # ----------------------------
@@ -135,6 +162,9 @@ class Pedido(models.Model):
     ESTADOS = [
         ('borrador', 'Borrador'),
         ('en_creacion', 'En creación'), 
+        ('pendiente_caja', 'Pendiente de caja'),
+        ('aceptado', 'Aceptado'),
+        ('rechazado', 'Rechazado'),
         ('en preparacion', 'En preparación'),
         ('listo', 'Listo'),
         ('finalizado', 'Finalizado'), 
@@ -199,20 +229,21 @@ class Pedido(models.Model):
             )
         )['total'] or 0
 
-        # Recargo total (recargo unitario * cantidad)
-        recargo_total = self.detalles.aggregate(
-            total_recargo=Sum(
-                F('recargo') * F('cantidad'),
-                output_field=DecimalField(max_digits=10, decimal_places=2)
-            )
-        )['total_recargo'] or 0
+        # DIFERENCIAR CLIENTE - CAJERO
+        if self.tipo_pedido == 'domicilio' and self.cliente:
+            # Recargo FIJO total de cliente
+            recargo_total = Decimal('1.50') if subtotal_calc > 0 else Decimal('0.00')
+        else:
+            # Recargo del cajero (unitario por detalle)
+            recargo_total = self.detalles.aggregate(
+                total_recargo=Sum(
+                    F('recargo') * F('cantidad'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )['total_recargo'] or 0
 
-        # Guardar subtotal
         self.subtotal = subtotal_calc
-
-        # Total final del pedido
         self.total = self.subtotal + recargo_total
-
         self.save()
     
     @property
@@ -223,6 +254,19 @@ class Pedido(models.Model):
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             )
         )['total'] or 0
+    
+    @property
+    def recargo_mostrar(self):
+        """
+        Recargo que se debe mostrar en la tabla:
+        - Cliente domicilio → recargo fijo
+        - Cajero → recargo por detalle
+        """
+        if self.tipo_pedido == 'domicilio' and self.cliente:
+            return Decimal('1.50') if self.subtotal > 0 else Decimal('0.00')
+
+        # Cajero
+        return self.total_recargos
 
     def generar_codigo(self):
         ultimo = Pedido.objects.filter(
@@ -381,3 +425,27 @@ class Mensaje(models.Model):
 
     def __str__(self):
         return f"De {self.remitente.nombre} para {self.destinatario.nombre}"
+
+# ----------------------------
+# Comprobante-pagocliente
+# ----------------------------
+
+class ComprobanteCliente(models.Model):
+    ESTADOS = (
+        ('pendiente', 'Pendiente'),
+        ('confirmado', 'Confirmado'),
+        ('rechazado', 'Rechazado'),
+    )
+
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='comprobantes_cliente')
+    cliente = models.ForeignKey(Usuario, on_delete=models.CASCADE, limit_choices_to={'rol': 'cliente'})
+    
+    numero_comprobante = models.CharField(max_length=50, unique=True)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    imagen = models.ImageField(upload_to='pagos_clientes/')
+    
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comprobante Cliente {self.numero_comprobante} - Pedido {self.pedido.codigo_pedido}"

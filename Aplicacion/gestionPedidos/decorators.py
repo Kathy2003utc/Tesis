@@ -2,7 +2,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from functools import wraps
 
-def rol_requerido(*roles):   # 👈 ahora acepta 1, 2, 3... roles
+def rol_requerido(*roles):   # ahora acepta 1, 2, 3... roles
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):

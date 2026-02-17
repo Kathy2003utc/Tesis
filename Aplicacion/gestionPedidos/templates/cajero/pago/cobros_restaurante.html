@@ -313,6 +313,18 @@
             <!-- ========================================================= -->
             <h4 class="text-success mt-4 mb-3">Pedidos Pagados</h4>
 
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text"
+                        id="buscar-pagados"
+                        class="form-control"
+                        placeholder="Buscar pedido pagado por código...">
+                </div>
+            </div>
+
             <div class="table-responsive shadow-sm rounded-3" id="contenedor-tabla-pagados">
                 <table class="table table-hover align-middle" id="tabla-pagados">
                     <thead class="text-center">
@@ -342,9 +354,10 @@
                                         {% if comps %}
                                             {% with c=comps.0 %}
                                                 {% if c.archivo_pdf %}
-                                                    <a href="{% static c.archivo_pdf %}" target="_blank" class="btn btn-sm btn-danger">
+                                                    <a href="{{ c.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-danger">
                                                         Ver PDF
                                                     </a>
+
                                                 {% else %}
                                                     <span class="text-muted">No disponible</span>
                                                 {% endif %}
@@ -754,7 +767,7 @@ socket.onmessage = function (e) {
     if (filaVacia) filaVacia.remove();
 
     const codigo = data.codigo_pedido ? data.codigo_pedido : data.pedido_id;
-    const totalTxt = money2(data.total); // ✅ formateo correcto
+    const totalTxt = money2(data.total);
 
     const fila = `
       <tr id="fila-${data.pedido_id}">
@@ -829,6 +842,20 @@ socket.onclose = function () {
 socket.onerror = function () {
   console.log("WS error (cajero restaurante)");
 };
+</script>
+
+<script>
+document.getElementById("buscar-pagados").addEventListener("keyup", function () {
+    const filtro = this.value.toLowerCase();
+    const filas = document.querySelectorAll("#tabla-pagados tbody tr");
+
+    filas.forEach(fila => {
+        if (fila.id === "fila-vacia-pagados") return;
+
+        const codigo = fila.cells[0]?.textContent.toLowerCase() || "";
+        fila.style.display = codigo.includes(filtro) ? "" : "none";
+    });
+});
 </script>
 
 

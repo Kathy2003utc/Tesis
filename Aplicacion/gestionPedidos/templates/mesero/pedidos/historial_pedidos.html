@@ -1,0 +1,315 @@
+{% extends 'mesero/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+
+<style>
+/* ================= PALETA ================= */
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
+
+    --verde-profundo: #2E5F32;
+    --verde-oliva: #5E7A43;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
+
+    --crema-suave: #FAF4EC;
+    --gris-claro-calido: #D8D3CC;
+    --gris-medio-calido: #B8B1A8;
+    --gris-oscuro-calido: #4A3F38;
+
+    --azul-pizarra: #4F6D7A;
+    --azul-gris: #7A8C99;
+
+    --naranja-tierra: #D98555;
+    --naranja-arcilla: #C66B3D;
+    --dorado-suave: #D9B77A;
+
+    --exito: #4F8A57;
+    --exito-suave: #D9F2D6;
+    --info: #6A93B0;
+    --info-suave: #DDE9F2;
+    --advertencia: #D9A441;
+    --advertencia-suave: #FFF5DA;
+}
+
+/* ================= FONDO ================= */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* ================= CONTENEDOR ================= */
+.main-content-wrapper {
+    padding: 20px;
+}
+
+.content-card {
+    background: var(--crema-suave);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid var(--cafe-suave);
+    box-shadow: 0 8px 18px rgba(0,0,0,.1);
+    max-width: 1300px;
+    margin: auto;
+}
+
+/* ================= TITULO ================= */
+h2 {
+    color: var(--cafe-profundo);
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #fff;
+}
+
+/* ================= FILTROS ================= */
+.form-filtros {
+    background: var(--blanco-calido);
+    border: 1px solid var(--gris-suave);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+/* ================= BOTONES ================= */
+.btn-filtrar {
+    background: var(--verde-profundo);
+    color: white;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: bold;
+}
+
+.btn-filtrar:hover {
+    background: var(--verde);
+}
+
+/* ================= TABLA ================= */
+.table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: var(--cafe-medio);
+    color: white;
+}
+
+.table tbody tr:hover {
+    background: #f6efe7;
+}
+
+/* VER */
+.btn-info {
+    background-color: var(--azul-pizarra) !important;
+    border-color: var(--azul-pizarra) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.btn-info:hover {
+    background-color: var(--azul-pizarra) !important;
+    color: var(--texto-oscuro) !important;
+}
+
+/* ================= PDF ================= */
+.btn-pdf {
+    background-color: var(--rojo-alerta) !important;
+    border-color: var(--rojo-alerta) !important;
+    color: white !important;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.btn-pdf:hover {
+    background-color: var(--rojo-oscuro) !important;
+    border-color: var(--rojo-oscuro) !important;
+}
+
+/* ================= BADGES MÉTODO ================= */
+.badge-metodo-efectivo {
+    background-color: var(--exito);
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+}
+
+.badge-metodo-transferencia {
+    background-color: var(--advertencia);
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+}
+
+.badge-metodo-default {
+    background-color: var(--gris-medio-calido);
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+}
+
+/* ================= FILTROS - COLOR TEXTO IGUAL AL CAJERO ================= */
+
+/* Labels */
+.form-filtros label {
+    color: var(--cafe-profundo);
+    font-weight: bold;
+}
+
+</style>
+
+<div class="main-content-wrapper">
+  <div class="content-card">
+
+    <h2 class="text-center mb-4">
+      Historial de pedidos atendidos
+    </h2>
+
+    <!-- ================= FILTROS ================= -->
+    <form method="get" class="row g-3 form-filtros mb-4 align-items-end">
+
+      <div class="col-md-3">
+        <label class="fw-semibold">Código de pedido</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white">
+            <i class="fas fa-search text-muted"></i>
+          </span>
+          <input type="text" name="codigo" class="form-control" placeholder="PCG-00082"
+                 value="{{ filtros.codigo }}">
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="fw-semibold">Método de pago</label>
+        <select name="metodo" class="form-select">
+          <option value="">Todos</option>
+          <option value="efectivo" {% if filtros.metodo == 'efectivo' %}selected{% endif %}>Efectivo</option>
+          <option value="transferencia" {% if filtros.metodo == 'transferencia' %}selected{% endif %}>Transferencia</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="fw-semibold">Fecha inicio</label>
+        <input type="date" name="fecha_inicio" class="form-control"
+               value="{{ filtros.fecha_inicio }}">
+      </div>
+
+      <div class="col-md-2">
+        <label class="fw-semibold">Fecha fin</label>
+        <input type="date" name="fecha_fin" class="form-control"
+               value="{{ filtros.fecha_fin }}">
+      </div>
+
+      <div class="col-md-2 d-flex justify-content-center">
+        <button class="btn btn-filtrar px-4">
+          <i class="fas fa-filter"></i> Filtrar
+        </button>
+      </div>
+    </form>
+
+    <!-- ================= TABLA ================= -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="text-center">
+          <tr>
+            <th>Código</th>
+            <th>Mesa</th>
+            <th>Total</th>
+            <th>Método</th>
+            <th>Fecha</th>
+            <th>Comprobante</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for pedido in pedidos %}
+          <tr>
+            <td class="text-center">{{ pedido.codigo_pedido }}</td>
+
+            <td class="text-center">
+              {% if pedido.mesa %}Mesa {{ pedido.mesa.numero }}{% else %}—{% endif %}
+            </td>
+
+            <td class="text-success fw-bold">
+              ${{ pedido.total|floatformat:2 }}
+            </td>
+
+            <td class="text-center">
+              {% if pedido.pago_confirmado %}
+                {% if pedido.pago_confirmado.metodo_pago == 'efectivo' %}
+                  <span class="badge-metodo-efectivo">Efectivo</span>
+                {% elif pedido.pago_confirmado.metodo_pago == 'transferencia' %}
+                  <span class="badge-metodo-transferencia">Transferencia</span>
+                {% else %}
+                  <span class="badge-metodo-default">
+                    {{ pedido.pago_confirmado.metodo_pago|upper }}
+                  </span>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+
+            <td class="text-center">
+              {{ pedido.fecha_hora|date:"d/m/Y H:i" }}
+            </td>
+
+            <td class="text-center">
+              {% if pedido.comprobante and pedido.comprobante.archivo_pdf %}
+                <a href="{{ pedido.comprobante.archivo_pdf.url }}"
+                   target="_blank"
+                   class="btn btn-pdf btn-sm">
+                  <i class="fas fa-file-pdf"></i> PDF
+                </a>
+              {% else %}—{% endif %}
+            </td>
+
+            <td class="text-center">
+              <a href="{% url 'ver_pedido' pedido.id %}"
+                 class="btn btn-info btn-sm">
+                <i class="fas fa-eye"></i> Ver
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-3">
+              No se encontraron pedidos con los filtros seleccionados.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

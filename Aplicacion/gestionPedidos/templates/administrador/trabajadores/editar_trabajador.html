@@ -248,18 +248,11 @@ label {
                     <label>Horario de trabajo:</label>
                     <select name="horario" class="form-select" required>
                         <option value="" disabled>Seleccione un horario</option>
-
-                        <optgroup label="Lunes a Viernes">
-                            <option value="lv_manana" {% if trabajador.horario == "lv_manana" %}selected{% endif %}>Mañana (06:00 - 14:00)</option>
-                            <option value="lv_tarde" {% if trabajador.horario == "lv_tarde" %}selected{% endif %}>Tarde (14:00 - 22:00)</option>
-                            <option value="lv_noche" {% if trabajador.horario == "lv_noche" %}selected{% endif %}>Noche (22:00 - 06:00)</option>
-                        </optgroup>
-
-                        <optgroup label="Fin de semana">
-                            <option value="sab_manana" {% if trabajador.horario == "sab_manana" %}selected{% endif %}>Sábado Mañana (06:00 - 12:00)</option>
-                            <option value="sab_tarde" {% if trabajador.horario == "sab_tarde" %}selected{% endif %}>Sábado Tarde (11:00 - 15:00)</option>
-                            <option value="dom_unico" {% if trabajador.horario == "dom_unico" %}selected{% endif %}>Domingo (06:00 - 13:00)</option>
-                        </optgroup>
+                        {% for h in horarios %}
+                        <option value="{{ h.id }}" {% if trabajador.horario.id == h.id %}selected{% endif %}>
+                            {{ h.nombre }} ({{ h.hora_inicio }} - {{ h.hora_fin }})
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -286,7 +279,6 @@ label {
                 <a href="{% url 'listar_trabajadores' %}" class="btn btn-cancelar">Cancelar</a>
             </div>
         </form>
-
     </div>
 </div>
 

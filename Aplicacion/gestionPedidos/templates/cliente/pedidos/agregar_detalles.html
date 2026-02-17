@@ -1,0 +1,454 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
+
+    --verde-profundo: #2E5F32;
+    --verde-menta: #A6D5A1;
+    --verde-musgo: #507B4C;
+
+    --crema-suave: #FAF4EC;
+    --azul-pizarra: #4F6D7A;
+    --advertencia: #D9A441;
+    --exito: #4F8A57;
+}
+
+/* Fondo */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* Card principal */
+.content-card {
+    background: var(--blanco-calido);
+    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+/* Título */
+.titulo-pedido {
+    color: var(--cafe-oscuro);
+    font-weight: 800;
+    text-shadow: 1px 1px 2px #ffffff70;
+}
+
+/* Grid */
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+/* Producto */
+.card-producto {
+    background: var(--crema-suave);
+    border-radius: 15px;
+    border: 1px solid var(--cafe-avellana);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    transition: .3s;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-producto:hover {
+    transform: translateY(-5px);
+}
+
+/* Inputs */
+.form-control {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    border: 1px solid var(--cafe-claro);
+}
+
+/* Botones */
+.btn-agregar {
+    background: var(--verde);
+    color: white;
+    border-radius: 12px;
+    padding: 10px;
+    font-weight: bold;
+}
+
+.btn-agregar:hover {
+    background: var(--verde-claro);
+    color: var(--texto-oscuro);
+}
+
+.btn-finalizar {
+    background: var(--verde);
+    color: white;
+    padding: 15px;
+    font-size: 18px;
+    border-radius: 15px;
+    font-weight: bold;
+}
+
+.btn-finalizar:hover {
+    background: var(--verde-claro);
+    color: var(--texto-oscuro);
+}
+
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 15px;
+    border-radius: 15px;
+    font-weight: bold;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    color: var(--texto-oscuro);
+}
+
+.producto-agotado {
+    opacity: .55;
+    filter: grayscale(100%);
+    pointer-events: none;
+}
+
+</style>
+<div class="main-content-wrapper">
+    <div class="container mt-5 content-card">
+
+        <h2 class="text-center titulo-pedido mb-4">
+            Agregar Productos al Pedido {{ pedido.codigo_pedido }}
+        </h2>
+
+        <!-- GRID DE PRODUCTOS -->
+        <div class="menu-grid">
+            {% for producto in productos %}
+            <div>
+                <div class="card card-producto p-3 h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+                    id="producto-{{ producto.id }}">
+
+
+                    <h5 class="fw-bold text-center mb-2">
+                        {{ producto.nombre }}
+                        {% if producto.agotado_hoy %}
+                        <span class="badge bg-secondary ms-2">Agotado hoy</span>
+                        {% endif %}
+                    </h5>
+
+                    <p class="text-muted text-center small mb-2">
+                        {{ producto.descripcion }}
+                    </p>
+
+                    <p class="fw-bold text-success text-center mb-2">
+                        ${{ producto.precio }}
+                    </p>
+
+                    <label>Cantidad</label>
+                    <input type="number" min="1" value="1"
+                        id="cantidad_{{ producto.id }}"
+                        class="form-control mb-2"
+                        {% if producto.agotado_hoy %}disabled{% endif %}>
+
+                    <label>Observación</label>
+                    <input type="text"
+                        id="obs_{{ producto.id }}"
+                        class="form-control mb-2"
+                        {% if producto.agotado_hoy %}disabled{% endif %}>
+
+                    <button class="btn btn-agregar w-100"
+                            data-producto-id="{{ producto.id }}"
+                            {% if producto.agotado_hoy %}disabled{% endif %}
+                            onclick="agregarProducto('{{ producto.id }}')">
+                        {% if producto.agotado_hoy %}Agotado{% else %}Agregar{% endif %}
+                    </button>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- TABLA -->
+        <h4 class="mt-5 text-center titulo-pedido">Detalles del Pedido</h4>
+
+        <div id="tabla_detalles" class="table-responsive mt-3">
+            {% include 'cliente/pedidos/tabla_detalles.html' %}
+        </div>
+
+        <!-- BOTONES -->
+        <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
+
+            <!-- IR A PAGO -->
+            <a href="{% url 'cliente_pago_pedido' pedido.id %}"
+               class="btn btn-finalizar"
+               id="btn_finalizar"
+               style="min-width:260px;">
+                Continuar al pago
+            </a>
+
+            <!-- CANCELAR -->
+            <button class="btn btn-cancelar"
+                    style="min-width:260px;"
+                    onclick="cancelarPedido('{{ pedido.id }}')">
+                Cancelar pedido
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ------------------------------
+// AGREGAR PRODUCTO
+// ------------------------------
+function agregarProducto(id) {
+
+    const cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
+    const observacion = document.getElementById(`obs_${id}`).value;
+
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Swal.fire({
+                icon: 'warning',
+                title: 'Cantidad inválida',
+                text: 'Ingrese una cantidad mayor a 0',
+                background: "#FFF7F0",
+                confirmButtonColor: "#3E7A3F",
+                confirmButtonText: "Aceptar",
+            });
+        return;
+    }
+
+    fetch("{% url 'cliente_agregar_detalle_ajax' pedido.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            producto_id: id,
+            cantidad: cantidad,
+            observacion: observacion
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            document.getElementById(`obs_${id}`).value = "";
+
+            Swal.fire({
+                icon: "success",
+                title: "Producto agregado",
+                timer: 1200,
+                background: "#FFF7F0",
+                showConfirmButton: false,
+                iconColor: "#3E7A3F"
+            });
+        } else {
+            Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.mensaje,
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#3E7A3F",
+                        background: "#FFF7F0"
+                    });
+        }
+    });
+}
+
+// ------------------------------
+// EDITAR DETALLE
+// ------------------------------
+function editarDetalleAjax(detalle_id, cantidad_actual, observacion_actual) {
+
+    Swal.fire({
+        title: "Editar detalle",
+        html: `
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+
+            <label style="font-weight:600;">Cantidad</label>
+            <input id="swal_cantidad"
+                   type="number"
+                   min="1"
+                   value="${cantidad_actual}"
+                   class="form-control">
+
+            <label style="font-weight:600;">Observación</label>
+            <input id="swal_observacion"
+                   type="text"
+                   value="${observacion_actual}"
+                   class="form-control">
+        </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Actualizar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#3E7A3F",
+        cancelButtonColor: "#C14949",
+        background: "#FFF7F0",
+        preConfirm: () => {
+
+            let cantidad = parseInt(document.getElementById("swal_cantidad").value);
+            let observacion = document.getElementById("swal_observacion").value;
+
+            if (isNaN(cantidad) || cantidad <= 0) {
+                Swal.showValidationMessage("La cantidad debe ser mayor a 0");
+                return false;
+            }
+
+            return {
+                cantidad: cantidad,
+                observacion: observacion
+            };
+        }
+    }).then((result) => {
+
+        if (!result.isConfirmed) return;
+
+        fetch("{% url 'cliente_editar_detalle_ajax' 0 %}".replace("0", detalle_id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(result.value)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Detalle actualizado",
+                    timer: 1400,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+            }
+        });
+    });
+}
+
+// ------------------------------
+// ELIMINAR DETALLE
+// ------------------------------
+function eliminarDetalleAjax(id) {
+
+    Swal.fire({
+        title: "¿Eliminar producto?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Eliminar",
+        cancelButtonText: "Cancelar",
+        background: "#FFF7F0",
+        confirmButtonColor: "#C14949",
+        cancelButtonColor: "#4F6D7A",
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch("{% url 'cliente_eliminar_detalle_ajax' 0 %}".replace("0", id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            }
+        });
+    });
+}
+
+// ------------------------------
+// CANCELAR PEDIDO
+// ------------------------------
+function cancelarPedido(id) {
+    Swal.fire({
+        title: "¿Cancelar pedido?",
+        text: "Se eliminará el pedido completo",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Cancelar",
+        background: "#FFF7F0",
+        confirmButtonColor: "#C14949",
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch(`/cliente/pedido/${id}/eliminar/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(() => window.location.href = "{% url 'cliente_listar_pedidos' %}");
+    });
+}
+</script>
+
+<script>
+/* ===============================
+   WEBSOCKET CLIENTE – PRODUCTO NO HAY
+=============================== */
+
+const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+const socketCliente = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
+
+socketCliente.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+
+    // SOLO nos interesa esto
+    if (data.tipo === "producto_no_hay") {
+        const productoId = data.producto_id;
+
+        const card = document.getElementById(`producto-${productoId}`);
+        if (!card) return;
+
+        // poner gris
+        card.classList.add("producto-agotado");
+
+        // deshabilitar inputs
+        const inputs = card.querySelectorAll("input");
+        inputs.forEach(i => i.disabled = true);
+
+        // botón
+        const btn = card.querySelector("button");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Agotado";
+        }
+    }
+};
+</script>
+
+{% endblock %}

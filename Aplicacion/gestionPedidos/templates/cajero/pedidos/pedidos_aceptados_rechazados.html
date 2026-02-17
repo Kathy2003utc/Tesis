@@ -1,0 +1,222 @@
+{% extends 'cajero/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+/* ================= PALETA ================= */
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-profundo: #2E5F32;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-avellana: #C8A784;
+    --crema-suave: #FAF4EC;
+}
+
+/* ================= FONDO ================= */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* ================= CONTENEDOR ================= */
+.main-content-wrapper {
+    padding: 20px;
+}
+
+.content-card {
+    background: var(--crema-suave);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid var(--cafe-suave);
+    box-shadow: 0 8px 18px rgba(0,0,0,.1);
+    max-width: 1300px;
+    margin: auto;
+}
+
+/* ================= TITULO ================= */
+h2 {
+    color: var(--cafe-profundo);
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #fff;
+}
+
+/* ================= FILTROS ================= */
+.form-filtros {
+    background: var(--blanco-calido);
+    border: 1px solid var(--gris-suave);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+/* ================= BOTONES ================= */
+.btn-filtrar {
+    background: var(--verde-profundo);
+    color: white;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-weight: bold;
+}
+
+.btn-filtrar:hover {
+    background: var(--verde);
+}
+
+/* ================= TABLA ================= */
+.table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: var(--cafe-medio);
+    color: white;
+}
+
+.table tbody tr:hover {
+    background: #f6efe7;
+}
+</style>
+
+<div class="main-content-wrapper">
+    <div class="content-card">
+
+        <h2 class="text-center mb-4">
+            Historial de pedidos del cliente
+        </h2>
+
+        <!-- ================= FILTROS ================= -->
+        <form method="get" class="row g-3 form-filtros mb-4 align-items-end">
+
+            <div class="col-md-3">
+                <label class="fw-semibold">Código de pedido</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text"
+                        name="codigo"
+                        class="form-control"
+                        placeholder="PCG-00082"
+                        value="{{ codigo|default:'' }}">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="fw-semibold">Estado del pedido</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="listo" {% if estado == 'listo' %}selected{% endif %}>
+                        Listo
+                    </option>
+                    <option value="rechazado" {% if estado == 'rechazado' %}selected{% endif %}>
+                        Rechazado
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="fw-semibold">Fecha inicio</label>
+                <input type="date"
+                    name="fecha_inicio"
+                    class="form-control"
+                    value="{{ fecha_inicio }}">
+            </div>
+
+            <div class="col-md-2">
+                <label class="fw-semibold">Fecha fin</label>
+                <input type="date"
+                    name="fecha_fin"
+                    class="form-control"
+                    value="{{ fecha_fin }}">
+            </div>
+
+            <div class="col-md-2 d-flex justify-content-center">
+                <button class="btn btn-filtrar px-4">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
+
+
+        </form>
+
+
+        <!-- ================= TABLA ================= -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="text-center">
+                    <tr>
+                        <th>Código</th>
+                        <th>Cliente</th>
+                        <th>Dirección</th>
+                        <th>Total</th>
+                        <th>Comprobante</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for pedido in pedidos %}
+                    <tr>
+                        <td class="text-center">{{ pedido.codigo_pedido }}</td>
+                        <td>{{ pedido.cliente.nombre }}</td>
+                        <td>{{ pedido.direccion_entrega }}</td>
+                        <td class="text-success fw-bold">${{ pedido.total }}</td>
+
+                        <td class="text-center">
+                            {% with comp=pedido.comprobantes_cliente.first %}
+                                {% if comp %}
+                                    <a href="{{ comp.imagen.url }}" target="_blank">
+                                        {{ comp.numero_comprobante }}
+                                    </a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if pedido.estado == 'listo' %}
+                                <span class="badge bg-success">Listo</span>
+                            {% elif pedido.estado == 'rechazado' %}
+                                <span class="badge bg-danger">Rechazado</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {{ pedido.fecha_hora|date:"d/m/Y H:i" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-3">
+                            No hay pedidos con los filtros seleccionados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}

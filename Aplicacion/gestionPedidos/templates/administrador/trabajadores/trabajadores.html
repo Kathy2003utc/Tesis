@@ -371,11 +371,15 @@
 
                             <td>
                                 {% if trabajador.horario %}
-                                    <span class="badge badge-horario">{{ trabajador.get_horario_display }}</span>
+                                    <span class="badge badge-horario">
+                                        {{ trabajador.horario.nombre }} 
+                                        ({{ trabajador.horario.hora_inicio }} - {{ trabajador.horario.hora_fin }})
+                                    </span>
                                 {% else %}
                                     —
                                 {% endif %}
                             </td>
+
 
 
                             <td>

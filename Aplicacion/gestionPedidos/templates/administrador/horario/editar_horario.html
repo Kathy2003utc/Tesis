@@ -1,0 +1,204 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-avellana: #C8A784;
+    --crema-suave: #FAF4EC;
+}
+
+/* Fondo elegante */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* Contenedor */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Animación */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-oscuro);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Inputs y select */
+.form-control, select.form-control {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    transition: 0.3s;
+    width: 100%;
+}
+
+.form-control:focus, select.form-control:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62, 122, 63, 0.35);
+}
+
+/* Botón guardar */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    width: 100%;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+/* Botón cancelar */
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    text-align: center;
+    display: block;
+    margin-top: 10px;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+label {
+    font-weight: bold;
+    color: var(--cafe-profundo);
+    font-size: 20px; 
+    margin-bottom: 6px;
+    display: block;
+}
+
+</style>
+
+<div class="form-container">
+
+    {% if messages %}
+        {% for message in messages %}
+        <script>
+            Swal.fire({
+                icon: "{{ message.tags }}",
+                title: "{{ message.tags|title }}",
+                text: "{{ message|escapejs }}",
+                confirmButtonColor: "#3E7A3F",
+                background: "#FFF7F0",
+            });
+        </script>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card-form">
+        <form id="frm_editar_horario" method="post" novalidate>
+            {% csrf_token %}
+
+            <h2 class="titulo-form">Editar Horario</h2>
+
+            <div class="mb-3">
+                <label class="form-label">Nombre:</label>
+                <select name="nombre" class="form-control" required>
+                    <option value="Mañana" {% if horario.nombre == "Mañana" %}selected{% endif %}>Mañana</option>
+                    <option value="Tarde" {% if horario.nombre == "Tarde" %}selected{% endif %}>Tarde</option>
+                    <option value="Noche" {% if horario.nombre == "Noche" %}selected{% endif %}>Noche</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hora Inicio:</label>
+                <input type="time" name="hora_inicio" class="form-control" value="{{ horario.hora_inicio }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hora Fin:</label>
+                <input type="time" name="hora_fin" class="form-control" value="{{ horario.hora_fin }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Días:</label>
+                <input type="text" name="dias" class="form-control" value="{{ horario.dias }}" required>
+            </div>
+
+            <button type="submit" class="btn-guardar">Actualizar Horario</button>
+
+            <a href="{% url 'lista_horarios' %}" class="btn-cancelar">Cancelar</a>
+
+        </form>
+    </div>
+</div>
+
+<script>
+$("#frm_editar_horario").validate({
+    rules: {
+        nombre: { required: true },
+        hora_inicio: { required: true },
+        hora_fin: { required: true },
+        dias: { required: true },
+    },
+    messages: {
+        nombre: { required: "Campo obligatorio" },
+        hora_inicio: { required: "Campo obligatorio" },
+        hora_fin: { required: "Campo obligatorio" },
+        dias: { required: "Campo obligatorio" },
+    }
+});
+</script>
+
+<br>
+{% endblock %}

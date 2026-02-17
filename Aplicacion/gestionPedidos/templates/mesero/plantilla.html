@@ -384,6 +384,15 @@
           </a>
         </li>
 
+        <!-- HISTORIAL DE PEDIDOS -->
+        <li>
+          <a href="{% url 'mesero_historial_pedidos' %}"
+            class="{% if request.resolver_match.url_name == 'mesero_historial_pedidos' %}active{% endif %}">
+            <i class="fas fa-clock-rotate-left"></i> Historial de pedidos
+          </a>
+        </li>
+
+
       </ul>
     </aside>
 

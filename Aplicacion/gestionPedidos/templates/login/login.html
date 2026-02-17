@@ -292,8 +292,6 @@
                                     {% endfor %}
                                 {% endif %}
 
-
-
                                 <!-- Correo -->
                                 <div class="form-group mb-3">
                                     <label for="correo" class="fw-semibold">Correo electrónico</label>
@@ -324,6 +322,30 @@
                                         <i class="fa-solid fa-right-to-bracket"></i>  Iniciar sesión
                                     </button>
                                 </div>
+
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'cliente_recuperar_password' %}"
+                                    class="btn btn-link fw-semibold"
+                                    style="color: var(--verde); text-decoration: none;">
+                                        ¿Olvidaste tu contraseña?
+                                    </a>
+                                </div>
+
+                                <div class="text-center mt-2">
+                                    <a href="{% url 'cliente_reactivar_cuenta' %}"
+                                    class="fw-semibold"
+                                    style="color: var(--verde); text-decoration: none;">
+                                        ¿Deseas reactivar tu cuenta?
+                                    </a>
+                                </div>
+
+                                <div class="text-center mt-3">
+                                    <p class="mb-1 text-muted">¿No tienes cuenta?</p>
+                                    <a href="{% url 'registro_cliente' %}" class="fw-semibold" style="color: var(--verde);">
+                                        Regístrate aquí
+                                    </a>
+                                </div>
+
                             </form>
 
                         </div>

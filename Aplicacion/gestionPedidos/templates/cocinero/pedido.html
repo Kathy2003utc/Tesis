@@ -96,6 +96,7 @@
         padding: 14px 14px 12px 14px;
         transition: all 0.2s ease;
         position: relative;
+        padding-top: 14px;
     }
 
     .pedido-card:hover {
@@ -115,19 +116,26 @@
         box-shadow: 0 8px 18px rgba(217, 164, 65, 0.18);
     }
 
-    .badge-estado {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        padding: 4px 10px;
+    .badge-estado{
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
         border-radius: 999px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        border: 1px solid transparent;
+        font-size: 0.85rem;
+        font-weight: 900;
         background: var(--advertencia-suave);
         color: #7A4F00;
-        border-color: var(--advertencia);
+        border: 1px solid var(--advertencia);
+        white-space: nowrap;
     }
+
+    .pedido-header{
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 14px;
+    }
+
+
 
     /* ===============================
        FILA ÚNICA: encabezado + productos (MISMA LÍNEA)
@@ -139,6 +147,7 @@
         gap: 12px;
         padding-bottom: 10px;
         border-bottom: 1px solid var(--gris-suave);
+        padding-top: 2px;
     }
 
     .pedido-meta{
@@ -445,7 +454,9 @@
                         {% if pedido.estado == 'en preparacion' %}estado-preparacion{% else %}estado-nuevo{% endif %}">
 
                         {% if pedido.estado != 'en preparacion' %}
-                            <span class="badge-estado">En preparación</span>
+                            <div class="pedido-header">
+                                <span class="badge-estado">En preparación</span>
+                            </div>
                         {% endif %}
 
                         <div class="pedido-topline">

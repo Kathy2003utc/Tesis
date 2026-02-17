@@ -138,11 +138,9 @@
         <div class="col-md-4">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="bi bi-receipt icono"></i>
-                    <h5 class="card-title mt-3 fw-bold">Pedidos a Domicilio</h5>
-                    <p class="text-muted">
-                        Visualiza pedidos realizados a domicilio.
-                    </p>
+                    <i class="fas fa-receipt icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Pedidos</h5>
+                    <p class="text-muted">Listado general de pedidos.</p>
                     <a href="{% url 'cajero_listar_pedidos' %}" class="btn btn-outline-success">
                         Ver Pedidos
                     </a>
@@ -150,15 +148,55 @@
             </div>
         </div>
 
-        <!-- PEDIDOS A COBRAR -->
+        <!-- HISTORIAL PEDIDOS -->
         <div class="col-md-4">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="bi bi-receipt icono"></i>
-                    <h5 class="card-title mt-3 fw-bold">Cobros de pedidos-Restaurante</h5>
-                    <p class="text-muted">
-                        Visualiza pedidos listos para pago en restaurante.
-                    </p>
+                    <i class="fas fa-clipboard-check icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Historial Pedidos</h5>
+                    <p class="text-muted">Pedidos gestionados por el cajero.</p>
+                    <a href="{% url 'cajero_historial_pedidos' %}" class="btn btn-outline-success">
+                        Ver Historial
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- PEDIDOS CLIENTE -->
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-motorcycle icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Pedidos Cliente</h5>
+                    <p class="text-muted">Pedidos de clientes a domicilio.</p>
+                    <a href="{% url 'cajero_pedidos_clientes_domicilio' %}" class="btn btn-outline-success">
+                        Ver Pedidos
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORIAL PEDIDOS CLIENTE -->
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-user-clock icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Historial Cliente</h5>
+                    <p class="text-muted">Historial de pedidos por cliente.</p>
+                    <a href="{% url 'cajero_pedidos_historial_cliente' %}" class="btn btn-outline-success">
+                        Ver Historial
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- COBROS RESTAURANTE -->
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-cash-register icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Cobros Restaurante</h5>
+                    <p class="text-muted">Pagos de pedidos en mesa.</p>
                     <a href="{% url 'cajero_restaurante_cobros' %}" class="btn btn-outline-success">
                         Ver Cobros
                     </a>
@@ -170,11 +208,9 @@
         <div class="col-md-4">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="bi bi-truck icono"></i>
-                    <h5 class="card-title mt-3 fw-bold">Cobros de pedidos-Domicilio</h5>
-                    <p class="text-muted">
-                        Gestiona pagos de pedidos enviados a domicilio.
-                    </p>
+                    <i class="fas fa-truck icono"></i>
+                    <h5 class="card-title mt-3 fw-bold">Cobros Domicilio</h5>
+                    <p class="text-muted">Pagos de pedidos a domicilio.</p>
                     <a href="{% url 'cajero_domicilio_cobros' %}" class="btn btn-outline-success">
                         Ver Cobros
                     </a>
@@ -182,23 +218,22 @@
             </div>
         </div>
 
-        <!-- COMPROBANTES -->
+        <!-- REPORTES -->
         <div class="col-md-4">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="bi bi-file-earmark-text icono"></i>
+                    <i class="fas fa-chart-line icono"></i>
                     <h5 class="card-title mt-3 fw-bold">Reportes</h5>
-                    <p class="text-muted">
-                        Consulta y genera reportes en PDF y Excel.
-                    </p>
+                    <p class="text-muted">PDF y Excel de ventas y cobros.</p>
                     <a href="{% url 'cajero_reporte_unificado' %}" class="btn btn-outline-success">
-                        Ver Reporte
+                        Ver Reportes
                     </a>
                 </div>
             </div>
         </div>
 
     </div>
+
 </div>
 
 <br>

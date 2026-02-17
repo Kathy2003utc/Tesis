@@ -1,0 +1,318 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-avellana: #C8A784;
+
+    --crema-suave: #FAF4EC;
+}
+
+/* Fondo */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* Contenedor */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta premium */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Labels */
+label {
+    font-weight: bold;
+    color: var(--cafe-profundo);
+}
+
+/* Inputs */
+.form-control {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    color: var(--texto-oscuro);
+}
+
+.form-control:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62,122,63,.35);
+}
+
+/* Botones */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    border: none;
+    transition: .3s;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-claro);
+    color: var(--texto-oscuro);
+    transform: translateY(-3px);
+}
+
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    border: none;
+    width: 100%;
+    margin-top: 12px;
+    transition: .3s;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    color: var(--texto-oscuro);
+    transform: translateY(-3px);
+}
+
+/* Resumen */
+.resumen-box {
+    background: var(--crema-suave);
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid var(--cafe-avellana);
+}
+
+/* ===============================
+   RESPONSIVE – PAGO DEL PEDIDO
+================================= */
+@media (max-width: 768px) {
+
+    /* Contenedor */
+    .form-container {
+        padding: 10px;
+    }
+
+    /* Tarjeta */
+    .card-form {
+        padding: 22px;
+        border-radius: 14px;
+    }
+
+    /* Título */
+    .titulo-form {
+        font-size: 22px;
+        margin-bottom: 18px;
+    }
+
+    /* Resumen */
+    .resumen-box {
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .resumen-box p {
+        margin-bottom: 6px;
+    }
+
+    /* Labels */
+    label {
+        font-size: 14px;
+    }
+
+    /* Inputs */
+    .form-control {
+        font-size: 14px;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    /* Botón principal */
+    .btn-guardar {
+        font-size: 15px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    /* Botón cancelar */
+    .btn-cancelar {
+        font-size: 15px;
+        padding: 12px;
+        border-radius: 12px;
+        margin-top: 10px;
+    }
+}
+
+/* Extra pequeño (teléfonos chicos) */
+@media (max-width: 480px) {
+
+    .titulo-form {
+        font-size: 20px;
+    }
+
+    .card-form {
+        padding: 18px;
+    }
+
+    .resumen-box {
+        font-size: 13px;
+    }
+
+    .btn-guardar,
+    .btn-cancelar {
+        font-size: 14px;
+    }
+}
+
+</style>
+
+<div class="form-container">
+
+    <div class="card-form">
+
+        <h2 class="titulo-form">Pago del Pedido</h2>
+
+        <!-- RESUMEN -->
+        <div class="resumen-box">
+            <p><strong>Código:</strong> {{ pedido.codigo_pedido }}</p>
+            <p><strong>Total a pagar:</strong> ${{ pedido.total }}</p>
+            <p><strong>Tipo:</strong> Domicilio</p>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label>Número de comprobante</label>
+                <input type="text"
+                       name="numero_comprobante"
+                       class="form-control"
+                       required>
+            </div>
+
+            <div class="mb-3">
+                <label>Imagen del comprobante</label>
+                <input type="file"
+                       name="imagen"
+                       class="form-control"
+                       accept="image/*"
+                       required>
+            </div>
+
+            <button class="btn btn-guardar w-100 mt-4">
+                Enviar comprobante
+            </button>
+
+            <button type="button"
+                    class="btn btn-cancelar"
+                    onclick="cancelarPedido('{{ pedido.id }}')">
+                Cancelar pedido
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function cancelarPedido(id) {
+    Swal.fire({
+        title: "¿Cancelar pedido?",
+        text: "El pedido será eliminado definitivamente.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Cancelar",
+        cancelButtonText: "Volver",
+        confirmButtonColor: "#C14949",
+        background: "#FFF7F0"
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        fetch(`/cliente/pedido/${id}/eliminar/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Pedido cancelado",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    background: "#FFF7F0",
+                    iconColor: "#3E7A3F"
+                });
+
+                setTimeout(() => {
+                    window.location.href = "{% url 'cliente_listar_pedidos' %}";
+                }, 1200);
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "No se pudo cancelar",
+                    text: data.message || "El pedido ya no puede cancelarse.",
+                    background: "#FFF7F0",
+                    confirmButtonColor: "#C14949"
+                });
+            }
+        });
+    });
+}
+</script>
+
+{% endblock %}

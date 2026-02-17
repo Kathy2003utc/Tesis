@@ -1,0 +1,452 @@
+{% load static %}
+{% block contenido %}
+
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+<!-- FontAwesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/localization/messages_es.min.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-oscuro: #8C2F39;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-tostado: #A66E4A;
+    --cafe-avellana: #C8A784;
+    --cafe-crema: #F0E1CA;
+
+    --verde-profundo: #2E5F32;
+    --verde-menta: #A6D5A1;
+
+    --crema-suave: #FAF4EC;
+}
+
+/* Fondo */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+.form-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+
+/* Tarjeta */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+    width: 100%;
+    max-width: 720px;
+}
+
+
+/* Animación */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Labels */
+label {
+    font-weight: bold;
+    color: var(--cafe-profundo);
+    font-size: 20px;
+    margin-bottom: 6px;
+}
+
+/* Inputs */
+.form-control {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    transition: 0.3s;
+    color: var(--texto-oscuro);
+}
+
+.form-control:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62, 122, 63, 0.35);
+}
+
+/* Botón Guardar */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-menta);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+/* Grid */
+.form-grid .col-md-6,
+.form-grid .col-12 {
+    margin-bottom: 15px;
+}
+
+/* Cancelar */
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    transition: 0.3s;
+    border: none;
+    text-decoration: none;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+@media (max-width: 576px) {
+    .card-form {
+        padding: 22px;
+        border-radius: 14px;
+    }
+
+    label {
+        font-size: 16px;
+    }
+
+    .titulo-form {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .form-container {
+        min-height: auto;          /*  clave */
+        padding: 8px;
+        align-items: flex-start;   /* lo acerca arriba */
+    }
+
+    .card-form {
+        width: 100%;
+        max-width: 100%;           /*  ocupa todo el ancho */
+        padding: 20px;
+        border-radius: 14px;
+        margin-top: 20px;          /* lo baja un poquito */
+        box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+    }
+
+    .titulo-form {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+
+    label {
+        font-size: 14px;
+    }
+
+    .form-control {
+        padding: 11px;
+        font-size: 15px;
+    }
+
+    .btn-guardar,
+    .btn-cancelar {
+        font-size: 15px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .card-form {
+        width: 96vw !important;   /* casi toda la pantalla */
+        max-width: none !important;
+        transform: scale(1.05);   /* lo acerca visualmente */
+        transform-origin: top center;
+    }
+
+    .form-container {
+        padding: 4px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        zoom: 1.05;
+    }
+}
+</style>
+
+<style>
+/* Mensajes de error */
+label.error {
+    color: var(--rojo-alerta);
+    font-size: 14px;
+    margin-top: 4px;
+    display: block;
+    font-weight: 600;
+}
+
+/* Input con error */
+input.error {
+    border-color: var(--rojo-alerta);
+    box-shadow: 0 0 5px rgba(193, 73, 73, 0.4);
+}
+
+/* Input válido */
+input.valid {
+    border-color: var(--verde);
+}
+</style>
+
+
+<div class="form-container">
+    <div class="card-form">
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <h2 class="titulo-form">Registro de Usuario</h2>
+
+            <div class="row form-grid">
+
+                <div class="col-12 col-md-6">
+                    <label>Nombre:</label>
+                    <input type="text" name="nombre" class="form-control" required>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Apellido:</label>
+                    <input type="text" name="apellido" class="form-control" required>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Correo:</label>
+                    <input type="email" name="correo" class="form-control" inputmode="email">
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Teléfono:</label>
+                    <input type="text" name="telefono" class="form-control" inputmode="numeric">
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Contraseña:</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label>Confirmar Contraseña:</label>
+                    <input type="password" name="password2" class="form-control" required>
+                </div>
+
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12 col-md-6 mb-2">
+                    <button type="submit" class="btn btn-guardar w-100">
+                        Registrarse
+                    </button>
+                </div>
+
+                <div class="col-12 col-md-6 mb-2">
+                    <a href="{% url 'login' %}" class="btn btn-cancelar w-100">
+                        Cancelar
+                    </a>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+
+    /* Método: solo letras */
+    $.validator.addMethod("soloLetras", function (value, element) {
+        return this.optional(element) || /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(value);
+    }, "Solo se permiten letras");
+
+    /* Método: solo números */
+    $.validator.addMethod("soloNumeros", function (value, element) {
+        return this.optional(element) || /^[0-9]+$/.test(value);
+    }, "Solo se permiten números");
+
+    $("form").validate({
+        rules: {
+            nombre: {
+                required: true,
+                soloLetras: true
+            },
+            apellido: {
+                required: true,
+                soloLetras: true
+            },
+            correo: {
+                required: true,
+                email: true
+            },
+            telefono: {
+                required: true,
+                soloNumeros: true,
+                minlength: 10,
+                maxlength: 10
+            },
+            password: {
+                required: true,
+                minlength: 5
+            },
+            password2: {
+                required: true,
+                equalTo: "[name='password']"
+            }
+        },
+        messages: {
+            nombre: {
+                required: "El nombre es obligatorio"
+            },
+            apellido: {
+                required: "El apellido es obligatorio"
+            },
+            correo: {
+                required: "El correo es obligatorio",
+                email: "Ingrese un correo electrónico válido"
+            },
+            telefono: {
+                required: "El teléfono es obligatorio",
+                minlength: "Debe tener exactamente 10 dígitos",
+                maxlength: "Debe tener exactamente 10 dígitos"
+            },
+            password: {
+                required: "La contraseña es obligatoria",
+                minlength: "Debe tener al menos 5 caracteres"
+            },
+            password2: {
+                required: "Debe confirmar la contraseña",
+                equalTo: "Las contraseñas no coinciden"
+            }
+        },
+        errorPlacement: function (error, element) {
+            error.insertAfter(element);
+        },
+        highlight: function (element) {
+            $(element).addClass("error").removeClass("valid");
+        },
+        unhighlight: function (element) {
+            $(element).removeClass("error").addClass("valid");
+        }
+    });
+
+});
+</script>
+
+<script>
+$(document).ready(function () {
+
+    const correoInput = $("input[name='correo']");
+
+    correoInput.on("blur", function () {
+        const correo = $(this).val().trim();
+
+        if (correo.length === 0) return;
+
+        $.ajax({
+            url: "{% url 'verificar_correo_ajax' %}",
+            data: { correo: correo },
+            dataType: "json",
+            success: function (data) {
+                if (data.existe) {
+                    correoInput
+                        .addClass("error")
+                        .removeClass("valid");
+
+                    if (!correoInput.next("label.error").length) {
+                        correoInput.after(
+                            '<label class="error">Este correo ya está registrado</label>'
+                        );
+                    }
+                } else {
+                    correoInput
+                        .removeClass("error")
+                        .addClass("valid");
+
+                    correoInput.next("label.error").remove();
+                }
+            }
+        });
+    });
+
+});
+</script>
+
+
+{% endblock %}

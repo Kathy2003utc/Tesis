@@ -391,9 +391,37 @@
         <!-- PEDIDOS -->
         <li>
           <a href="{% url 'cajero_listar_pedidos' %}"
-            class="{% if '/cajero/pedidos/' in request.path %}active{% endif %}">
+            class="{% if request.resolver_match.url_name == 'cajero_listar_pedidos' %}active{% endif %}">
+
             <i class="fas fa-receipt"></i> Pedidos
           </a>
+        </li>
+
+        <!-- PEDIDOS CAJERO -->
+        <li>
+          <a href="{% url 'cajero_historial_pedidos' %}"
+            class="{% if request.resolver_match.url_name == 'cajero_historial_pedidos' %}active{% endif %}">
+              <i class="fas fa-clipboard-check"></i>
+              Historial Pedidos
+          </a>
+        </li>
+
+
+        <!-- PEDIDOS CLIENTES DOMICILIO -->
+        <li>
+          <a href="{% url 'cajero_pedidos_clientes_domicilio' %}"
+            class="{% if 'pedidos-clientes-domicilio' in request.path %}active{% endif %}">
+            <i class="fas fa-motorcycle"></i> Pedidos Cliente
+          </a>
+        </li>
+
+        <!-- PEDIDOS CLIENTE -->
+        <li>
+            <a href="{% url 'cajero_pedidos_historial_cliente' %}"
+              class="{% if request.resolver_match.url_name == 'cajero_pedidos_historial_cliente' %}active{% endif %}">
+                <i class="fas fa-user-clock"></i>
+                Historial Pedidos Cliente
+            </a>
         </li>
 
         <!-- COBROS RESTAURANTE -->
@@ -408,7 +436,7 @@
         <li>
           <a href="{% url 'cajero_domicilio_cobros' %}"
             class="{% if '/cajero/domicilio/cobros/' in request.path %}active{% endif %}">
-            <i class="fas fa-motorcycle"></i> Cobros Domicilio
+            <i class="fas fa-truck"></i> Cobros Domicilio
           </a>
         </li>
 
@@ -419,7 +447,6 @@
               <i class="fas fa-chart-line"></i> Reportes
           </a>
         </li>
-
 
       </ul>
     </aside>
@@ -691,6 +718,34 @@
       });
     }
   </script>
+
+
+<script>
+const userId = "{{ request.user.id }}";
+
+const notifSocket = new WebSocket(
+    'ws://' + window.location.host + '/ws/notificaciones/' + userId + '/'
+);
+
+notifSocket.onmessage = function(e) {
+
+    const data = JSON.parse(e.data);
+
+    if (data.tipo === "pedido_cliente") {
+
+        Swal.fire({
+            icon: 'info',
+            title: 'Nuevo pedido',
+            text: data.mensaje,
+            confirmButtonText: 'Ver pedidos'
+        }).then(() => {
+            window.location.href = "/cajero/pedidos-clientes-domicilio/";
+        });
+
+    }
+
+};
+</script>
 
 
 </body>

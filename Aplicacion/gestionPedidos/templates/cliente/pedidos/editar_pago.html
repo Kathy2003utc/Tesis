@@ -1,0 +1,50 @@
+{% extends 'cliente/plantilla.html' %}
+{% block contenido %}
+
+<div class="main-content-wrapper">
+  <div class="container mt-5 content-card">
+
+    <h2 class="text-center titulo-pedido mb-4">
+      Editar Pago del Pedido {{ pedido.codigo_pedido }}
+    </h2>
+
+    <div class="alert alert-info text-center">
+      Total a pagar actualizado: <strong>${{ pedido.total|floatformat:2 }}</strong>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label>Número de comprobante</label>
+        <input type="text"
+               name="numero_comprobante"
+               class="form-control"
+               value="{{ comprobante.numero_comprobante|default:'' }}"
+               required>
+      </div>
+
+      <div class="mb-3">
+        <label>Imagen del comprobante</label>
+        <input type="file" name="imagen" class="form-control" {% if not comprobante %}required{% endif %}>
+      </div>
+
+      {% if comprobante %}
+      <div class="mb-3">
+        <small>Comprobante actual:</small><br>
+        <img src="{{ comprobante.imagen.url }}" width="150">
+      </div>
+      {% endif %}
+
+      <div class="text-center mt-4">
+        <button class="btn btn-success btn-lg">
+          Confirmar Pago Actualizado
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -164,4 +164,18 @@ CHANNEL_LAYERS = {
     }
 }
 
+# ================================
+# CONFIGURACIÓN DE CORREO REAL (GMAIL)
+# ================================
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = 'morales.carlosgerardo80@gmail.com'
+EMAIL_HOST_PASSWORD = 'coyd qkza lfpd vemz'  # contraseña de aplicación
+
+DEFAULT_FROM_EMAIL = 'Café Restaurante Carlos Gerardo <morales.carlosgerardo80@gmail.com>'
 

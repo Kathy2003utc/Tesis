@@ -1,14 +1,15 @@
 import json
 import re
+from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-
 from Restaurante.settings import BASE_DIR
 from .decorators import rol_requerido
+from django.db.models import Prefetch
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
-from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje, Pago, Comprobante
+from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje, Pago, Comprobante, Horario, ComprobanteCliente
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -34,6 +35,9 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Image
 import os
+from django.utils.dateparse import parse_date
+from django.db.models import Q
+from django.db import IntegrityError
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.drawing.image import Image as ExcelImage
@@ -50,6 +54,12 @@ from django.conf import settings
 from pathlib import Path
 from datetime import datetime, time, timedelta
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import login
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.urls import reverse
 
 # ----------------------------
 # Login (pantalla)
@@ -62,9 +72,39 @@ def login_view(request):
 # ----------------------------
 def iniciar_sesion(request):
     if request.method == 'POST':
-        correo = request.POST.get('correo')
-        password = request.POST.get('password')
+        correo = request.POST.get('correo', '').strip().lower()
+        password = request.POST.get('password', '')
 
+        # BUSCAR USUARIO POR CORREO
+        try:
+            usuario_db = Usuario.objects.get(correo=correo)
+        except Usuario.DoesNotExist:
+            usuario_db = None
+
+        # ===============================
+        # VALIDACIÓN DE CUENTA INACTIVA
+        # ===============================
+        if usuario_db and usuario_db.rol == 'cliente' and not usuario_db.is_active:
+
+            # 🔹 Caso 1: cliente se registró pero NO activó el correo
+            if usuario_db.cambio_password:
+                messages.error(
+                    request,
+                    "Debes activar tu cuenta desde el correo antes de iniciar sesión."
+                )
+
+            # 🔹 Caso 2: cliente desactivó su cuenta voluntariamente
+            else:
+                messages.error(
+                    request,
+                    "Tu cuenta está desactivada. Puedes reactivarla desde el correo."
+                )
+
+            return redirect('login')
+
+        # ===============================
+        # AUTENTICACIÓN NORMAL
+        # ===============================
         usuario = authenticate(request, correo=correo, password=password)
 
         if usuario is not None:
@@ -75,11 +115,11 @@ def iniciar_sesion(request):
             request.session['usuario_rol'] = usuario.rol
             request.session['usuario_nombre'] = f"{usuario.nombre} {usuario.apellido}"
 
-            # Si es su primer ingreso, debe cambiar su contraseña
+            # Primer ingreso
             if not usuario.cambio_password:
                 return redirect('cambiar_password_primera_vez')
 
-            # Redirección según rol
+            # Redirección por rol
             if usuario.rol == 'admin':
                 return redirect('dashboard_admin')
             elif usuario.rol == 'mesero':
@@ -88,8 +128,11 @@ def iniciar_sesion(request):
                 return redirect('vista_cocina')
             elif usuario.rol == 'cajero':
                 return redirect('dashboard_cajero')
+            elif usuario.rol == 'cliente':
+                return redirect('dashboard_cliente')
             else:
                 messages.error(request, "Rol desconocido.")
+
         else:
             messages.error(request, "Correo o contraseña incorrectos.")
 
@@ -103,6 +146,199 @@ def cerrar_sesion(request):
     auth_logout(request)
     request.session.flush()
     return redirect('login')
+
+# ----------------------------
+# Registro del cliente
+# ----------------------------
+
+def registro_cliente(request):
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        correo = request.POST.get('correo', '').strip().lower()
+        telefono = request.POST.get('telefono', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+
+        # ===== VALIDACIONES (LAS TUYAS) =====
+        if Usuario.objects.filter(correo=correo).exists():
+            messages.error(request, "Ya existe una cuenta con este correo.")
+            return redirect('registro_cliente')
+
+        if password != password2:
+            messages.error(request, "Las contraseñas no coinciden.")
+            return redirect('registro_cliente')
+
+        # ===== CREAR USUARIO INACTIVO =====
+        usuario = Usuario.objects.create(
+            username=correo,
+            correo=correo,
+            nombre=nombre,
+            apellido=apellido,
+            telefono=telefono,
+            rol='cliente',
+            password=make_password(password),
+            is_active=False,         
+            cambio_password=True
+        )
+
+        # ===== TOKEN + UID =====
+        uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+        token = default_token_generator.make_token(usuario)
+
+        enlace = request.build_absolute_uri(
+            reverse('activar_cuenta_cliente', args=[uid, token])
+        )
+
+        # ===== ENVIAR CORREO =====
+        send_mail(
+            subject="Activa tu cuenta - Café Restaurante",
+            message=(
+                f"Hola {usuario.nombre},\n\n"
+                f"Gracias por registrarte.\n\n"
+                f"Para activar tu cuenta haz clic en el siguiente enlace:\n\n"
+                f"{enlace}\n\n"
+                f"Si no te registraste, ignora este correo."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[correo],
+            fail_silently=False,
+        )
+
+        messages.success(
+            request,
+            "Te enviamos un correo para activar tu cuenta."
+        )
+        return redirect('login')
+
+    return render(request, 'login/registro_cliente.html')
+
+def activar_cuenta_cliente(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        usuario = Usuario.objects.get(pk=uid, rol='cliente')
+    except Exception:
+        usuario = None
+
+    if usuario is None or not default_token_generator.check_token(usuario, token):
+        messages.error(request, "El enlace de activación no es válido.")
+        return redirect('login')
+
+    usuario.is_active = True
+    usuario.save(update_fields=['is_active'])
+
+    messages.success(
+        request,
+        "Cuenta activada correctamente. Ya puedes iniciar sesión."
+    )
+    return redirect('login')
+
+
+def verificar_correo_ajax(request):
+    correo = request.GET.get('correo', '').strip().lower()
+
+    existe = Usuario.objects.filter(correo=correo).exists()
+
+    return JsonResponse({
+        'existe': existe
+    })
+
+def cliente_recuperar_password(request):
+    if request.method == 'POST':
+        correo = request.POST.get('correo', '').strip().lower()
+
+        try:
+            usuario = Usuario.objects.get(
+                correo=correo,
+                rol='cliente',
+                is_active=True
+            )
+        except Usuario.DoesNotExist:
+            messages.info(
+                request,
+                "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."
+            )
+            return redirect('login')
+
+        uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+        token = default_token_generator.make_token(usuario)
+
+        enlace = request.build_absolute_uri(
+            reverse(
+                'cliente_restablecer_password',
+                args=[uid, token]
+            )
+        )
+
+        send_mail(
+            subject="Recuperación de contraseña - Café Restaurante",
+            message=(
+                f"Hola {usuario.nombre},\n\n"
+                f"Solicitaste restablecer tu contraseña.\n\n"
+                f"Haz clic en el siguiente enlace:\n\n"
+                f"{enlace}\n\n"
+                f"Si no fuiste tú, ignora este mensaje."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[correo],
+            fail_silently=False,
+        )
+
+        messages.success(
+            request,
+            "Te enviamos un enlace a tu correo para restablecer tu contraseña."
+        )
+        return redirect('login')
+
+    return render(request, 'login/cliente_recuperar_password.html')
+
+
+def cliente_restablecer_password(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        usuario = Usuario.objects.get(pk=uid, rol='cliente')
+    except Exception:
+        usuario = None
+
+    if usuario is None or not default_token_generator.check_token(usuario, token):
+        messages.error(
+            request,
+            "El enlace es inválido o ya fue utilizado."
+        )
+        return redirect('login')
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+
+        if len(password) < 6:
+            messages.error(
+                request,
+                "La contraseña debe tener al menos 6 caracteres."
+            )
+            return redirect(request.path)
+
+        if password != password2:
+            messages.error(
+                request,
+                "Las contraseñas no coinciden."
+            )
+            return redirect(request.path)
+
+        usuario.set_password(password)
+        usuario.save(update_fields=['password'])
+
+        messages.success(
+            request,
+            "Contraseña actualizada correctamente. Ya puedes iniciar sesión."
+        )
+        return redirect('login')
+
+    return render(
+        request,
+        'login/cliente_restablecer_password.html'
+    )
+
 
 # ----------------------------
 # Cambio de contraseña
@@ -154,6 +390,13 @@ def dashboard_cajero(request):
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('login')
     return render(request, 'cajero/dashboard.html')
+
+@login_required(login_url='login')
+def dashboard_cliente(request):
+    if request.user.rol != 'cliente':
+        messages.error(request, "No tienes permisos para acceder a esta página.")
+        return redirect('login')
+    return render(request, 'cliente/dashboard.html')
 
 # ----------------------------
 # Admin-Perfil
@@ -260,21 +503,19 @@ def editar_perfil_admin(request):
 # ----------------------------
 # Admin-Gestion de trabajadores
 # ----------------------------
+
 @login_required(login_url='login')
 @rol_requerido('admin')
 def listar_trabajadores(request):
-    # Filtrar todos los usuarios que no sean clientes ni admin
     trabajadores = Usuario.objects.exclude(rol__in=['cliente', 'admin'])
     return render(request, 'administrador/trabajadores/trabajadores.html', {'trabajadores': trabajadores})
+
 
 @login_required(login_url='login')
 @rol_requerido('admin')
 def crear_trabajador(request):
-    TOPES = {
-        'mesero': 4,
-        'cajero': 3,
-        'cocinero': 4,
-    }
+    TOPES = {'mesero': 4, 'cajero': 3, 'cocinero': 4}
+    horarios = Horario.objects.filter(activo=True)  # Traemos solo horarios activos
 
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
@@ -283,80 +524,71 @@ def crear_trabajador(request):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         rol = request.POST.get('rol', '').strip()
-        horario = request.POST.get('horario', '').strip()
+        horario_id = request.POST.get('horario', '').strip()  # Recibimos el ID del horario
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
 
-        # Campos obligatorios
-        if not all([nombre, apellido, correo, telefono, direccion, rol, horario, password, password2]):
+        # Validar campos obligatorios
+        if not all([nombre, apellido, correo, telefono, direccion, rol, horario_id, password, password2]):
             messages.error(request, "Todos los campos son obligatorios.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
-        # Validar rol permitido (trabajadores)
+        # Validar rol permitido
         if rol not in ['mesero', 'cocinero', 'cajero']:
             messages.error(request, "Rol inválido.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         # Validar horario
-        HORARIOS_VALIDOS = [
-            'lv_manana', 'lv_tarde', 'lv_noche',
-            'sab_manana', 'sab_tarde', 'dom_unico'
-        ]
+        try:
+            horario_obj = Horario.objects.get(id=horario_id, activo=True)
+        except Horario.DoesNotExist:
+            messages.error(request, "Seleccione un horario válido.")
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
-        if horario not in HORARIOS_VALIDOS:
-            messages.error(request, "Horario inválido.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
-
-        # ========== VALIDAR TOPE POR ROL ==========
+        # Validar tope por rol
         tope = TOPES.get(rol)
         if tope is not None:
-            actuales = Usuario.objects.filter(
-                rol=rol,
-                is_active=True
-            ).exclude(rol__in=['admin', 'cliente']).count()
-
+            actuales = Usuario.objects.filter(rol=rol, is_active=True).exclude(rol__in=['admin','cliente']).count()
             if actuales >= tope:
-                messages.error(
-                    request,
-                    f"No se puede registrar más personal para el rol {rol}. Tope permitido: {tope}."
-                )
-                return render(request, 'administrador/trabajadores/crear_trabajador.html')
+                messages.error(request, f"No se puede registrar más personal para el rol {rol}. Tope permitido: {tope}.")
+                return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         # Validar solo letras
         solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
         if not re.match(solo_letras, nombre):
             messages.error(request, "El nombre solo debe contener letras.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         if not re.match(solo_letras, apellido):
             messages.error(request, "El apellido solo debe contener letras.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         # Validar email
         try:
             validate_email(correo)
         except ValidationError:
             messages.error(request, "Ingrese un correo electrónico válido.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         if Usuario.objects.filter(correo=correo).exists():
             messages.error(request, "Ya existe un usuario con este correo.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         # Validar teléfono
         if not telefono.isdigit() or len(telefono) != 10:
             messages.error(request, "El teléfono debe tener exactamente 10 números.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         # Validar contraseñas
         if len(password) < 6:
             messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
         if password != password2:
             messages.error(request, "Las contraseñas no coinciden.")
-            return render(request, 'administrador/trabajadores/crear_trabajador.html')
+            return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
 
+        # Crear trabajador
         trabajador = Usuario(
             nombre=nombre,
             apellido=apellido,
@@ -365,7 +597,7 @@ def crear_trabajador(request):
             telefono=telefono,
             direccion=direccion,
             rol=rol,
-            horario=horario
+            horario=horario_obj
         )
         trabajador.set_password(password)
         trabajador.save()
@@ -373,18 +605,15 @@ def crear_trabajador(request):
         messages.success(request, f"Trabajador {nombre} {apellido} creado con éxito.")
         return redirect('listar_trabajadores')
 
-    return render(request, 'administrador/trabajadores/crear_trabajador.html')
+    return render(request, 'administrador/trabajadores/crear_trabajador.html', {'horarios': horarios})
+
 
 @login_required(login_url='login')
 @rol_requerido('admin')
 def editar_trabajador(request, trabajador_id):
     trabajador = get_object_or_404(Usuario, id=trabajador_id)
-
-    TOPES = {
-        'mesero': 4,
-        'cajero': 3,
-        'cocinero': 4,
-    }
+    TOPES = {'mesero': 4, 'cajero': 3, 'cocinero': 4}
+    horarios = Horario.objects.filter(activo=True)  # Solo horarios activos
 
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
@@ -393,93 +622,83 @@ def editar_trabajador(request, trabajador_id):
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         rol = request.POST.get('rol', '').strip()
-        horario = request.POST.get('horario', '').strip()
-
+        horario_id = request.POST.get('horario', '').strip()
         password = request.POST.get('password', '')
         password2 = request.POST.get('password2', '')
 
         # Validar rol
         if rol not in ['mesero', 'cocinero', 'cajero']:
             messages.error(request, "Rol inválido.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         # Validar horario
-        HORARIOS_VALIDOS = [
-            'lv_manana', 'lv_tarde', 'lv_noche',
-            'sab_manana', 'sab_tarde', 'dom_unico'
-        ]
+        try:
+            horario_obj = Horario.objects.get(id=horario_id, activo=True)
+        except Horario.DoesNotExist:
+            messages.error(request, "Seleccione un horario válido.")
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
-        if horario not in HORARIOS_VALIDOS:
-            messages.error(request, "Horario inválido.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
-
-        # ========== VALIDAR TOPE POR ROL (si cambia rol o si estaba inactivo y lo reactivas luego) ==========
+        # Validar tope por rol si cambia
         if rol != trabajador.rol:
             tope = TOPES.get(rol)
             if tope is not None:
-                actuales = Usuario.objects.filter(
-                    rol=rol,
-                    is_active=True
-                ).exclude(id=trabajador.id).count()
-
+                actuales = Usuario.objects.filter(rol=rol, is_active=True).exclude(id=trabajador.id).count()
                 if actuales >= tope:
-                    messages.error(
-                        request,
-                        f"No se puede asignar el rol '{rol}'. Ya se alcanzó el tope: {tope}."
-                    )
-                    return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+                    messages.error(request, f"No se puede asignar el rol {rol}. Ya se alcanzó el tope: {tope}.")
+                    return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         # Validar solo letras
         solo_letras = r'^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$'
         if not re.match(solo_letras, nombre):
             messages.error(request, "El nombre solo debe contener letras.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         if not re.match(solo_letras, apellido):
             messages.error(request, "El apellido solo debe contener letras.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         # Validar email
         try:
             validate_email(correo)
         except ValidationError:
             messages.error(request, "Ingrese un correo electrónico válido.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         if Usuario.objects.exclude(id=trabajador.id).filter(correo=correo).exists():
             messages.error(request, "Ya existe un usuario con este correo.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         # Validar teléfono
         if not telefono.isdigit() or len(telefono) != 10:
             messages.error(request, "El teléfono debe tener exactamente 10 números.")
-            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+            return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
         # Contraseñas si se envían
         if password or password2:
             if password != password2:
                 messages.error(request, "Las contraseñas no coinciden.")
-                return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+                return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
             if len(password) < 6:
                 messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
-                return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+                return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
             trabajador.set_password(password)
 
+        # Actualizar trabajador
         trabajador.nombre = nombre
         trabajador.apellido = apellido
         trabajador.correo = correo
         trabajador.telefono = telefono
         trabajador.direccion = direccion
         trabajador.rol = rol
-        trabajador.horario = horario
+        trabajador.horario = horario_obj
         trabajador.save()
 
         messages.success(request, f"Trabajador {trabajador.nombre} actualizado con éxito.")
         return redirect('listar_trabajadores')
 
-    return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador})
+    return render(request, 'administrador/trabajadores/editar_trabajador.html', {'trabajador': trabajador, 'horarios': horarios})
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -525,8 +744,6 @@ def eliminar_trabajador(request, trabajador_id):
             )
 
     return redirect('listar_trabajadores')
-
-from django.db import transaction
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -587,6 +804,192 @@ def activar_trabajador(request, trabajador_id):
         f"Trabajador {trabajador.nombre} {trabajador.apellido} activado correctamente."
     )
     return redirect('listar_trabajadores')
+
+# ----------------------------
+# Admin - Gestión de horario
+# ----------------------------
+
+DIAS_VALIDOS = [
+    "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo",
+]
+
+# ----------------------------
+# Listar horarios
+# ----------------------------
+def lista_horarios(request):
+    horarios = Horario.objects.all()
+    return render(request, 'administrador/horario/horario.html', {'horarios': horarios})
+
+# ----------------------------
+# Crear horario
+# ----------------------------
+def crear_horario(request):
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        hora_inicio = request.POST.get('hora_inicio')
+        hora_fin = request.POST.get('hora_fin')
+        dias = request.POST.get('dias')
+        activo = True  # siempre activo al crear
+
+        # Validar que hora fin >= hora inicio
+        fmt = "%H:%M"
+        try:
+            hi = datetime.strptime(hora_inicio, fmt).time()
+            hf = datetime.strptime(hora_fin, fmt).time()
+            if hf <= hi:
+                messages.error(request, "La hora fin no puede ser menor o igual a la hora inicio.")
+                return render(request, 'administrador/horario/crear_horario.html')
+        except ValueError:
+            messages.error(request, "Formato de hora inválido.")
+            return render(request, 'administrador/horario/crear_horario.html')
+
+        # Validar que las horas correspondan al horario seleccionado
+        if not validar_horario_por_nombre(nombre, hora_inicio, hora_fin):
+            messages.error(request, f"El horario seleccionado {nombre} no coincide con las horas ingresadas.")
+            return render(request, 'administrador/horario/crear_horario.html')
+
+        # Validar días
+        if not validar_dias(dias):
+            messages.error(request, f"Los días ingresados no son válidos. Deben ser nombres correctos de los días.")
+            return render(request, 'administrador/horario/crear_horario.html')
+
+        Horario.objects.create(
+            nombre=nombre,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            dias=dias,
+            activo=activo
+        )
+        messages.success(request, f"Horario {nombre} creado correctamente.")
+        return redirect('lista_horarios')
+    
+    return render(request, 'administrador/horario/crear_horario.html')
+
+# ----------------------------
+# Editar horario
+# ----------------------------
+def editar_horario(request, id):
+    horario = get_object_or_404(Horario, id=id)
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        hora_inicio = request.POST.get('hora_inicio')
+        hora_fin = request.POST.get('hora_fin')
+        dias = request.POST.get('dias')
+
+        # Validar que hora fin >= hora inicio
+        fmt = "%H:%M"
+        try:
+            hi = datetime.strptime(hora_inicio, fmt).time()
+            hf = datetime.strptime(hora_fin, fmt).time()
+            if hf <= hi:
+                messages.error(request, "La hora fin no puede ser menor o igual a la hora inicio.")
+                return render(request, 'administrador/horario/editar_horario.html', {'horario': horario})
+        except ValueError:
+            messages.error(request, "Formato de hora inválido.")
+            return render(request, 'administrador/horario/editar_horario.html', {'horario': horario})
+
+        # Validar que las horas correspondan al horario seleccionado
+        if not validar_horario_por_nombre(nombre, hora_inicio, hora_fin):
+            messages.error(request, f"El horario seleccionado {nombre} no coincide con las horas ingresadas.")
+            return render(request, 'administrador/horario/editar_horario.html', {'horario': horario})
+
+        # Validar días
+        if not validar_dias(dias):
+            messages.error(request, f"Los días ingresados no son válidos. Deben ser nombres correctos de los días.")
+            return render(request, 'administrador/horario/editar_horario.html', {'horario': horario})
+
+        horario.nombre = nombre
+        horario.hora_inicio = hora_inicio
+        horario.hora_fin = hora_fin
+        horario.dias = dias
+
+        # Activo siempre True mientras tenga trabajadores asignados
+        horario.activo = True
+
+        horario.save()
+        messages.success(request, f"Horario {nombre} actualizado correctamente.")
+        return redirect('lista_horarios')
+
+    return render(request, 'administrador/horario/editar_horario.html', {'horario': horario})
+
+# ----------------------------
+# Eliminar horario
+# ----------------------------
+def eliminar_horario(request, id):
+    horario = get_object_or_404(Horario, id=id)
+
+    if horario.tiene_trabajadores_asignados():
+        messages.error(
+            request,
+            f"No se puede eliminar el horario {horario.nombre} porque tiene trabajadores asignados. "
+            "Solo se permite editar."
+        )
+        return redirect('lista_horarios')
+
+    # Si no tiene trabajadores → sí se puede eliminar
+    horario.delete()
+    messages.success(request, f"Horario {horario.nombre} eliminado correctamente.")
+    return redirect('lista_horarios')
+
+# ----------------------------
+# Función auxiliar para validar horario por nombre
+# ----------------------------
+def validar_horario_por_nombre(nombre, hora_inicio, hora_fin):
+    """
+    Retorna True si las horas corresponden al tipo de horario:
+    Mañana (AM), Tarde (PM temprano), Noche (PM tarde)
+    """
+    fmt = "%H:%M"
+    try:
+        hi = datetime.strptime(hora_inicio, fmt).time()
+        hf = datetime.strptime(hora_fin, fmt).time()
+    except ValueError:
+        return False
+
+    if nombre == "Mañana":
+        return hi >= datetime.strptime("06:00", fmt).time() and hf <= datetime.strptime("12:00", fmt).time()
+    elif nombre == "Tarde":
+        return hi >= datetime.strptime("12:00", fmt).time() and hf <= datetime.strptime("18:00", fmt).time()
+    elif nombre == "Noche":
+        return hi >= datetime.strptime("18:00", fmt).time() and hf <= datetime.strptime("23:59", fmt).time()
+    else:
+        return False
+
+# ----------------------------
+# Función auxiliar para validar días
+# ----------------------------
+def validar_dias(dias_texto):
+    """
+    Acepta:
+    - Lunes, Martes, Miercoles
+    - Lunes y Martes
+    - Lunes, Martes y Miercoles
+    - Lunes a Viernes
+    - Lunes a Viernes, Sabado y Domingo
+    """
+    texto = dias_texto.strip().lower()
+
+    # Normalizar: cambiar " y " por coma
+    texto = texto.replace(" y ", ",")
+
+    partes = [p.strip() for p in texto.split(",")]
+
+    for parte in partes:
+        if not parte:
+            continue
+
+        # Rango: solo si tiene " a "
+        if " a " in parte:
+            inicio, fin = [p.strip().capitalize() for p in parte.split(" a ")]
+            if inicio not in DIAS_VALIDOS or fin not in DIAS_VALIDOS:
+                return False
+        else:
+            dia = parte.capitalize()
+            if dia not in DIAS_VALIDOS:
+                return False
+
+    return True
 
 # ----------------------------
 # Admin - Gestión de Mesas
@@ -922,7 +1325,7 @@ def eliminar_menu(request, producto_id):
         producto.delete()
         messages.success(
             request,
-            f"Producto '{nombre}' eliminado correctamente."
+            f"Producto {nombre} eliminado correctamente."
         )
 
     return redirect('listar_menu')
@@ -944,6 +1347,34 @@ def activar_menu(request, producto_id):
         messages.info(request, f"El producto {producto.nombre} ya estaba activo.")
 
     return redirect('listar_menu')
+
+#-----------------------------
+# Admin-Clientes
+#-----------------------------
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def admin_listar_clientes(request):
+
+    buscar = request.GET.get('buscar', '').strip()
+
+    clientes = Usuario.objects.filter(rol='cliente')
+
+    if buscar:
+        clientes = clientes.filter(
+            nombre__icontains=buscar
+        ) | clientes.filter(
+            apellido__icontains=buscar
+        ) | clientes.filter(
+            correo__icontains=buscar
+        )
+
+    clientes = clientes.order_by('nombre', 'apellido')
+
+    return render(request, 'administrador/clientes/listar.html', {
+        'clientes': clientes,
+        'buscar': buscar
+    })
 
 # ----------------------------
 # Mesero-Pedidos
@@ -1382,6 +1813,68 @@ def mesero_cancelar_pedido(request, pedido_id):
     messages.info(request, "Pedido cancelado correctamente.")
     return redirect('listar_pedidos')
 
+@login_required(login_url='login')
+@rol_requerido('mesero')
+def mesero_historial_pedidos(request):
+
+    codigo = request.GET.get("codigo", "").strip()
+    fecha_inicio = request.GET.get("fecha_inicio", "")
+    fecha_fin = request.GET.get("fecha_fin", "")
+    metodo = request.GET.get("metodo", "")
+
+    pedidos = (
+        Pedido.objects
+        .filter(
+            tipo_pedido="restaurante",
+            mesero=request.user,
+            estado="finalizado",
+            pagos__estado_pago="confirmado"
+        )
+        .select_related("mesa")
+        .prefetch_related(
+            Prefetch(
+                "pagos",
+                queryset=Pago.objects.filter(estado_pago="confirmado")
+                .prefetch_related("comprobante_set")
+            )
+        )
+        .distinct()
+        .order_by("-fecha_hora")
+    )
+
+    # ================= FILTROS =================
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo:
+        pedidos = pedidos.filter(pagos__metodo_pago=metodo)
+
+    # Pago + comprobante (1 por pedido)
+    for p in pedidos:
+        p.pago_confirmado = (
+            p.pagos.filter(estado_pago="confirmado").order_by("id").first()
+        )
+        p.comprobante = (
+            p.pago_confirmado.comprobante_set.first()
+            if p.pago_confirmado else None
+        )
+
+    return render(request, "mesero/pedidos/historial_pedidos.html", {
+        "pedidos": pedidos,
+        "filtros": {
+            "codigo": codigo,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
+            "metodo": metodo,
+        }
+    })
+
 # ----------------------------
 # Cocinero - Perfil
 # ----------------------------
@@ -1392,7 +1885,6 @@ def perfil_cocinero(request):
     return render(request, "cocinero/perfil/perfil_cocinero.html", {
         "usuario": usuario
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('cocinero')
@@ -1477,7 +1969,7 @@ def editar_perfil_cocinero(request):
 @rol_requerido('cocinero')
 def vista_cocina(request):
     hoy = timezone.localdate()
-    estados = ["en_creacion", "en preparacion"]
+    estados = ["en_creacion", "aceptado", "en preparacion"]
 
     pedidos_restaurante = Pedido.objects.filter(
         estado__in=estados,
@@ -1505,7 +1997,6 @@ def vista_cocina(request):
         'productos_menu': productos_menu,  # NUEVO
     })
 
-
 @login_required(login_url='login')
 @rol_requerido('cocinero')
 @csrf_protect
@@ -1520,6 +2011,16 @@ def marcar_pedido_listo(request, pedido_id):
     pedido.save()
 
     channel_layer = get_channel_layer()
+
+    if pedido.cliente:
+        async_to_sync(channel_layer.group_send)(
+            f"estado_pedidos_cliente_{pedido.cliente.id}",
+            {
+                "type": "actualizar_estado",
+                "pedido": pedido.id,
+                "estado": "listo"
+            }
+        )
 
     # 1) Actualizar en tiempo real (cocina + cajero)
     try:
@@ -1613,30 +2114,7 @@ def _payload_pedido_cocina(pedido):
         "contacto_cliente": pedido.contacto_cliente or "",
         "total": float(pedido.total or 0),
 
-        "cajero": pedido.cajero.nombre if pedido.cajero else None,
-
-        "productos": [
-            {"nombre": d.producto.nombre, "cantidad": d.cantidad, "observacion": d.observacion or ""}
-            for d in pedido.detalles.select_related("producto").all()
-        ]
-    }
-def _payload_pedido_cocina(pedido):
-    return {
-        "id": pedido.id,
-        "codigo_pedido": pedido.codigo_pedido,
-        "tipo": pedido.tipo_pedido,
-        "estado": pedido.estado,
-
-        # restaurante
-        "mesa": pedido.mesa.numero if pedido.mesa else None,
-        "mesero": pedido.mesero.nombre if pedido.mesero else None,
-
-        # domicilio (PARA LA TABLA DEL CAJERO)
-        "nombre_cliente": pedido.nombre_cliente or "",
-        "contacto_cliente": pedido.contacto_cliente or "",
-        "total": float(pedido.total or 0),
-
-        "cajero": pedido.cajero.nombre if pedido.cajero else None,
+        "cajero_id": pedido.cajero_id,
 
         "productos": [
             {"nombre": d.producto.nombre, "cantidad": d.cantidad, "observacion": d.observacion or ""}
@@ -1645,6 +2123,9 @@ def _payload_pedido_cocina(pedido):
     }
 
 def enviar_pedido_cocina(pedido):
+    if pedido.estado not in ["en_creacion", "aceptado", "en preparacion"]:
+        return
+
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
@@ -1654,7 +2135,13 @@ def enviar_pedido_cocina(pedido):
         }
     )
 
+
 def enviar_actualizacion_cocina(pedido):
+
+    # SOLO si ya fue enviado a cocina
+    if not pedido.enviado_cocina:
+        return
+
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         "pedidos_activos",
@@ -1716,18 +2203,34 @@ def marcar_pedido_preparacion(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
 
     if pedido.estado == "en preparacion":
-        return JsonResponse({"success": False, "mensaje": "Este pedido ya está siendo preparado."})
+        return JsonResponse({
+            "success": False,
+            "mensaje": "Este pedido ya está siendo preparado."
+        })
 
-    if pedido.estado != "en_creacion":
-        return JsonResponse({"success": False, "mensaje": "Este pedido no está en creación."})
-
-    # (Opcional recomendado) evitar N+1 luego
-    # pedido = Pedido.objects.prefetch_related('detalles__producto').get(id=pedido_id)
+    if pedido.estado not in ["en_creacion", "aceptado"]:
+        return JsonResponse({
+            "success": False,
+            "mensaje": "Este pedido no puede pasar a preparación."
+        })
 
     pedido.estado = "en preparacion"
     pedido.save(update_fields=["estado"])
 
-    # SOLO esto (manda productos)
+    channel_layer = get_channel_layer()
+
+    # SOLO estado (sin notificación)
+    if pedido.cliente:
+        async_to_sync(channel_layer.group_send)(
+            f"estado_pedidos_cliente_{pedido.cliente.id}",
+            {
+                "type": "actualizar_estado",
+                "pedido": pedido.id,
+                "estado": "en preparacion"
+            }
+        )
+
+    # WS cocina / cajero (ya lo tenías)
     try:
         enviar_actualizacion_cocina(pedido)
     except Exception:
@@ -1810,6 +2313,7 @@ def cajero_listar_pedidos(request):
     pedidos = Pedido.objects.filter(
         tipo_pedido='domicilio',
         cajero=request.user,
+        cliente__isnull=True,
         fecha_hora__date=hoy
     ).exclude(estado='borrador').order_by('id')
 
@@ -2042,12 +2546,19 @@ def cajero_ver_pedido(request, pedido_id):
         )
         return redirect('cajero_agregar_detalles', pedido_id=pedido.id)
 
-    # Solo la PRIMERA vez lo mando a cocina
-    if pedido.estado in ["borrador", "en_creacion"] and not pedido.enviado_cocina:
+    # SOLO pedidos creados por cajero manualmente
+    if (
+        pedido.cliente is None
+        and pedido.cajero == request.user
+        and pedido.estado in ["borrador", "en_creacion"]
+        and not pedido.enviado_cocina
+    ):
+
         pedido.estado = "en_creacion"
         pedido.enviado_cocina = True
         pedido.save(update_fields=["estado", "enviado_cocina"])
         enviar_pedido_cocina(pedido)
+
    # solo una vez
     # si ya está en preparación/listo/finalizado, NO lo vuelves a mandar
 
@@ -2063,6 +2574,7 @@ def cajero_api_estados_pedidos(request):
     pedidos = Pedido.objects.filter(
         tipo_pedido='domicilio',
         cajero=request.user,
+        cliente__isnull=True,
         fecha_hora__date=hoy
     ).exclude(estado='borrador').values(
         'id', 'estado', 'codigo_pedido', 'nombre_cliente', 'contacto_cliente', 'total'
@@ -2103,7 +2615,6 @@ def cajero_eliminar_pedido(request, pedido_id):
 
     return JsonResponse({"success": False})
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_finalizar_pedido(request, pedido_id):
@@ -2124,20 +2635,24 @@ def cajero_finalizar_pedido(request, pedido_id):
             "message": "Solo se puede finalizar un pedido que ya esté listo."
         })
 
+    # CAMBIO DE ESTADO
     pedido.estado = "finalizado"
     pedido.save(update_fields=["estado"])
 
-    # SOLO enviar payload completo con productos
-    try:
-        enviar_actualizacion_cocina(pedido)
-    except Exception:
-        pass
+    # AVISAR EN TIEMPO REAL AL CAJERO
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "pedidos_activos",
+        {
+            "type": "actualizar_pedido",
+            "pedido": payload_pedido_cajero(pedido)
+        }
+    )
 
     return JsonResponse({
         "success": True,
         "message": f"El pedido #{pedido.codigo_pedido} ha sido finalizado."
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -2184,7 +2699,10 @@ def cajero_editar_pedido(request, pedido_id):
         pedido.save()
         pedido.calcular_totales()
 
-        enviar_actualizacion_cocina(pedido)
+        # SOLO si el pedido fue creado por cajero
+        if pedido.cliente is None:
+            enviar_actualizacion_cocina(pedido)
+
 
 
         return JsonResponse({
@@ -2238,6 +2756,324 @@ def pedido_to_dict(pedido):
             for d in pedido.detalles.select_related("producto").all()
         ]
     }
+
+def payload_pedido_cajero(pedido):
+    return {
+        "id": pedido.id,
+        "codigo_pedido": pedido.codigo_pedido,
+        "tipo": pedido.tipo_pedido,
+        "estado": pedido.estado,   # en_creacion | en preparacion | listo | finalizado
+        "nombre_cliente": pedido.nombre_cliente or "",
+        "contacto_cliente": pedido.contacto_cliente or "",
+        "total": float(pedido.total or 0),
+        "cajero_id": pedido.cajero_id,
+    }
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_historial_pedidos(request):
+
+    codigo = request.GET.get("codigo", "").strip()
+    fecha_inicio = request.GET.get("fecha_inicio", "")
+    fecha_fin = request.GET.get("fecha_fin", "")
+    metodo = request.GET.get("metodo", "")
+
+    pedidos = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='domicilio',
+            cajero=request.user,
+            cliente__isnull=True,
+            estado='finalizado',
+            pagos__estado_pago='confirmado'
+        )
+        .select_related()
+        .prefetch_related(
+            Prefetch(
+                'pagos',
+                queryset=Pago.objects.filter(estado_pago='confirmado')
+                .prefetch_related('comprobante_set')
+            )
+        )
+        .distinct()
+        .order_by('-fecha_hora')
+    )
+
+    # =======================
+    # FILTROS
+    # =======================
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo:
+        pedidos = pedidos.filter(pagos__metodo_pago=metodo)
+
+    # Pago y comprobante (1 por pedido)
+    for p in pedidos:
+        p.pago_confirmado = (
+            p.pagos.filter(estado_pago='confirmado').order_by('id').first()
+        )
+        if p.pago_confirmado:
+            p.comprobante = (
+                p.pago_confirmado.comprobante_set.first()
+            )
+        else:
+            p.comprobante = None
+
+    return render(request, 'cajero/pedidos/historial_pedidos.html', {
+        'pedidos': pedidos,
+        'filtros': {
+            'codigo': codigo,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'metodo': metodo,
+        }
+    })
+
+#-------------------------------
+#  CAJERO - PEDIDOS CLIENTE
+# ------------------------------
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_pedidos_clientes_domicilio(request):
+
+    hoy = timezone.localdate()
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        fecha_hora__date=hoy,
+        detalles__isnull=False,
+        comprobantes_cliente__estado='pendiente'
+    ).filter(
+        Q(estado='pendiente_caja', cajero__isnull=True) |
+        Q(estado='aceptado', cajero=request.user)
+    ).distinct().order_by('id')
+    
+
+    return render(
+        request,
+        'cajero/pedidos/pedidos_clientes_domicilio.html',
+        {'pedidos': pedidos}
+    )
+
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+@require_POST
+def cajero_aceptar_pedido_cliente(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado='pendiente_caja',
+        tipo_pedido='domicilio'
+    )
+
+    # ================================
+    # 1) ACEPTAR PEDIDO
+    # ================================
+    pedido.cajero = request.user
+    pedido.estado = 'aceptado'
+    pedido.enviado_cocina = True
+    pedido.save(update_fields=['cajero', 'estado', 'enviado_cocina'])
+
+    # ================================
+    # DEFINIR DATOS DEL COMPROBANTE
+    # ================================
+    numero = f"DC-{pedido.id}"  # o el formato que tú quieras
+
+    # Para pedidos de cliente (domicilio)
+    nombre_comp = pedido.cliente_nombre
+    direccion_comp = pedido.direccion_entrega or ""
+
+    # ================================
+    # 2) CREAR PAGO + COMPROBANTE
+    # ================================
+    with transaction.atomic():
+        pago = Pago.objects.create(
+            pedido=pedido,
+            total=Decimal(str(pedido.total)),
+            monto_recibido=Decimal(str(pedido.total)),
+            metodo_pago="transferencia",
+            estado_pago="confirmado"
+        )
+
+        try:
+            comprobante = Comprobante.objects.create(
+                pago=pago,
+                numero_comprobante=numero,
+                nombre_cliente=nombre_comp,
+                direccion_cliente=direccion_comp,
+                correo_cliente=None
+            )
+        except IntegrityError:
+            return JsonResponse({
+                "success": False,
+                "message": "El número de comprobante ya existe. Verifique e intente nuevamente."
+            })
+
+
+    generar_comprobante_pdf(comprobante)
+    comprobante.refresh_from_db()
+
+    comprobante_url = ""
+    if comprobante.archivo_pdf:
+        comprobante_url = comprobante.archivo_pdf.url
+    else:
+        comprobante_url = ""
+
+    # ================================
+    #  DEFINIR UNA SOLA VEZ
+    # ================================
+    channel_layer = get_channel_layer()
+
+    # ================================
+    # 3) WS → ACTUALIZAR ESTADO CLIENTE
+    # ================================
+    async_to_sync(channel_layer.group_send)(
+        f"estado_pedidos_cliente_{pedido.cliente.id}",
+        {
+            "type": "actualizar_estado",
+            "pedido": pedido.id,
+            "estado": "aceptado",
+            "comprobante_url": comprobante_url
+        }
+    )
+
+    # ================================
+    # 4) NOTIFICACIÓN CLIENTE
+    # ================================
+    notif = Notificacion.objects.create(
+        pedido=pedido,
+        usuario_destino=pedido.cliente,
+        tipo="comprobante_generado",
+        mensaje=f"Tu pedido #{pedido.codigo_pedido} fue aceptado."
+    )
+
+    async_to_sync(channel_layer.group_send)(
+        f"notificaciones_{pedido.cliente.id}",
+        {
+            "type": "enviar_notificacion",
+            "mensaje": "Tu pedido fue aceptado.",
+            "pedido": pedido.id,
+            "comprobante_url": comprobante_url,
+            "fecha": localtime(notif.fecha_hora).strftime("%d/%m/%Y %H:%M"),
+        }
+    )
+
+    # ================================
+    # 5) ENVIAR A COCINA
+    # ================================
+    enviar_pedido_cocina(pedido)
+
+    return JsonResponse({'success': True})
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+@require_POST
+def cajero_rechazar_pedido_cliente(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado='pendiente_caja',
+        tipo_pedido='domicilio'
+    )
+
+    comprobante = pedido.comprobantes_cliente.filter(estado='pendiente').first()
+    if comprobante:
+        comprobante.estado = 'rechazado'
+        comprobante.save(update_fields=['estado'])
+
+    pedido.estado = 'rechazado'
+    pedido.enviado_cocina = False
+    pedido.cajero = request.user
+    pedido.save(update_fields=['estado', 'enviado_cocina'])
+
+    channel_layer = get_channel_layer()
+
+    # SOLO estado (sin popup)
+    if pedido.cliente:
+        async_to_sync(channel_layer.group_send)(
+            f"estado_pedidos_cliente_{pedido.cliente.id}",
+            {
+                "type": "actualizar_estado",
+                "pedido": pedido.id,
+                "estado": "rechazado"
+            }
+        )
+
+    return JsonResponse({'success': True})
+
+@login_required
+@rol_requerido('cajero')
+def cajero_enviar_cocina(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        estado='aceptado',
+        enviado_cocina=False
+    )
+
+    pedido.enviado_cocina = True
+    pedido.estado = 'en preparacion'
+    pedido.save(update_fields=['enviado_cocina','estado'])
+
+    # notificación cocina aquí
+
+    return JsonResponse({'success': True})
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_pedidos_historial_cliente(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user
+    )
+
+    # ===== FILTRO POR ESTADO =====
+    estado = request.GET.get('estado')
+    if estado in ['listo', 'rechazado']:
+        pedidos = pedidos.filter(estado=estado)
+    else:
+        pedidos = pedidos.filter(estado__in=['listo', 'rechazado'])
+
+    # ===== FILTRO POR FECHA =====
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    # ===== BUSCADOR POR CÓDIGO =====
+    codigo = request.GET.get('codigo')
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    return render(
+        request,
+        'cajero/pedidos/pedidos_aceptados_rechazados.html',
+        {
+            'pedidos': pedidos,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'codigo': codigo,
+            'estado': estado
+        }
+    )
 
 #-------------------------------
 # CAJERO - COBROS
@@ -2360,6 +3196,16 @@ def cajero_restaurante_pagar(request, pedido_id):
     else:
         return JsonResponse({"success": False, "message": "Método de pago no válido."})
 
+    # ================================
+    # VALIDAR NÚMERO DE COMPROBANTE ÚNICO
+    # ================================
+    if metodo == "transferencia":
+        if Comprobante.objects.filter(numero_comprobante=referencia).exists():
+            return JsonResponse({
+                "success": False,
+                "message": "El número de comprobante ya fue utilizado."
+            })
+
     # ==========================================================
     # GUARDADO EN BD (atómico) + liberar mesa
     # ==========================================================
@@ -2386,7 +3232,11 @@ def cajero_restaurante_pagar(request, pedido_id):
             Mesa.objects.filter(id=pedido.mesa_id).update(estado="libre")
 
         # Comprobante
-        numero = f"C-{pedido.id}-{pago.id}"
+        if metodo == "transferencia":
+            numero = referencia
+        else:
+            numero = f"C-{pedido.id}-{pago.id}"
+
 
         if total >= Decimal("50.00"):
             nombre_comp = cliente_nombre
@@ -2395,13 +3245,19 @@ def cajero_restaurante_pagar(request, pedido_id):
             nombre_comp = "Consumidor final"
             direccion_comp = ""
 
-        comprobante = Comprobante.objects.create(
-            pago=pago,
-            numero_comprobante=numero,
-            nombre_cliente=nombre_comp,
-            direccion_cliente=direccion_comp,
-            correo_cliente=None
-        )
+        try:
+            comprobante = Comprobante.objects.create(
+                pago=pago,
+                numero_comprobante=numero,
+                nombre_cliente=nombre_comp,
+                direccion_cliente=direccion_comp,
+                correo_cliente=None
+            )
+        except IntegrityError:
+            return JsonResponse({
+                "success": False,
+                "message": "El número de comprobante ya fue utilizado. Intente nuevamente."
+            })
 
     # Generar PDF (fuera del atomic por si tarda)
     comprobante_url = ""
@@ -2409,9 +3265,10 @@ def cajero_restaurante_pagar(request, pedido_id):
         generar_comprobante_pdf(comprobante)
         comprobante.refresh_from_db()
         if comprobante.archivo_pdf:
-            comprobante_url = settings.STATIC_URL + str(comprobante.archivo_pdf)
+            comprobante_url = comprobante.archivo_pdf.url
         else:
             comprobante_url = ""
+
     except Exception as e:
         # IMPORTANTE: no rompas el cobro por el PDF
         print("ERROR generando PDF comprobante:", e)
@@ -2472,33 +3329,33 @@ def cajero_restaurante_pagar(request, pedido_id):
         "codigo_pedido": pedido.codigo_pedido
     })
 
-
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 def cajero_domicilio_cobros(request):
+
+    hoy = timezone.localdate()
 
     pagos_confirmados = Pago.objects.filter(
         pedido=OuterRef('pk'),
         estado_pago='confirmado'
     )
 
-    # FECHA DE HOY
-    hoy = timezone.localdate()
+    pedidos_cobrar = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='domicilio',
+            cajero=request.user,
+            fecha_hora__date=hoy,
 
-    # PEDIDOS PENDIENTES DE COBRO
-    pedidos_cobrar = Pedido.objects.filter(
-        tipo_pedido='domicilio',
-        estado__in=['listo', 'finalizado'],
-        cajero=request.user,
-        fecha_hora__date=hoy  
-    ).annotate(
-        tiene_pago=Exists(pagos_confirmados)
-    ).filter(tiene_pago=False).order_by('id')
+            # SOLO pedidos creados por cajero (NO cliente)
+            cliente__isnull=True,
 
-    # AQUÍ ESTABA EL PROBLEMA:
-    # antes solo hacías un filter simple.
-    # Usa la MISMA lógica que en tabla_pedidos_pagados_domicilio:
+            estado__in=['listo', 'finalizado']
+        )
+        .annotate(tiene_pago=Exists(pagos_confirmados))
+        .filter(tiene_pago=False)
+        .order_by('id')
+    )
 
     pedidos_pagados = (
         Pedido.objects
@@ -2506,26 +3363,23 @@ def cajero_domicilio_cobros(request):
             tipo_pedido='domicilio',
             cajero=request.user,
             pagos__estado_pago='confirmado',
-            pagos__fecha_hora__date=hoy 
+            pagos__fecha_hora__date=hoy
         )
-        .prefetch_related('pagos__comprobante_set')  # para acceder a los comprobantes sin más queries
+        .prefetch_related('pagos__comprobante_set')
         .distinct()
         .order_by('id')
     )
 
-    # añadir el último pago confirmado a cada pedido
     for p in pedidos_pagados:
         p.pago_confirmado = (
-            p.pagos
-            .filter(estado_pago='confirmado')
-            .order_by('id')
-            .first()
+            p.pagos.filter(estado_pago='confirmado').order_by('id').first()
         )
 
     return render(request, "cajero/pago/cobros_domicilio.html", {
         "pedidos_cobrar": pedidos_cobrar,
         "pedidos_pagados": pedidos_pagados
     })
+
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -2585,6 +3439,13 @@ def cajero_domicilio_pagar(request, pedido_id):
     # Fecha local
     fecha_local = timezone.localtime(timezone.now())
 
+    if metodo == "transferencia":
+        if Comprobante.objects.filter(numero_comprobante=referencia).exists():
+            return JsonResponse({
+                "success": False,
+                "message": "El número de comprobante ya fue utilizado."
+            })
+
     # ================================
     # REGISTRO DEL PAGO
     # ================================
@@ -2605,33 +3466,35 @@ def cajero_domicilio_pagar(request, pedido_id):
         pedido.estado = "finalizado"
         pedido.save(update_fields=["estado"])
 
-        # Enviar actualización a cocina (opcional)
-        try:
-            enviar_actualizacion_cocina(pedido)
-        except Exception:
-            pass
-
     # ================================
     # COMPROBANTE
     # ================================
     numero = f"D-{pedido.id}-{pago.id}"
 
-    comprobante = Comprobante.objects.create(
-        pago=pago,
-        numero_comprobante=numero,
-        nombre_cliente="Consumidor final",
-        direccion_cliente=pedido.direccion_entrega,
-        correo_cliente=None
-    )
+    try:
+        comprobante = Comprobante.objects.create(
+            pago=pago,
+            numero_comprobante=numero,
+            nombre_cliente="Consumidor final",
+            direccion_cliente=pedido.direccion_entrega,
+            correo_cliente=None
+        )
+    except IntegrityError:
+        return JsonResponse({
+            "success": False,
+            "message": "El número de comprobante ya fue utilizado. Intente nuevamente."
+        })
+
 
     # Generar PDF y guardarlo en archivo_pdf
     generar_comprobante_pdf(comprobante)
 
     # URL del PDF (YA existe porque ya se generó)
     if comprobante.archivo_pdf:
-        comprobante_url = settings.STATIC_URL + str(comprobante.archivo_pdf)
+        comprobante_url = comprobante.archivo_pdf.url
     else:
         comprobante_url = ""
+
     # ================================
     # WEBSOCKET → NOTIFICAR TABLA PAGADOS (CON PDF)
     # ================================
@@ -2659,7 +3522,6 @@ def cajero_domicilio_pagar(request, pedido_id):
         "message": "Pago registrado correctamente.",
         "comprobante_url": comprobante_url
     })
-
 
 @login_required(login_url='login')
 def ver_comprobante(request, comp_id):
@@ -2697,26 +3559,44 @@ def generar_comprobante_pdf(comprobante):
     pedido = pago.pedido
     detalles = pedido.detalles.all()
 
+    # ================================
+    # VALIDACIÓN DE DATOS OBLIGATORIOS
+    # ================================
     requiere_datos = pago.total >= Decimal("50.00")
 
-    # USA LO GUARDADO EN EL COMPROBANTE (NO el pedido)
+    # USAR LO YA GUARDADO EN EL COMPROBANTE
     nombre_impreso = (comprobante.nombre_cliente or "").strip()
     direccion_impresa = (comprobante.direccion_cliente or "").strip()
 
     if requiere_datos:
         if not nombre_impreso or not direccion_impresa:
-            raise ValueError("Pedido >= $50 requiere nombre y dirección del cliente.")
+            raise ValueError(
+                "Pedido >= $50 requiere nombre y dirección del cliente."
+            )
     else:
         nombre_impreso = "Consumidor final"
         direccion_impresa = ""
 
-    # (opcional) asegúrate de persistir lo final
+    # Persistir datos finales (seguridad)
     comprobante.nombre_cliente = nombre_impreso
     comprobante.direccion_cliente = direccion_impresa
     comprobante.save(update_fields=["nombre_cliente", "direccion_cliente"])
 
-    template = "cajero/comprobantes/comprobante_restaurante.html" if pedido.tipo_pedido == "restaurante" else "cajero/comprobantes/comprobante_domicilio.html"
+    # ================================
+    # SELECCIÓN DE TEMPLATE
+    # ================================
+    if pedido.tipo_pedido == "restaurante":
+        template = "cajero/comprobantes/comprobante_restaurante.html"
 
+    elif pedido.tipo_pedido == "domicilio" and pedido.cliente is not None:
+        template = "cajero/comprobantes/comprobante_domicilio_cliente.html"
+
+    else:
+        template = "cajero/comprobantes/comprobante_domicilio.html"
+
+    # ================================
+    # RENDER HTML
+    # ================================
     html_string = render_to_string(template, {
         "comprobante": comprobante,
         "pago": pago,
@@ -2727,22 +3607,21 @@ def generar_comprobante_pdf(comprobante):
         "direccion_impresa": direccion_impresa,
     })
 
-    
-    pdf_file = HTML(string=html_string).write_pdf()
+    # ================================
+    # GENERAR PDF (WEASYPRINT)
+    # ================================
+    pdf_bytes = HTML(string=html_string).write_pdf()
+
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
 
-    # Crear carpeta staticfiles/comprobantes si no existe
-    carpeta = os.path.join(BASE_DIR, "Restaurante", "static", "comprobantes_generados")
-    os.makedirs(carpeta, exist_ok=True)
-
-    ruta = os.path.join(carpeta, nombre_archivo)
-
-    with open(ruta, "wb") as f:
-        f.write(pdf_file)
-
-    # Guardar solo la ruta relativa en la BD
-    comprobante.archivo_pdf = f"comprobantes_generados/{nombre_archivo}"
-    comprobante.save(update_fields=["archivo_pdf"])
+    # ================================
+    # GUARDAR EN MEDIA (FileField)
+    # ================================
+    comprobante.archivo_pdf.save(
+        nombre_archivo,
+        ContentFile(pdf_bytes),
+        save=True
+    )
 
 #-----------------------------
 # Reportes
@@ -2822,7 +3701,6 @@ def reporte_pagos_domicilio(request):
         "cajeros": cajeros,
     })
 
-
 @login_required(login_url='login')
 @rol_requerido('admin')
 def reporte_pedidos_restaurante(request):
@@ -2862,7 +3740,6 @@ def reporte_pedidos_restaurante(request):
         "total_ventas": total_ventas,
         "meseros": meseros,
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -3341,7 +4218,6 @@ def estilos_tabla():
     )
     return header_fill, header_font, center, border
 
-
 @login_required
 @rol_requerido('admin')
 def exportar_pedidos_restaurante_pdf(request):
@@ -3448,7 +4324,6 @@ def exportar_pedidos_restaurante_pdf(request):
 
     doc.build(elementos)
     return response
-
 
 @login_required
 @rol_requerido('admin')
@@ -4354,7 +5229,6 @@ def cajero_exportar_unificado_excel(request):
     wb.save(response)
     return response
 
-
 @login_required(login_url='login')
 @rol_requerido('cajero')
 @never_cache
@@ -4502,7 +5376,6 @@ def perfil_mesero(request):
     usuario = request.user  # si tu auth usa tu modelo Usuario como user
     return render(request, "mesero/perfil_mesero.html", {"usuario": usuario})
 
-
 @login_required
 @rol_requerido('mesero')
 def editar_perfil_mesero(request):
@@ -4550,7 +5423,681 @@ def service_worker(request):
     return FileResponse(open(sw_path, "rb"), content_type="application/javascript")
 
 
-from django.http import HttpResponse
-
 def ping_eliminar(request, notif_id):
     return HttpResponse("ok eliminar " + str(notif_id))
+
+# ----------------------------
+# Cliente -Pedido
+# ----------------------------
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_listar_pedidos(request):
+    hoy = timezone.localdate()
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cliente=request.user,
+        fecha_hora__date=hoy
+    ).order_by('id')
+
+    return render(request, 'cliente/pedidos/listar_pedidos.html', {
+        'pedidos': pedidos
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_crear_pedido(request):
+    if request.method == 'POST':
+
+        telefono = request.POST.get('telefono', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+
+        if not telefono or not direccion:
+            messages.error(request, "Debe completar todos los campos.")
+            return redirect('cliente_crear_pedido')
+
+        if not re.fullmatch(r'\d{10}', telefono):
+            messages.error(request, "El teléfono debe tener exactamente 10 dígitos numéricos.")
+            return redirect('cliente_crear_pedido')
+
+        pedido = Pedido.objects.create(
+            cliente=request.user,
+            tipo_pedido='domicilio',
+            contacto_cliente=telefono,
+            direccion_entrega=direccion,
+            estado='en_creacion'
+        )
+
+        return redirect('cliente_agregar_detalles', pedido_id=pedido.id)
+
+    return render(request, 'cliente/pedidos/crear_pedido.html', {
+        'cliente': request.user
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_editar_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    if request.method == 'POST' and not pedido.detalles.exists():
+        messages.error(request, "No puedes guardar un pedido sin productos.")
+        return redirect('cliente_editar_pedido', pedido_id=pedido.id)
+
+    if pedido.estado != 'en_creacion':
+        messages.error(request, "Solo puedes editar un pedido mientras esté en creación.")
+        return redirect('cliente_listar_pedidos')
+
+    if request.method == 'POST':
+        telefono = request.POST.get('telefono', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+
+        if not telefono or not direccion:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect('cliente_editar_pedido', pedido_id=pedido.id)
+
+        if not re.fullmatch(r'\d{10}', telefono):
+            messages.error(request, "El teléfono debe tener exactamente 10 dígitos numéricos.")
+            return redirect('cliente_editar_pedido', pedido_id=pedido.id)
+
+        pedido.contacto_cliente = telefono
+        pedido.direccion_entrega = direccion
+        pedido.save(update_fields=['contacto_cliente', 'direccion_entrega'])
+
+        messages.success(request, "Pedido actualizado. Revisa tu pago.")
+        return redirect('cliente_editar_pago', pedido_id=pedido.id)
+
+    productos = Producto.objects.filter(activo=True).order_by('nombre')
+
+    return render(request, 'cliente/pedidos/editar_pedido.html', {
+        'pedido': pedido,
+        'productos': productos
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_editar_pago(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    comprobante = pedido.comprobantes_cliente.first()
+
+    if request.method == 'POST':
+
+        numero = request.POST.get('numero_comprobante')
+        imagen = request.FILES.get('imagen')
+
+        if not numero:
+            messages.error(request, "Debe ingresar el número de comprobante.")
+            return redirect('cliente_editar_pago', pedido_id=pedido.id)
+
+        # ===== VALIDAR DUPLICADO EXCLUYENDO EL ACTUAL =====
+        qs = ComprobanteCliente.objects.filter(
+            numero_comprobante=numero
+        )
+
+        if comprobante:
+            qs = qs.exclude(id=comprobante.id)
+
+        if qs.exists():
+            messages.error(
+                request,
+                "El número de comprobante ya fue registrado en el sistema."
+            )
+            return redirect('cliente_editar_pago', pedido_id=pedido.id)
+        # =====================================================
+
+        if comprobante:
+            comprobante.numero_comprobante = numero
+            comprobante.valor = pedido.total
+            if imagen:
+                comprobante.imagen = imagen
+            comprobante.estado = 'pendiente'
+            comprobante.save()
+
+        else:
+            ComprobanteCliente.objects.create(
+                pedido=pedido,
+                cliente=request.user,
+                numero_comprobante=numero,
+                valor=pedido.total,
+                imagen=imagen,
+                estado='pendiente'
+            )
+
+        messages.success(request, "Pago actualizado correctamente.")
+        return redirect('cliente_listar_pedidos')
+
+    return render(request, 'cliente/pedidos/editar_pago.html', {
+        'pedido': pedido,
+        'comprobante': comprobante
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_eliminar_pedido(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    if pedido.estado != 'en_creacion':
+        return JsonResponse({
+            "success": False,
+            "message": "Solo puede cancelar pedidos en creación."
+        })
+
+    if request.method == 'POST':
+        pedido.delete()
+        return JsonResponse({"success": True})
+
+    return JsonResponse({"success": False})
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_ver_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    comprobante = pedido.comprobantes_cliente.first()
+
+    return render(request, 'cliente/pedidos/ver_pedido.html', {
+        'pedido': pedido,
+        'comprobante': comprobante
+    })
+
+# ----------------------------
+# CLIENTE - AGREGAR DETALLES
+# ----------------------------
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_agregar_detalles(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    productos = Producto.objects.filter(activo=True).order_by('nombre')
+    detalles = pedido.detalles.order_by('id')
+
+    return render(request, 'cliente/pedidos/agregar_detalles.html', {
+        'pedido': pedido,
+        'productos': productos,
+        'detalles': detalles 
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_agregar_detalle_ajax(request, pedido_id):
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+
+        producto_id = data.get('producto_id')
+        cantidad = int(data.get('cantidad', 1))
+        observacion = data.get('observacion', '')
+
+        producto = get_object_or_404(Producto, id=producto_id)
+
+        if producto.agotado_hoy:
+            return JsonResponse({
+                'success': False,
+                'mensaje': f'El producto "{producto.nombre}" está agotado hoy.'
+            })
+
+        if DetallePedido.objects.filter(pedido_id=pedido_id, producto_id=producto_id).exists():
+            return JsonResponse({
+                'success': False,
+                'mensaje': 'Este producto ya fue agregado.'
+            })
+
+        DetallePedido.objects.create(
+            pedido_id=pedido_id,
+            producto_id=producto_id,
+            cantidad=cantidad,
+            observacion=observacion
+        )
+
+        pedido = Pedido.objects.get(id=pedido_id)
+        pedido.recargo = 1.50
+        pedido.calcular_totales()
+
+        detalles = pedido.detalles.order_by('id')
+
+        tabla_html = render_to_string(
+            'cliente/pedidos/tabla_detalles.html',
+            {'pedido': pedido, 'detalles': detalles},
+            request=request
+        )
+
+        return JsonResponse({
+            'success': True,
+            'tabla': tabla_html
+        })
+
+    return JsonResponse({'success': False})
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_editar_detalle_ajax(request, detalle_id):
+    detalle = get_object_or_404(DetallePedido, id=detalle_id)
+    pedido = detalle.pedido
+
+    if pedido.estado != 'en_creacion':
+        return JsonResponse({'success': False, 'mensaje': 'No puedes editar este pedido.'})
+
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+
+        detalle.cantidad = int(data.get('cantidad', detalle.cantidad))
+        detalle.observacion = data.get('observacion', detalle.observacion)
+        detalle.save()
+
+        pedido.calcular_totales()
+        detalles = pedido.detalles.order_by('id')
+
+        tabla_html = render_to_string(
+            'cliente/pedidos/tabla_detalles.html',
+            {'pedido': pedido, 'detalles': detalles},
+            request=request
+        )
+
+        return JsonResponse({'success': True, 'tabla': tabla_html})
+
+    return JsonResponse({'success': False})
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_eliminar_detalle_ajax(request, detalle_id):
+    detalle = get_object_or_404(DetallePedido, id=detalle_id)
+    pedido = detalle.pedido
+
+    if pedido.estado != 'en_creacion':
+        return JsonResponse({'success': False, 'mensaje': 'No puedes eliminar este pedido.'})
+
+    if request.method == 'POST':
+        detalle.delete()
+        pedido.calcular_totales()
+
+        detalles = pedido.detalles.order_by('id')
+
+        tabla_html = render_to_string(
+            'cliente/pedidos/tabla_detalles.html',
+            {'pedido': pedido, 'detalles': detalles},
+            request=request
+        )
+
+        return JsonResponse({'success': True, 'tabla': tabla_html})
+
+    return JsonResponse({'success': False})
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_pago_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio'
+    )
+
+    if not pedido.detalles.exists():
+        messages.error(request, "No puedes pagar un pedido vacío.")
+        return redirect('cliente_agregar_detalles', pedido_id=pedido.id)
+
+    if pedido.comprobantes_cliente.exists():
+        messages.warning(request, "Ya enviaste un comprobante para este pedido.")
+        return redirect('cliente_listar_pedidos')
+
+    if request.method == 'POST':
+
+        imagen = request.FILES.get('imagen')
+        numero = request.POST.get('numero_comprobante')
+
+        if not imagen or not numero:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect(request.path)
+
+        #VALIDAR DUPLICADO (primera barrera)
+        if ComprobanteCliente.objects.filter(
+            numero_comprobante=numero
+        ).exists():
+            messages.error(
+                request,
+                "El número de comprobante ya fue registrado en el sistema."
+            )
+            return redirect(request.path)
+
+        try:
+            #CREAR (segunda barrera con try/except)
+            ComprobanteCliente.objects.create(
+                pedido=pedido,
+                cliente=request.user,
+                numero_comprobante=numero,
+                valor=pedido.total,
+                imagen=imagen,
+                estado='pendiente'
+            )
+
+        except IntegrityError:
+            messages.error(
+                request,
+                "El número de comprobante ya fue registrado en el sistema."
+            )
+            return redirect(request.path)
+        
+        pedido.estado = 'pendiente_caja'
+        pedido.cajero = None
+        pedido.enviado_cocina = False
+        pedido.save(update_fields=['estado','cajero','enviado_cocina'])
+
+        channel_layer = get_channel_layer()
+
+        comp = pedido.comprobantes_cliente.first()
+
+        async_to_sync(channel_layer.group_send)(
+            "pedidos_cajero",
+            {
+                "type": "nuevo_pedido_cajero",
+                "pedido": {
+                    "id": pedido.id,
+                    "codigo_pedido": pedido.codigo_pedido,
+                    "nombre_cliente": pedido.cliente.nombre,
+                    "direccion": pedido.direccion_entrega,
+                    "total": float(pedido.total),
+                    "comprobante_numero": comp.numero_comprobante,
+                    "comprobante_url": comp.imagen.url if comp.imagen else ""
+                }
+            }
+        )
+
+        # Notificar cajeros
+        cajeros = Usuario.objects.filter(rol='cajero')
+
+        for cajero in cajeros:
+            Notificacion.objects.create(
+                pedido=pedido,
+                usuario_destino=cajero,
+                tipo='pago_pendiente',
+                mensaje=f'Nuevo comprobante de pago del cliente {request.user.nombre}'
+            )
+
+        messages.success(request, "Comprobante enviado correctamente.")
+        return redirect('cliente_listar_pedidos')
+
+    return render(request, 'cliente/pedidos/pago.html', {
+        'pedido': pedido
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_enviar_pedido(request, pedido_id):
+
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        cliente=request.user,
+        tipo_pedido='domicilio',
+        estado='en_creacion'
+    )
+
+    if not pedido.detalles.exists():
+        return JsonResponse({
+            "success": False,
+            "message": "No puedes enviar un pedido vacío."
+        })
+
+    pedido.estado = 'pendiente_caja'
+    pedido.cajero = None          # ← AQUI
+    pedido.enviado_cocina = False # ← YA LO TENÍAS
+    pedido.save(update_fields=['estado','enviado_cocina','cajero'])
+
+
+    channel_layer = get_channel_layer()
+
+    cajeros = Usuario.objects.filter(rol='cajero')
+
+    for cajero in cajeros:
+
+        # guardar notificación DB
+        notif = Notificacion.objects.create(
+            pedido=pedido,
+            usuario_destino=cajero,
+            tipo='pedido_cliente',
+            mensaje=f'Nuevo pedido a domicilio #{pedido.codigo_pedido}'
+        )
+
+        # ENVÍO REAL TIME
+        async_to_sync(channel_layer.group_send)(
+            f"notificaciones_{cajero.id}",
+            {
+                "type": "enviar_notificacion",
+                "tipo": "pedido_cliente",
+                "mensaje": f"Nuevo pedido a domicilio por revisar",
+                "pedido": pedido.id,
+                "codigo_pedido": pedido.codigo_pedido,
+                "id": notif.id,
+                "fecha": str(notif.fecha)
+            }
+        )
+
+    return JsonResponse({"success": True})
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_historial_pedidos(request):
+
+    codigo = request.GET.get('codigo', '').strip()
+    estado = request.GET.get('estado', '').strip()
+    fecha_inicio = request.GET.get('fecha_inicio', '').strip()
+    fecha_fin = request.GET.get('fecha_fin', '').strip()
+
+    pedidos = Pedido.objects.filter(
+        cliente=request.user,
+        tipo_pedido='domicilio',
+        estado__in=['listo', 'rechazado']
+    ).prefetch_related(
+        'pagos__comprobante_set'
+    )
+
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if estado in ['listo', 'rechazado']:
+        pedidos = pedidos.filter(estado=estado)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=parse_date(fecha_inicio))
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=parse_date(fecha_fin))
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    return render(request, 'cliente/pedidos/historial_pedidos.html', {
+        'pedidos': pedidos,
+        'codigo': codigo,
+        'estado': estado,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_ver_perfil(request):
+    return render(request, 'cliente/perfil/ver_perfil.html', {
+        'usuario': request.user
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_editar_perfil(request):
+
+    usuario = request.user
+
+    if request.method == 'POST':
+
+        usuario.nombre = request.POST.get('nombre', '').strip()
+        usuario.apellido = request.POST.get('apellido', '').strip()
+        usuario.correo = request.POST.get('correo', '').strip()
+        usuario.telefono = request.POST.get('telefono', '').strip()
+        usuario.direccion = request.POST.get('direccion', '').strip()
+
+        password = request.POST.get('password', '').strip()
+        password2 = request.POST.get('password2', '').strip()
+
+        # ===== VALIDAR CONTRASEÑAS =====
+        if password or password2:
+            if password != password2:
+                messages.error(request, "Las contraseñas no coinciden.")
+                return redirect('cliente_editar_perfil')
+
+            if len(password) < 6:
+                messages.error(request, "La contraseña debe tener al menos 6 caracteres.")
+                return redirect('cliente_editar_perfil')
+
+            usuario.set_password(password)
+
+        try:
+            usuario.save()
+        except IntegrityError:
+            messages.error(request, "El correo ingresado ya está registrado.")
+            return redirect('cliente_editar_perfil')
+
+        messages.success(request, "Perfil actualizado correctamente.")
+        return redirect('cliente_ver_perfil')
+
+    return render(request, 'cliente/perfil/editar_perfil.html', {
+        'usuario': usuario
+    })
+
+@login_required(login_url='login')
+@rol_requerido('cliente')
+def cliente_desactivar_cuenta(request):
+    usuario = request.user
+
+    # Seguridad extra
+    if usuario.rol != 'cliente':
+        messages.error(request, "No tienes permiso para realizar esta acción.")
+        return redirect('login')
+
+    # ¿Tiene pedidos?
+    tiene_pedidos = usuario.pedidos_cliente.exists()
+
+    if tiene_pedidos:
+        # SOLO DESACTIVAR
+        usuario.is_active = False
+        usuario.save(update_fields=['is_active'])
+
+        messages.info(
+            request,
+            "Tu cuenta ha sido desactivada."
+        )
+
+    else:
+        # ELIMINAR DEFINITIVAMENTE
+        usuario.delete()
+
+        messages.success(
+            request,
+            "Tu cuenta fue eliminada definitivamente del sistema."
+        )
+
+    # Cerrar sesión siempre
+    auth_logout(request)
+    request.session.flush()
+
+    return redirect('login')
+
+def cliente_reactivar_cuenta(request):
+    if request.method == 'POST':
+        correo = request.POST.get('correo', '').strip().lower()
+
+        try:
+            usuario = Usuario.objects.get(
+                correo=correo,
+                rol='cliente',
+                is_active=False
+            )
+        except Usuario.DoesNotExist:
+            messages.error(
+                request,
+                "No existe una cuenta desactivada con ese correo."
+            )
+            return redirect('cliente_reactivar_cuenta')
+
+        uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+        token = default_token_generator.make_token(usuario)
+
+        enlace = request.build_absolute_uri(
+            reverse('cliente_confirmar_reactivacion', args=[uid, token])
+        )
+
+        send_mail(
+            subject="Reactivar cuenta - Café Restaurante",
+            message=(
+                f"Hola {usuario.nombre},\n\n"
+                f"Solicitaste reactivar tu cuenta.\n\n"
+                f"Haz clic en el siguiente enlace:\n\n"
+                f"{enlace}\n\n"
+                f"Si no fuiste tú, ignora este mensaje."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[correo],
+            fail_silently=False,
+        )
+
+        messages.success(
+            request,
+            "Te enviamos un enlace para reactivar tu cuenta."
+        )
+        return redirect('login')
+
+    return render(request, 'login/cliente_reactivar_cuenta.html')
+
+
+def cliente_confirmar_reactivacion(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        usuario = Usuario.objects.get(pk=uid, rol='cliente')
+    except Exception:
+        usuario = None
+
+    if usuario is None or not default_token_generator.check_token(usuario, token):
+        messages.error(
+            request,
+            "El enlace de reactivación no es válido o ya expiró."
+        )
+        return redirect('login')
+
+    usuario.is_active = True
+    usuario.save(update_fields=['is_active'])
+
+    messages.success(
+        request,
+        "Tu cuenta ha sido reactivada correctamente. Ya puedes iniciar sesión."
+    )
+    return redirect('login')

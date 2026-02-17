@@ -109,3 +109,38 @@ class NotificacionesConsumer(AsyncWebsocketConsumer):
             "id": event.get("id"),
             "fecha": event.get("fecha"),
         }))
+
+class CajeroPedidosConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.group_name = "pedidos_cajero"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def nuevo_pedido_cajero(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "nuevo_pedido",
+            "pedido": event["pedido"]
+        }))
+
+
+class ClienteEstadoPedidoConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.user_id = self.scope["url_route"]["kwargs"]["user_id"]
+        self.group_name = f"estado_pedidos_cliente_{self.user_id}"
+
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def actualizar_estado(self, event):
+        await self.send(text_data=json.dumps({
+            "pedido": event["pedido"],
+            "estado": event["estado"],
+            "comprobante_url": event.get("comprobante_url")
+        }))
+

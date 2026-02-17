@@ -1,0 +1,501 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+
+<style>
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-crema: #F0E1CA;
+
+        --azul-pizarra: #4F6D7A;
+
+        --naranja-tierra: #D98555;
+
+        --exito: #4F8A57;
+        --advertencia: #D9A441;
+    }
+
+    html, body {
+        background: linear-gradient(135deg,
+            var(--crema-suave),
+            var(--cafe-suave) 45%,
+            var(--blanco-calido));
+    }
+
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+        border: 1px solid var(--cafe-suave);
+    }
+
+    h1 {
+        color: var(--cafe-profundo);
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    /* ===== BOTONES ===== */
+    .btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    .btn-success:hover {
+        background-color: var(--verde) !important;
+    }
+
+    .btn-warning {
+        background-color: var(--advertencia) !important;
+        border-color: var(--advertencia) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+
+    .btn-warning:hover {
+        background-color: var(--advertencia) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    .btn-info {
+        background-color: var(--azul-pizarra) !important;
+        border-color: var(--azul-pizarra) !important;
+        color: white !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+
+    .btn-info:hover {
+        background-color: var(--azul-pizarra) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+
+    .btn-danger:hover {
+        background-color: var(--rojo-claro) !important;
+        color: var(--texto-oscuro) !important;
+    }
+
+    a.btn-success.btn-sm {
+        background-color: var(--verde) !important;   /* verde anterior */
+        border-color: var(--verde) !important;
+        padding: 4px 10px !important;                /* tamaño pequeño original */
+        font-size: 13px !important;
+        border-radius: 8px;
+    }
+
+    a.btn-success.btn-sm:hover {
+        background-color: var(--verde-claro) !important;
+    }
+
+
+    /* ===== BADGES ===== */
+    .badge {
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    .badge-creacion {
+        background-color: var(--naranja-tierra) !important;
+        color: white;
+    }
+
+    .badge.bg-warning { background-color: var(--advertencia) !important; }
+    .badge.bg-success { background-color: var(--exito) !important; }
+    .badge.bg-primary { background-color: var(--azul-pizarra) !important; }
+    .badge.bg-danger { background-color: var(--rojo-alerta) !important; }
+    .badge.bg-info { background-color: var(--azul-pizarra) !important; }
+    .badge.bg-secondary { background-color: var(--gris-suave) !important; color: var(--texto-oscuro); }
+
+    /* ===== TABLA ===== */
+    table thead th {
+        background-color: var(--cafe-crema) !important;
+        color: var(--texto-oscuro) !important;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    table tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    table tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    table td:last-child {
+        white-space: nowrap;
+    }
+
+    #tbl_pedidos thead th {
+        background-color: var(--cafe-crema) !important;
+        color: var(--texto-oscuro) !important;
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio) !important;
+    }
+
+    @media (max-width: 768px) {
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .content-card {
+            padding: 15px;
+        }
+
+        .text-end {
+            text-align: center !important;
+        }
+
+        .text-end .btn {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        table thead {
+            display: none; /* ocultamos cabecera */
+        }
+
+        table tbody tr {
+            display: block;
+            margin-bottom: 15px;
+            border: 1px solid var(--cafe-claro);
+            border-radius: 12px;
+            padding: 10px;
+            background: var(--blanco-calido);
+        }
+
+        table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: right;
+            padding: 8px 6px;
+            border: none;
+            font-size: 14px;
+        }
+
+        table tbody td::before {
+            content: attr(data-label);
+            font-weight: bold;
+            color: var(--cafe-profundo);
+            text-align: left;
+        }
+
+        table td:last-child {
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        .btn-sm {
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+
+        td .btn {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        td .btn:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        .badge {
+            font-size: 13px;
+            padding: 5px 8px;
+        }
+    }
+
+
+
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-5">
+        <div class="content-card">
+
+            <h1>Mis Pedidos a Domicilio</h1>
+
+            <div class="text-end mb-3">
+                <a href="{% url 'cliente_crear_pedido' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Crear Pedido
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table id="tbl_pedidos" class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Dirección</th>
+                            <th>Estado</th>
+                            <th>Total</th>
+                            <th>Comprobante</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for pedido in pedidos %}
+                        <tr data-pedido-row="{{ pedido.id }}">
+                            <td data-label="Código">{{ pedido.codigo_pedido }}</td>
+                            <td data-label="Dirección">{{ pedido.direccion_entrega }}</td>
+
+                            <td data-label="Estado">
+                                {% if pedido.estado == 'en_creacion' %}
+                                    <span class="badge badge-creacion">En creación</span>
+                                {% elif pedido.estado == 'pendiente_caja' %}
+                                    <span class="badge bg-secondary">Pendiente de caja</span>
+                                {% elif pedido.estado == 'aceptado' %}
+                                    <span class="badge bg-info">Aceptado</span>
+                                {% elif pedido.estado == 'en preparacion' %}
+                                    <span class="badge bg-warning">En preparación</span>
+                                {% elif pedido.estado == 'listo' %}
+                                    <span class="badge bg-success">Listo</span>
+                                {% elif pedido.estado == 'finalizado' %}
+                                    <span class="badge bg-primary">Finalizado</span>
+                                {% elif pedido.estado == 'rechazado' %}
+                                    <span class="badge bg-danger">Rechazado</span>
+                                {% endif %}
+                            </td>
+
+                            <td data-label="Total">${{ pedido.total }}</td>
+
+                            <td data-label="Comprobante">
+                                {% if pedido.estado == 'rechazado' %}
+                                    <span class="badge bg-danger">Rechazado</span>
+                                {% else %}
+                                    {% with pago=pedido.pagos.first %}
+                                        {% if pago and pago.comprobante_set.first %}
+                                            <a href="{{ pago.comprobante_set.first.archivo_pdf.url }}"
+                                            target="_blank"
+                                            class="btn btn-success btn-sm">
+                                                Descargar
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Pendiente</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            </td>
+
+
+                            <td data-label="Acciones">
+                                <a href="{% url 'cliente_ver_pedido' pedido.id %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+
+                                {% if pedido.estado == 'en_creacion' %}
+                                    <a href="{% url 'cliente_editar_pedido' pedido.id %}" class="btn btn-warning btn-sm">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="cancelarPedido('{{ pedido.id }}')">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No has realizado pedidos todavía.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function cancelarPedido(id) {
+    Swal.fire({
+        title: "¿Cancelar pedido?",
+        text: "Este pedido será eliminado.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#C14949",
+        cancelButtonColor: "#4F6D7A",
+        confirmButtonText: "Cancelar",
+        cancelButtonText: "Volver"
+    }).then(async (r) => {
+        if (!r.isConfirmed) return;
+
+        const url = `{% url 'cliente_eliminar_pedido' 0 %}`.replace('0', id);
+
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            document.querySelector(`[data-pedido-row='${id}']`).remove();
+            Swal.fire({
+                        icon: "success",
+                        title: "Éxito",
+                        text: "Pedido cancelado",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#3E7A3F",
+                        background: "#FFF7F0",
+                        iconColor: "#3E7A3F"
+                    });
+        } else {
+            Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.message || "No se pudo cancelar",
+                        confirmButtonText: "Aceptar",
+                        confirmButtonColor: "#C14949",
+                        background: "#FFF7F0",
+                        iconColor: "#C14949"
+                    });
+        }
+    });
+}
+</script>
+
+<script>
+const userId = "{{ request.user.id }}";
+
+const socketEstado = new WebSocket(
+    (window.location.protocol === "https:" ? "wss://" : "ws://")
+    + window.location.host
+    + `/ws/estado-pedidos/${userId}/`
+);
+
+socketEstado.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+
+    const pedidoId = data.pedido;
+    const estado = data.estado;
+    const comprobanteUrl = data.comprobante_url;
+
+    const fila = document.querySelector(
+        `[data-pedido-row='${pedidoId}']`
+    );
+    if (!fila) return;
+
+    /* =====================
+       1) ACTUALIZAR ESTADO
+       ===================== */
+    const celdaEstado = fila.querySelector("td:nth-child(3)");
+    if (celdaEstado) {
+        let badge = "";
+        switch (estado) {
+            case "pendiente_caja":
+                badge = `<span class="badge bg-secondary">Pendiente de caja</span>`;
+                break;
+            case "aceptado":
+                badge = `<span class="badge bg-info">Aceptado</span>`;
+                break;
+            case "en preparacion":
+                badge = `<span class="badge bg-warning">En preparación</span>`;
+                break;
+            case "listo":
+                badge = `<span class="badge bg-success">Listo</span>`;
+                break;
+            case "finalizado":
+                badge = `<span class="badge bg-primary">Finalizado</span>`;
+                break;
+            case "rechazado":
+                badge = `<span class="badge bg-danger">Rechazado</span>`;
+                break;
+        }
+        if (badge) celdaEstado.innerHTML = badge;
+    }
+
+    /* ==========================
+       2) ACTUALIZAR COMPROBANTE
+       ========================== */
+    if (comprobanteUrl) {
+        const celdaComp = fila.querySelector("td:nth-child(5)");
+        if (celdaComp) {
+            celdaComp.innerHTML = `
+                <a href="${comprobanteUrl}"
+                   target="_blank"
+                   class="btn btn-success btn-sm">
+                    Descargar
+                </a>
+            `;
+        }
+    }
+
+    /* ======================
+       3) SI ES RECHAZADO
+       ====================== */
+    if (estado === "rechazado") {
+        const celdaComp = fila.querySelector("td:nth-child(5)");
+        if (celdaComp) {
+            celdaComp.innerHTML = `<span class="badge bg-danger">Rechazado</span>`;
+        }
+    }
+};
+
+socketEstado.onerror = () => console.error("WS estado error");
+socketEstado.onclose = () => console.warn("WS estado cerrado");
+</script>
+
+
+
+{% endblock %}

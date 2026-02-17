@@ -277,6 +277,7 @@
                                 {% elif pedido.estado == 'finalizado' %}
                                 <span class="badge bg-primary">Finalizado</span>
                                 {% endif %}
+
                             </td>
 
                             <td>$ <span class="money" data-valor="{{ pedido.total }}">{{ pedido.total }}</span></td>
@@ -536,12 +537,27 @@
     // HTML ESTADO / ACCIONES
     // =========================
     function estadoBadgeHTML(estado) {
-        if (estado === "en_creacion") return `<span class="badge badge-creacion">En creación</span>`;
-        if (estado === "en preparacion") return `<span class="badge bg-warning">En preparación</span>`;
-        if (estado === "listo") return `<span class="badge bg-success">Listo</span>`;
-        if (estado === "finalizado") return `<span class="badge bg-primary">Finalizado</span>`;
-        return `<span class="badge bg-warning">${estado || ""}</span>`;
+        if (!estado) return "";
+
+        const normal = String(estado)
+            .toLowerCase()
+            .trim()
+            .replace(/_/g, " ");
+
+        if (normal === "en creacion")
+            return `<span class="badge badge-creacion">En creación</span>`;
+        if (normal === "en preparacion")
+            return `<span class="badge bg-warning">En preparación</span>`;
+        if (normal === "listo")
+            return `<span class="badge bg-success">Listo</span>`;
+        if (normal === "finalizado")
+            return `<span class="badge bg-primary">Finalizado</span>`;
+
+        return `<span class="badge bg-warning">${estado}</span>`;
     }
+
+
+
 
     function accionesHTML(p) {
         let html = `
@@ -615,8 +631,14 @@
 
         }
 
-        const celdaEstado = fila.querySelector(`.estado-pedido-domicilio[data-id="${p.id}"]`);
-        if (celdaEstado && p.estado !== undefined) celdaEstado.innerHTML = estadoBadgeHTML(p.estado);
+        const celdaEstado = fila.querySelector(
+            `.estado-pedido-domicilio[data-id="${p.id}"]`
+        );
+
+        if (celdaEstado && p.estado) {
+            celdaEstado.innerHTML = estadoBadgeHTML(p.estado);
+        }
+
 
         const celdaAcc = fila.querySelector(`.acciones-pedido-domicilio[data-id="${p.id}"]`);
         if (celdaAcc && p.estado !== undefined) celdaAcc.innerHTML = accionesHTML(p);
@@ -689,31 +711,31 @@
         };
 
         socket.onmessage = (e) => {
-        let data;
-        try { data = JSON.parse(e.data); } catch (err) { return; }
+            let data;
+            try { data = JSON.parse(e.data); } catch { return; }
 
-        // SOLO DOMICILIO EN ESTA PANTALLA
-        const p = data.pedido || null;
+            const p = data.pedido;
+            if (!p) return;
 
-        if ((data.type === "nuevo_pedido" || data.type === "actualizar_pedido") && p) {
-            // tu payload trae "tipo": pedido.tipo_pedido
-            if (p.tipo && p.tipo !== "domicilio") return;
+            // SOLO pedidos creados por ESTE cajero
+            const CAJERO_ID = Number('{{ request.user.id }}');
 
-            upsertFilaPedido(p);
-            cacheUpsert(p);
-            quitarFilaVacia();
-            mostrarFilaVaciaSiNoHayNada();
-            return;
-        }
+            if (p.cajero_id !== CAJERO_ID) return;
 
-        if (data.type === "eliminar_pedido") {
-            // (opcional) si quieres ser estricto, manda tipo en backend.
-            eliminarFilaPedido(data.pedido_id);
-            cacheRemove(data.pedido_id);
-            mostrarFilaVaciaSiNoHayNada();
-            return;
-        }
+            if (data.type === "nuevo_pedido" || data.type === "actualizar_pedido") {
+                upsertFilaPedido(p);
+                cacheUpsert(p);
+                quitarFilaVacia();
+                mostrarFilaVaciaSiNoHayNada();
+            }
+
+            if (data.type === "eliminar_pedido") {
+                eliminarFilaPedido(data.pedido_id);
+                cacheRemove(data.pedido_id);
+                mostrarFilaVaciaSiNoHayNada();
+            }
         };
+
 
         socket.onclose = () => {
             wsOk = false;
@@ -755,5 +777,4 @@
 
 
 
-<br>
 {% endblock %}

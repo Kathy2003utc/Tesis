@@ -100,33 +100,81 @@
     }
 
     .card:hover .icono {
-        color: var(--verde-oliva);
+        color: var(--verde);
         transform: scale(1.1);
     }
 
     h1.display-5 {
         text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
     }
+
+    .card-title {
+        color: var(--texto-oscuro);
+    }
+
+    .btn-outline-success {
+        padding: 8px 20px;
+        border-radius: 10px;
+        border: 2px solid var(--verde);
+        color: var(--verde);
+        font-weight: bold;
+        background-color: transparent;
+    }
+
+    .btn-outline-success:hover {
+        background-color: var(--verde);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+    }
+
+
 </style>
 
 <div class="main-content-wrapper">
     <div class="container my-5">
 
         <div class="text-center mb-5">
-            <h1 class="display-5 fw-bold text-success">Panel del Mesero</h1>
-            <p class="lead text-muted">Gestiona pedidos, asigna mesas y atiende a tus clientes.</p>
+            <h1 class="display-5 fw-bold text-success">¡Bienvenido/a, {{ user.first_name|default:"Mesero" }}!</h1>
+            <p class="lead text-muted">
+                Gestiona pedidos, asigna mesas y atiende a tus clientes.
+            </p>
         </div>
 
         <div class="row g-4 justify-content-center">
 
-            <!-- Ver Pedidos -->
+            <!-- VER PEDIDOS -->
             <div class="col-md-6">
                 <div class="card text-center shadow-lg border-0">
                     <div class="card-body">
-                        <i class="bi bi-eye-fill icono"></i>
-                        <h5 class="card-title mt-3 fw-bold">Ver Pedidos</h5>
-                        <p class="text-muted">Consulta los pedidos pendientes o entregados.</p>
-                        <a href="{% url 'listar_pedidos' %}" class="btn btn-outline-success">Ver Pedidos</a>
+                        <!-- MISMO ICONO QUE CAJERO -->
+                        <i class="fas fa-receipt icono"></i>
+
+                        <h5 class="card-title mt-3 fw-bold">Pedidos</h5>
+                        <p class="text-muted">
+                            Consulta los pedidos pendientes o entregados.
+                        </p>
+                        <a href="{% url 'listar_pedidos' %}" class="btn btn-outline-success">
+                            Ver Pedidos
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIAL DE PEDIDOS -->
+            <div class="col-md-6">
+                <div class="card text-center shadow-lg border-0">
+                    <div class="card-body">
+                        <!-- MISMO ICONO QUE CAJERO -->
+                        <i class="fas fa-clipboard-check icono"></i>
+
+                        <h5 class="card-title mt-3 fw-bold">Historial de pedidos</h5>
+                        <p class="text-muted">
+                            Revisa los pedidos atendidos anteriormente.
+                        </p>
+                        <a href="{% url 'mesero_historial_pedidos' %}" class="btn btn-outline-success">
+                            Ver Historial
+                        </a>
                     </div>
                 </div>
             </div>

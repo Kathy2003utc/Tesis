@@ -313,7 +313,22 @@
             <!-- ======================================================= -->
             <!-- TABLA DE PEDIDOS PAGADOS -->
             <!-- ======================================================= -->
+             
             <h4 class="text-success mt-4 mb-3">Pedidos Pagados</h4>
+
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text"
+                        id="buscar-codigo"
+                        class="form-control"
+                        placeholder="Buscar pedido pagado por código...">
+                </div>
+            </div>
+
+
             <div class="table-responsive shadow-sm rounded-3" id="contenedor-tabla-pagados">
                 {% include "cajero/pago/tabla_pedidos_pagados_domicilio.html" %}
             </div>
@@ -630,6 +645,22 @@
             recargarTablaPagadosDomicilio();
         }
     };
+</script>
+
+<script>
+document.getElementById("buscar-codigo").addEventListener("keyup", function () {
+    const filtro = this.value.toLowerCase();
+    const filas = document.querySelectorAll("#tabla-pagados tbody tr");
+
+    filas.forEach(fila => {
+        const codigo = fila.cells[0].textContent.toLowerCase();
+        if (codigo.includes(filtro)) {
+            fila.style.display = "";
+        } else {
+            fila.style.display = "none";
+        }
+    });
+});
 </script>
 
 

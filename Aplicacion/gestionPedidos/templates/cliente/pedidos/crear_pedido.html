@@ -1,0 +1,354 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+
+<style>
+:root {
+    --cafe-oscuro: #b4764f;
+    --cafe-medio: #cd966c;
+    --cafe-claro: #D7B999;
+    --cafe-suave: #EEDDC6;
+
+    --verde: #3E7A3F;
+    --verde-claro: #7FBF6A;
+
+    --blanco-calido: #F8F5F2;
+    --gris-suave: #E2DED8;
+    --texto-oscuro: #2B1A10;
+
+    --rojo-alerta: #C14949;
+    --rojo-claro: #EA9A9A;
+
+    --cafe-profundo: #8A5A3C;
+    --cafe-avellana: #C8A784;
+
+    --verde-menta: #A6D5A1;
+}
+
+/* Fondo */
+html, body {
+    background: linear-gradient(
+        135deg,
+        var(--crema-suave),
+        var(--cafe-suave) 45%,
+        var(--blanco-calido)
+    );
+    overflow-x: hidden;
+}
+
+/* Contenedor */
+.form-container {
+    max-width: 700px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* Tarjeta */
+.card-form {
+    background: var(--blanco-calido);
+    border: 1px solid var(--cafe-avellana);
+    border-radius: 18px;
+    padding: 35px;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título */
+.titulo-form {
+    color: var(--cafe-profundo);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+/* Labels */
+label {
+    font-weight: bold;
+    color: var(--cafe-profundo);
+}
+
+/* Inputs */
+.form-control, textarea {
+    background: var(--blanco-calido);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--cafe-claro);
+    transition: 0.3s;
+    color: var(--texto-oscuro);
+}
+
+.form-control:focus, textarea:focus {
+    border-color: var(--verde);
+    box-shadow: 0 0 6px rgba(62, 122, 63, 0.35);
+}
+
+/* Botones */
+.btn-guardar {
+    background: var(--verde);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    border: none;
+    transition: 0.3s;
+}
+
+.btn-guardar:hover {
+    background: var(--verde-menta);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+.btn-cancelar {
+    background: var(--rojo-alerta);
+    color: white;
+    padding: 13px;
+    font-size: 16px;
+    border-radius: 14px;
+    font-weight: bold;
+    border: none;
+    width: 100%;
+    margin-top: 12px;
+    transition: 0.3s;
+}
+
+.btn-cancelar:hover {
+    background: var(--rojo-claro);
+    transform: translateY(-3px);
+    color: var(--texto-oscuro) !important;
+}
+
+.error-text {
+    color: var(--rojo-alerta);
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.is-invalid {
+    border-color: var(--rojo-alerta) !important;
+    box-shadow: 0 0 5px rgba(193, 73, 73, 0.4);
+}
+
+/* ===============================
+   RESPONSIVE – FORMULARIO CLIENTE
+================================= */
+@media (max-width: 768px) {
+
+    /* Contenedor */
+    .form-container {
+        padding: 10px;
+    }
+
+    /* Tarjeta */
+    .card-form {
+        padding: 20px;
+        border-radius: 14px;
+    }
+
+    /* Título */
+    .titulo-form {
+        font-size: 22px;
+        margin-bottom: 18px;
+    }
+
+    /* Labels */
+    label {
+        font-size: 14px;
+    }
+
+    /* Inputs */
+    .form-control,
+    textarea {
+        padding: 10px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+
+    /* Mensajes de error */
+    .error-text {
+        font-size: 13px;
+    }
+
+    /* Botón principal */
+    .btn-guardar {
+        font-size: 15px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    /* Botón cancelar */
+    .btn-cancelar {
+        font-size: 15px;
+        padding: 12px;
+        border-radius: 12px;
+        margin-top: 10px;
+    }
+}
+
+/* Extra pequeño (teléfonos chicos) */
+@media (max-width: 480px) {
+
+    .titulo-form {
+        font-size: 20px;
+    }
+
+    .card-form {
+        padding: 18px;
+    }
+
+    .btn-guardar,
+    .btn-cancelar {
+        font-size: 14px;
+    }
+}
+
+/* ===============================
+   CENTRAR FORMULARIO EN PANTALLA
+================================= */
+.main-content-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;     /* centra vertical */
+    justify-content: center; /* centra horizontal */
+}
+
+
+</style>
+
+<div class="main-content-wrapper">
+
+<div class="form-container">
+
+    <div class="card-form">
+
+        <h2 class="titulo-form">Crear Pedido a Domicilio</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        Swal.fire({
+                            icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                            title: "{% if message.tags == 'error' %}¡Atención!{% else %}Éxito{% endif %}",
+                            text: "{{ message|escapejs }}",
+                            confirmButtonText: "Aceptar",
+                            confirmButtonColor: "{% if message.tags == 'error' %}#C14949{% else %}#4F8A57{% endif %}",
+                            background: "#FFF7F0"
+                        });
+                    });
+                </script>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label>Cliente:</label>
+                <input type="text"
+                       class="form-control"
+                       value="{{ cliente.nombre }} {{ cliente.apellido }}"
+                       readonly>
+            </div>
+
+            <div class="mb-3">
+                <label>Teléfono de contacto:</label>
+                <input type="text"
+                       name="telefono"
+                       id="telefono"
+                       class="form-control"
+                       placeholder="Ej: 0991234567">
+                <div class="error-text" id="error_telefono"></div>
+            </div>
+
+            <div class="mb-3">
+                <label>Dirección de entrega:</label>
+                <textarea name="direccion" id="direccion"
+                          class="form-control"
+                          rows="3"
+                          placeholder="Ej: Av. Principal y Calle 10"></textarea>
+                <div class="error-text" id="error_direccion"></div>
+            </div>
+
+            <button type="submit" class="btn btn-guardar w-100 mt-4">
+                Continuar
+            </button>
+
+            <a href="{% url 'cliente_listar_pedidos' %}" class="btn btn-cancelar">
+                Cancelar
+            </a>
+        </form>
+
+    </div>
+</div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$(document).ready(function () {
+
+    $("form").on("submit", function (e) {
+
+        let valido = true;
+
+        const telefono = $("#telefono");
+        const direccion = $("#direccion");
+
+        const errTelefono = $("#error_telefono");
+        const errDireccion = $("#error_direccion");
+
+        // Reset
+        $(".error-text").text("");
+        $(".form-control").removeClass("is-invalid");
+
+        /* =====================
+           VALIDAR TELÉFONO
+           ===================== */
+        const telVal = telefono.val().trim();
+
+        if (telVal === "") {
+            telefono.addClass("is-invalid");
+            errTelefono.text("El teléfono es obligatorio.");
+            valido = false;
+        }
+        else if (!/^\d{10}$/.test(telVal)) {
+            telefono.addClass("is-invalid");
+            errTelefono.text("El teléfono debe tener exactamente 10 números.");
+            valido = false;
+        }
+
+        /* =====================
+           VALIDAR DIRECCIÓN
+           ===================== */
+        if (direccion.val().trim() === "") {
+            direccion.addClass("is-invalid");
+            errDireccion.text("La dirección es obligatoria.");
+            valido = false;
+        }
+
+        if (!valido) {
+            e.preventDefault();
+            Swal.fire({
+                icon: "warning",
+                title: "Campos incompletos",
+                text: "Por favor corrija los errores antes de continuar.",
+                confirmButtonColor: "#C14949",
+                background: "#FFF7F0",
+                confirmButtonText: "Aceptar",
+            });
+        }
+    });
+
+});
+</script>
+
+{% endblock %}

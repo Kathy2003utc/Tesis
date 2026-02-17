@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante Domicilio Cliente</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 15px;
+            color: #000;
+        }
+        h2 {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 3px;
+        }
+        .datos-local {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .subtitulo {
+            text-align: center;
+            font-weight: bold;
+            margin: 8px 0;
+            text-transform: uppercase;
+        }
+        .info {
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        hr {
+            border-top: 1px dashed #999;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            font-size: 13px;
+            border-collapse: collapse;
+        }
+        th {
+            border-bottom: 1px solid #000;
+            text-align: center;
+        }
+        td {
+            padding: 4px 0;
+        }
+        .right { text-align: right; }
+        .center { text-align: center; }
+        .total {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .footer {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Café Restaurante "Productos Carlos Gerardo"</h2>
+
+<div class="datos-local">
+    Telf: 0992964222 <br>
+    Dirección: Barrio Eloy Alfaro
+</div>
+
+<p class="subtitulo">NOTA DE VENTA</p>
+
+<div class="info">
+    <b>N°:</b> {{ comprobante.numero_comprobante }} <br>
+    <b>Fecha:</b> {{ comprobante.fecha_hora|date:"d/m/Y H:i" }} <br>
+    <b>Cliente:</b> {{ nombre_impreso }} <br>
+    <b>Dirección:</b> {{ direccion_impresa }}
+</div>
+
+<hr>
+
+<table>
+    <thead>
+        <tr>
+            <th>Descripción</th>
+            <th>Cant.</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for d in detalles %}
+        <tr>
+            <td>{{ d.producto.nombre }}</td>
+            <td class="center">{{ d.cantidad }}</td>
+            <td class="right">$ {{ d.precio_unitario|floatformat:2 }}</td>
+            <td class="right">$ {{ d.subtotal|floatformat:2 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<hr>
+
+<p class="right">
+    <b>Recargo domicilio:</b> $ {{ pedido.recargo_mostrar|floatformat:2 }}
+</p>
+
+
+<p class="total">
+    TOTAL GENERAL: $ {{ pedido.total|floatformat:2 }}
+</p>
+
+<p>
+    <b>Método de pago:</b> {{ pago.metodo_pago }} <br>
+    <b>Recibido:</b> $ {{ pago.monto_recibido|floatformat:2 }} <br>
+    <b>Cambio:</b> $ {{ pago.cambio|floatformat:2 }}
+</p>
+
+<hr>
+
+<div class="footer">
+    Documento NO VÁLIDO para efectos tributarios.
+</div>
+
+</body>
+</html>

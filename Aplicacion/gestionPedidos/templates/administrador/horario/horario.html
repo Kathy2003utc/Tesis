@@ -1,0 +1,170 @@
+{% extends 'administrador/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+    /* ====== COLORES Y ESTILOS ====== */
+    :root {
+        --cafe-oscuro: #b4764f;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+
+        --verde: #3E7A3F;
+        --verde-claro: #7FBF6A;
+
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
+
+        --rojo-alerta: #C14949;
+        --rojo-claro: #EA9A9A;
+
+        --cafe-profundo: #8A5A3C;
+        --cafe-crema: #F0E1CA;
+        --crema-suave: #FAF4EC;
+    }
+
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(
+            135deg,
+            var(--crema-suave),
+            var(--cafe-suave) 45%,
+            var(--blanco-calido)
+        );
+    }
+
+    .main-content-wrapper {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+
+    @media (min-width: 768px) {
+        .main-content-wrapper { padding-left: 40px !important; padding-right: 40px !important; }
+    }
+    @media (min-width: 1200px) {
+        .main-content-wrapper { padding-left: 80px !important; padding-right: 80px !important; }
+    }
+
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--cafe-suave);
+    }
+
+    h2 { color: var(--cafe-profundo); font-weight: bold; text-shadow: 1px 1px 2px #ffffff70; letter-spacing: 1px; }
+
+    .btn-success { background-color: var(--verde) !important; border-color: var(--verde) !important; padding: 10px 18px; border-radius: 10px; font-weight: bold; transition: 0.3s; }
+    .btn-success:hover { background-color: var(--verde-claro) !important; }
+
+    .btn-warning { background-color: #D9A441 !important; border-color: #D9A441 !important; color: white !important; font-weight: bold; border-radius: 8px; transition: 0.3s; }
+    .btn-warning:hover { background-color: #D9A441 !important; color: var(--texto-oscuro) !important; }
+
+    .btn-danger { background-color: var(--rojo-alerta) !important; border-color: var(--rojo-alerta) !important; font-weight: bold; border-radius: 8px; transition: 0.3s; }
+    .btn-danger:hover { background-color: var(--rojo-claro) !important; color: var(--texto-oscuro) !important; }
+
+    .table-responsive { width: 100%; overflow-x: auto; overflow-y: hidden; margin-top: 15px; }
+
+    table { min-width: 700px; overflow: hidden; }
+    table thead th { background-color: var(--cafe-crema) !important; color: var(--texto-oscuro) !important; text-align: center; vertical-align: middle; }
+    table tbody td { text-align: center; vertical-align: middle; }
+    table tbody tr:hover { background-color: var(--gris-suave) !important; }
+
+    #tbl_horarios th, #tbl_horarios td { text-align: center; vertical-align: middle; }
+    #tbl_horarios td:last-child { white-space: nowrap; }
+    #tbl_horarios .btn { padding: 4px 10px; font-size: 13px; }
+    #tbl_horarios .btn + .btn { margin-left: 6px; }
+</style>
+
+<div class="main-content-wrapper">
+    <div class="container mt-5">
+        <div class="content-card">
+
+            <h2 class="text-center mb-4">Listado de Horarios</h2>
+
+            <div class="mb-3 text-end">
+                <a href="{% url 'crear_horario' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Agregar Nuevo Horario
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover" id="tbl_horarios">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Hora Inicio</th>
+                            <th>Hora Fin</th>
+                            <th>Días</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in horarios %}
+                        <tr>
+                            <td>{{ h.codigo }}</td>
+                            <td>{{ h.nombre }}</td>
+                            <td>{{ h.hora_inicio }}</td>
+                            <td>{{ h.hora_fin }}</td>
+                            <td>{{ h.dias }}</td>
+                            <td>
+                                <a href="{% url 'editar_horario' h.id %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
+
+                                {% if not h.tiene_trabajadores_asignados %}
+                                    <form method="post" action="{% url 'eliminar_horario' h.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmarEliminacion(event);">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </form>                
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No hay horarios registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmarEliminacion(e) {
+    e.preventDefault();
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#C14949',
+        cancelButtonColor: '#4F6D7A',
+        confirmButtonText: 'Eliminar',
+        cancelButtonText: 'Cancelar',
+        background: "#FFF7F0"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            e.target.closest("form").submit();
+        }
+    });
+}
+</script>
+
+<br>
+{% endblock %}

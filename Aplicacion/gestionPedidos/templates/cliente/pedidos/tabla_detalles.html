@@ -1,0 +1,141 @@
+<style>
+    #tbl_detalles {
+        min-width: 900px;
+    }
+
+    #tbl_detalles thead th {
+        background-color: var(--cafe-crema);
+        color: var(--texto-oscuro);
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
+
+    #tbl_detalles tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #tbl_detalles tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
+
+    #tbl_detalles td:last-child {
+        white-space: nowrap;
+    }
+
+    #tbl_detalles tfoot .fila-total {
+        background-color: var(--cafe-suave);
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+</style>
+
+<div id="tabla_detalles">
+  <div class="table-responsive mt-3">
+    <table class="table table-bordered table-hover align-middle" id="tbl_detalles">
+
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Valor unitario</th>
+          <th>Subtotal</th>
+          <th>Observación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% with lista_detalles=detalles|default:pedido.detalles.all %}
+          {% for det in lista_detalles %}
+          <tr data-detalle-id="{{ det.id }}">
+            <td>{{ det.producto.nombre }}</td>
+            <td>{{ det.cantidad }}</td>
+            <td>${{ det.precio_unitario|floatformat:2 }}</td>
+            <td>${{ det.subtotal|floatformat:2 }}</td>
+            <td>{{ det.observacion|default:"-" }}</td>
+
+            <td>
+                <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-warning btn-sm"
+                    onclick="editarDetalleAjax(
+                        '{{ det.id }}',
+                        '{{ det.cantidad }}',
+                        '{{ det.observacion|default_if_none:''|escapejs }}'
+                    )">
+                    <i class="fas fa-edit"></i>
+                    </button>
+
+                    <button class="btn btn-danger btn-sm"
+                    onclick="eliminarDetalleAjax('{{ det.id }}')">
+                    <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              Aún no hay productos agregados.
+            </td>
+          </tr>
+          {% endfor %}
+        {% endwith %}
+      </tbody>
+
+      {% if pedido.detalles.exists %}
+      <tfoot>
+
+        <!-- RECARGO  -->
+        <tr class="fila-total">
+          <td colspan="3" class="text-end">RECARGO:</td>
+          <td class="text-center text-warning">
+            ${{ pedido.recargo_mostrar|floatformat:2 }}
+          </td>
+          <td colspan="2"></td>
+        </tr>
+
+        <!-- TOTAL FINAL -->
+        <tr class="fila-total">
+          <td colspan="3" class="text-end">TOTAL FINAL:</td>
+          <td class="text-center text-success">
+            ${{ pedido.total|floatformat:2 }}
+          </td>
+          <td colspan="2"></td>
+        </tr>
+
+      </tfoot>
+      {% endif %}
+
+    </table>
+  </div>
+</div>
+
+<script>
+function eliminarDetalleAjax(id) {
+    Swal.fire({
+        title: "¿Eliminar producto?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Eliminar"
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch("{% url 'cliente_eliminar_detalle_ajax' 0 %}".replace("0", id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            }
+        });
+    });
+}
+</script>

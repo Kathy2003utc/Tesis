@@ -1,0 +1,342 @@
+{% extends 'cliente/plantilla.html' %}
+{% load static %}
+{% block contenido %}
+<br>
+
+<style>
+:root{
+    --cafe-oscuro:#b4764f;
+    --cafe-medio:#cd966c;
+    --cafe-claro:#D7B999;
+    --cafe-suave:#EEDDC6;
+    --verde:#3E7A3F;
+    --verde-claro:#7FBF6A;
+    --blanco-calido:#F8F5F2;
+    --gris-suave:#E2DED8;
+    --texto-oscuro:#2B1A10;
+    --exito:#4F8A57;
+    --crema-suave:#FAF4EC;
+}
+
+.wrapper-editar{
+    max-width: 1100px;
+    margin:auto;
+    background: var(--blanco-calido);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+}
+
+.titulo-editar{
+    text-align:center;
+    font-weight:800;
+    color:var(--cafe-oscuro);
+    margin-bottom:25px;
+}
+
+.card-datos{
+    border: 1px solid var(--cafe-claro);
+    background: var(--crema-suave);
+    border-radius:18px;
+    padding:16px;
+    margin-bottom:30px;
+}
+
+.card-datos h5{
+    font-weight:700;
+    color:var(--cafe-oscuro);
+}
+
+.grid-datos{
+    display:grid;
+    grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+}
+
+.form-control{
+    border-radius:12px;
+}
+
+.titulo-seccion{
+    text-align:center;
+    font-weight:800;
+    color:var(--cafe-oscuro);
+    margin:40px 0 20px;
+}
+</style>
+
+<div class="main-content-wrapper">
+  <div class="wrapper-editar mt-5">
+
+    <!-- TÍTULO -->
+    <h2 class="titulo-editar">
+      Editar Pedido {{ pedido.codigo_pedido }}
+    </h2>
+
+    <!-- DATOS CLIENTE -->
+    <div class="card-datos">
+      <h5>Datos del cliente</h5>
+
+      <form method="post" id="form_editar_pedido">
+        {% csrf_token %}
+
+        <div class="grid-datos">
+          <div>
+            <label>Teléfono</label>
+            <input type="text"
+                   name="telefono"
+                   maxlength="10"
+                   pattern="\d{10}"
+                   title="Ingrese exactamente 10 dígitos"
+                   class="form-control"
+                   value="{{ pedido.contacto_cliente }}"
+                   required>
+          </div>
+
+          <div>
+            <label>Dirección</label>
+            <input type="text"
+                   name="direccion"
+                   class="form-control"
+                   value="{{ pedido.direccion_entrega }}"
+                   required>
+          </div>
+
+          <div>
+            <label>Estado</label>
+            <input class="form-control" value="{{ pedido.estado }}" disabled>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- PRODUCTOS -->
+    <h4 class="titulo-seccion">Agregar productos</h4>
+
+    <div class="menu-grid">
+      {% for producto in productos %}
+      <div>
+        <div class="card card-producto p-3 h-100 {% if producto.agotado_hoy %}producto-agotado{% endif %}"
+            id="producto-{{ producto.id }}">
+
+          <h5 class="fw-bold text-center">{{ producto.nombre }}</h5>
+          <p class="text-muted text-center small">{{ producto.descripcion }}</p>
+          <p class="fw-bold text-success text-center">${{ producto.precio }}</p>
+
+          <input type="number" min="1" value="1"
+                 id="cantidad_{{ producto.id }}"
+                 class="form-control mb-2"
+                 {% if producto.agotado_hoy %}disabled{% endif %}>
+
+          <input type="text"
+                 id="obs_{{ producto.id }}"
+                 class="form-control mb-2"
+                 placeholder="Observación"
+                 {% if producto.agotado_hoy %}disabled{% endif %}>
+
+          <button class="btn btn-agregar w-100"
+                data-producto-id="{{ producto.id }}"
+                onclick="agregarProducto('{{ producto.id }}')"
+                {% if producto.agotado_hoy %}disabled{% endif %}>
+            {% if producto.agotado_hoy %}Agotado{% else %}Agregar{% endif %}
+        </button>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- TABLA DETALLES -->
+    <h4 class="titulo-seccion">Detalles del pedido</h4>
+    <div id="tabla_detalles">
+      {% include 'cliente/pedidos/tabla_detalles.html' %}
+    </div>
+
+    <div class="text-center mt-4">
+        <button type="button" onclick="guardarPedido()" class="btn btn-warning btn-lg">
+            Guardar cambios del pedido
+        </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ================================
+// AGREGAR PRODUCTO
+// ================================
+function agregarProducto(id) {
+
+    const cantidad = parseInt(document.getElementById(`cantidad_${id}`).value);
+    const observacion = document.getElementById(`obs_${id}`).value;
+
+    if (isNaN(cantidad) || cantidad <= 0) {
+        Swal.fire("Cantidad inválida", "Ingrese una cantidad válida", "warning");
+        return;
+    }
+
+    fetch("{% url 'cliente_agregar_detalle_ajax' pedido.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            producto_id: id,
+            cantidad: cantidad,
+            observacion: observacion
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            document.getElementById(`obs_${id}`).value = "";
+        } else {
+            Swal.fire("Error", data.mensaje, "error");
+        }
+    });
+}
+
+// ================================
+// EDITAR DETALLE
+// ================================
+function editarDetalleAjax(id, cantidad, observacion) {
+
+    Swal.fire({
+        title: "Editar producto",
+        html: `
+            <input id="cant" type="number" min="1" value="${cantidad}" class="form-control mb-2">
+            <input id="obs" type="text" value="${observacion}" class="form-control">
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Actualizar"
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch("{% url 'cliente_editar_detalle_ajax' 0 %}".replace("0", id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                cantidad: document.getElementById("cant").value,
+                observacion: document.getElementById("obs").value
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            }
+        });
+    });
+}
+
+// ================================
+// ELIMINAR DETALLE
+// ================================
+function eliminarDetalleAjax(id) {
+    Swal.fire({
+        title: "¿Eliminar producto?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Eliminar"
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch("{% url 'cliente_eliminar_detalle_ajax' 0 %}".replace("0", id), {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("tabla_detalles").innerHTML = data.tabla;
+            }
+        });
+    });
+}
+</script>
+
+<script>
+document.getElementById("form_editar_pedido").addEventListener("submit", function(e) {
+
+    const filas = document.querySelectorAll("#tbl_detalles tbody tr");
+
+    if (filas.length === 1 && filas[0].innerText.includes("Aún no hay productos")) {
+        e.preventDefault();
+        Swal.fire("Pedido vacío", "Debe agregar al menos un producto", "warning");
+    }
+});
+</script>
+
+<script>
+function guardarPedido() {
+
+    const filas = document.querySelectorAll("#tbl_detalles tbody tr");
+
+    if (filas.length === 1 && filas[0].innerText.includes("Aún no hay productos")) {
+        Swal.fire("Pedido vacío", "Debe agregar al menos un producto", "warning");
+        return;
+    }
+
+    const form = document.getElementById("form_editar_pedido");
+    const formData = new FormData(form);
+
+    fetch("", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(r => r.text())
+    .then(() => {
+        window.location.href = "{% url 'cliente_editar_pago' pedido.id %}";
+    });
+}
+</script>
+
+<script>
+/* ===============================
+   WEBSOCKET CLIENTE – PRODUCTO NO HAY
+   (EDITAR PEDIDO)
+=============================== */
+
+const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+const socketCliente = new WebSocket(protocol + window.location.host + "/ws/pedidos/");
+
+socketCliente.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+
+    if (data.tipo === "producto_no_hay") {
+        const productoId = data.producto_id;
+
+        const card = document.getElementById(`producto-${productoId}`);
+        if (!card) return;
+
+        // poner gris
+        card.classList.add("producto-agotado");
+
+        // deshabilitar inputs
+        card.querySelectorAll("input").forEach(i => i.disabled = true);
+
+        // botón
+        const btn = card.querySelector("button");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Agotado";
+        }
+    }
+};
+</script>
+
+
+{% endblock %}

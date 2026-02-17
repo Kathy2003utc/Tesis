@@ -290,12 +290,6 @@
                                   <i class="fas fa-eye"></i> Ver
                               </a>
 
-                              {% if pedido.estado == 'listo' %}
-                                <button class="btn btn-fin btn-sm" onclick="finalizarPedido('{{ pedido.id }}')">
-                                  <i class="fas fa-check"></i> Finalizar
-                                </button>
-                              {% endif %}
-
                               {% if pedido.estado == 'en_creacion' %}
                                 <a href="{% url 'editar_pedido' pedido.id %}" class="btn btn-warning btn-sm">
                                   <i class="fas fa-edit"></i> Editar

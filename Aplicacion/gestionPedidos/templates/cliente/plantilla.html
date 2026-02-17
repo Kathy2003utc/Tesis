@@ -1,0 +1,691 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+    <meta name="theme-color" content="#8A5A3C">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <meta charset="UTF-8">
+    <title>Café Restaurante Productos Carlos Gerardo · Administración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- BOOTSTRAP JS (OBLIGATORIO PARA MODALES) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/localization/messages_es.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- DataTables Buttons -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <style>
+        /* ================= PALETA (MISMA DEL SIDEBAR ORIGINAL) ================= */
+            :root {
+                --cafe-oscuro: #b4764f;
+                --cafe-medio: #cd966c;
+                --cafe-claro: #D7B999;
+                --cafe-suave: #EEDDC6;
+
+                --verde: #3E7A3F;
+                --verde-claro: #7FBF6A;
+
+                --blanco-calido: #F8F5F2;
+                --gris-suave: #E2DED8;
+                --texto-oscuro: #2B1A10;
+
+                --rojo-alerta: #C14949;
+                --rojo-oscuro: #8C2F39;
+
+                --cafe-profundo: #8A5A3C;
+                --cafe-tostado: #A66E4A;
+                --cafe-avellana: #C8A784;
+                --cafe-crema: #F0E1CA;
+
+                --verde-profundo: #2E5F32;
+                --verde-oliva: #5E7A43;
+                --verde-menta: #A6D5A1;
+                --verde-musgo: #507B4C;
+
+                --crema-suave: #FAF4EC;
+                --gris-claro-calido: #D8D3CC;
+                --gris-medio-calido: #B8B1A8;
+                --gris-oscuro-calido: #4A3F38;
+
+                --azul-pizarra: #4F6D7A;
+                --azul-gris: #7A8C99;
+
+                --naranja-tierra: #D98555;
+                --naranja-arcilla: #C66B3D;
+                --dorado-suave: #D9B77A;
+
+                --exito: #4F8A57;
+                --exito-suave: #D9F2D6;
+                --info: #6A93B0;
+                --info-suave: #DDE9F2;
+                --advertencia: #D9A441;
+                --advertencia-suave: #FFF5DA;
+            }
+
+        /* ================= BASE ================= */
+        body {
+            margin: 0;
+            background: var(--blanco-calido);
+            color: var(--texto-oscuro);
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ================= OVERLAY ================= */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .35);
+            display: none;
+            z-index: 1040;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, var(--cafe-profundo), var(--cafe-tostado));
+            color: white;
+            position: fixed;
+            top: 0;
+            left: -260px;
+            height: 100%;
+            transition: .3s ease;
+            z-index: 1050;
+        }
+
+        .sidebar.show {
+            left: 0;
+        }
+
+        .sidebar-header {
+            padding: 18px 14px;
+            text-align: center;
+            background: rgba(0, 0, 0, .18);
+        }
+
+        .sidebar-header img {
+            width: 102px;
+            height: 102px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            background: transparent;
+        }
+
+        .sidebar-header strong {
+            display: block;
+            font-size: .95rem;
+        }
+
+        /* ================= MENU ================= */
+        .menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+        }
+
+        .menu li {
+            margin: 10px 0;
+        }
+
+        .menu li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 22px;
+            color: #f7f3ee;
+            text-decoration: none;
+            font-size: .95rem;
+            border-left: 4px solid transparent;
+        }
+
+        .menu li a i {
+            width: 20px;
+        }
+
+        .menu li a:hover {
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .menu li a.active {
+            background: rgba(255, 255, 255, .18);
+            border-left-color: var(--verde);
+            font-weight: 600;
+        }
+
+        /* ================= MAIN ================= */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ================= TOPBAR ================= */
+        .topbar {
+            height: 56px;
+            background: var(--crema-suave);
+            border-bottom: 1px solid var(--gris-suave);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            color: var(--texto-oscuro);
+        }
+
+        /* ================= CONTENT ================= */
+        .content {
+            padding: 20px;
+            flex: 1;
+            min-width: 0;
+            overflow-x: visible;
+        }
+
+        /* ================= FOOTER ================= */
+        footer {
+            background: var(--crema-suave);
+            border-top: 1px solid var(--gris-suave);
+            font-size: 13px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        /* ================= FORM ERRORS ================= */
+        .error {
+            color: var(--rojo-alerta);
+            font-weight: 600;
+            font-size: .85rem;
+        }
+
+        .form-control.error {
+            border: 1px solid var(--rojo-alerta);
+        }
+
+        /* ================= DESKTOP ================= */
+        @media(min-width:992px) {
+            .sidebar {
+                left: 0;
+            }
+
+            .main {
+                margin-left: 260px;
+            }
+
+            .menu-btn {
+                display: inline-flex;
+            }
+
+            .overlay {
+                display: none !important;
+            }
+
+            /* SIDEBAR COLAPSADO (SOLO ICONOS) */
+            .sidebar.collapsed {
+                width: 74px;
+            }
+
+            .main.collapsed {
+                margin-left: 74px;
+            }
+
+            .sidebar.collapsed:hover {
+                width: 260px;
+            }
+
+            .sidebar.collapsed .sidebar-header strong {
+                opacity: 0;
+                height: 0;
+                overflow: hidden;
+                display: block;
+                transition: .2s ease;
+            }
+
+            .sidebar.collapsed .menu li a {
+                justify-content: center;
+                padding: 13px 0;
+                gap: 0;
+            }
+
+            .sidebar.collapsed .menu li a i {
+                width: auto;
+                font-size: 1.05rem;
+            }
+
+            .sidebar.collapsed .menu li a {
+                font-size: 0;
+            }
+
+            .sidebar.collapsed:hover .sidebar-header strong {
+                opacity: 1;
+                height: auto;
+                overflow: visible;
+            }
+
+            .sidebar.collapsed:hover .menu li a {
+                justify-content: flex-start;
+                padding: 13px 22px;
+                gap: 12px;
+                font-size: .95rem;
+            }
+
+            .sidebar.collapsed:hover .menu li a i {
+                width: 20px;
+            }
+
+            .sidebar.collapsed .sidebar-header img {
+                width: 46px;
+                height: 46px;
+                margin-bottom: 0;
+                transition: .2s ease;
+            }
+
+            .sidebar.collapsed:hover .sidebar-header img {
+                width: 102px;
+                height: 102px;
+                margin-bottom: 10px;
+            }
+        }
+
+        .form-control.is-invalid,
+        textarea.is-invalid {
+            border-color: var(--rojo-alerta);
+            box-shadow: 0 0 6px rgba(193, 73, 73, 0.35);
+        }
+
+        .error-text {
+            color: var(--rojo-alerta);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        /* ================= FORZAR BOTÓN LOGOUT IGUAL AL CAJERO ================= */
+        .btn-logout {
+            border: 1px solid var(--rojo-alerta) !important;
+            color: var(--rojo-alerta) !important;
+            background: transparent !important;
+            font-weight: 600;
+            border-radius: 0.25rem;
+            /* igual al outline default bootstrap */
+            padding: .25rem .5rem;
+            /* igual al btn-sm */
+            line-height: 1.5;
+        }
+
+        .btn-logout:hover {
+            background: var(--rojo-alerta) !important;
+            color: #fff !important;
+        }
+
+        .btn-logout:focus,
+        .btn-logout:active {
+            box-shadow: 0 0 0 .2rem rgba(193, 73, 73, .25) !important;
+        }
+
+        .producto-agotado {
+            opacity: .55;
+            filter: grayscale(100%);
+        }
+
+        .producto-agotado .btn-agregar {
+            cursor: not-allowed;
+        }
+
+        .producto-agotado .btn-agregar:disabled {
+            opacity: 1;
+        }
+
+        .form-label {
+            font-weight: bold;
+            color: var(--cafe-profundo);
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        label {
+            font-weight: bold;
+            color: var(--cafe-profundo);
+            font-size: 20px; 
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="app">
+
+        <!-- ================= SIDEBAR ================= -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="{% static 'logo/logo.jpeg' %}" alt="Logo">
+                <strong>Café Restaurante<br>Mesero</strong>
+            </div>
+
+            <ul class="menu">
+                <!-- INICIO -->
+                <li>
+                    <a href="{% url 'dashboard_cliente' %}"
+                    class="{% if request.resolver_match.url_name == 'dashboard_cliente' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Inicio
+                    </a>
+                </li>
+
+                <!-- PEDIDOS -->
+                <li>
+                    <a href="{% url 'cliente_listar_pedidos' %}"
+                    class="{% if request.resolver_match.url_name == 'cliente_listar_pedidos' %}active{% endif %}">
+                        <i class="fas fa-receipt"></i> Pedidos
+                    </a>
+                </li>
+
+                <!-- HISTORIAL DE PEDIDOS -->
+                <li>
+                    <a href="{% url 'cliente_historial_pedidos' %}"
+                    class="{% if request.resolver_match.url_name == 'cliente_historial_pedidos' %}active{% endif %}">
+                        <i class="fas fa-clock-rotate-left"></i> Historial Pedidos
+                    </a>
+                </li>
+            </ul>
+
+        </aside>
+
+        <!-- ================= MAIN ================= -->
+        <div class="main" id="main">
+
+            <div class="topbar">
+                <button class="menu-btn" id="btnMenu">
+                    <i class="bi bi-list" id="btnMenuIcon"></i>
+                </button>
+
+                <strong>Panel del Cliente</strong>
+
+                <div class="d-flex align-items-center gap-3">
+                    <a href="{% url 'cliente_ver_perfil' %}" class="text-dark">
+                        <i class="bi bi-person-circle fs-4"></i>
+                    </a>
+                    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger btn-logout">
+                        Cerrar Sesión
+                    </a>
+
+                </div>
+            </div>
+
+            <main class="content">
+                {% block contenido %}{% endblock %}
+            </main>
+
+            <footer>
+                <strong>Katherin Pico</strong> · kathy.jim06.cc@gmail.com · 0958615103
+            </footer>
+
+        </div>
+    </div>
+
+    <script>
+        const btnMenu = document.getElementById("btnMenu");
+        const btnMenuIcon = document.getElementById("btnMenuIcon");
+        const sidebar = document.getElementById("sidebar");
+        const main = document.getElementById("main");
+        const overlay = document.getElementById("overlay");
+
+        function isDesktop() {
+            return window.matchMedia("(min-width: 992px)").matches;
+        }
+
+        function setBtnIconCollapsed(isCollapsed) {
+            if (!btnMenuIcon) return;
+            btnMenuIcon.classList.remove("bi-list", "bi-three-dots-vertical");
+            btnMenuIcon.classList.add(isCollapsed ? "bi-three-dots-vertical" : "bi-list");
+        }
+
+        btnMenu.onclick = () => {
+            if (isDesktop()) {
+                const willCollapse = !sidebar.classList.contains("collapsed");
+                sidebar.classList.toggle("collapsed", willCollapse);
+                main.classList.toggle("collapsed", willCollapse);
+                setBtnIconCollapsed(willCollapse);
+
+                overlay.classList.remove("show");
+                sidebar.classList.remove("show");
+                return;
+            }
+
+            sidebar.classList.toggle("show");
+            overlay.classList.toggle("show");
+        };
+
+        overlay.onclick = () => {
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
+        };
+
+        window.addEventListener("resize", () => {
+            if (isDesktop()) {
+                overlay.classList.remove("show");
+                sidebar.classList.remove("show");
+            } else {
+                sidebar.classList.remove("collapsed");
+                main.classList.remove("collapsed");
+                setBtnIconCollapsed(false);
+            }
+        });
+    </script>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}"></div>
+    {% endfor %}
+    {% endif %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".django-message").forEach(msg => {
+                const type = msg.dataset.type;
+                const text = msg.dataset.text;
+
+                const config = {
+                    success: { icon: "success", title: "Éxito", color: "#4F8A57" },
+                    error: { icon: "error", title: "Error", color: "#C14949" },
+                    warning: { icon: "warning", title: "Advertencia", color: "#D9A441" }
+                };
+
+                const cfg = config[type] || config.success;
+
+                Swal.fire({
+                    icon: cfg.icon,
+                    title: cfg.title,
+                    text: text,
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: cfg.color,
+                    iconColor: cfg.color,
+                    background: "#FFF7F0"
+                });
+
+                msg.remove();
+            });
+        });
+    </script>
+
+    <script>
+        const USER_ID = "{{ request.user.id }}";
+        const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+
+        const socketNotif = new WebSocket(
+            ws_scheme + "://" + window.location.host + "/ws/notificaciones/" + USER_ID + "/"
+        );
+
+        socketNotif.onopen = function () {
+            console.log("WS notificaciones conectado | usuario:", USER_ID);
+        };
+
+        socketNotif.onclose = function () {
+            console.log("WS notificaciones cerrado");
+        };
+
+        socketNotif.onerror = function (e) {
+            console.log("WS notificaciones error:", e);
+        };
+
+        socketNotif.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+
+            const tipo = data.tipo || "";
+            const mensaje = data.mensaje || "Tienes una nueva notificación";
+
+            /* ================= PRODUCTO NO HAY ================= */
+            if (tipo === "producto_no_hay") {
+
+                const pid = data.producto_id;
+
+                if (pid) {
+                    // 1) botones / elementos con data-producto-id
+                    document.querySelectorAll(`[data-producto-id="${pid}"]`).forEach(el => {
+                        if (el.tagName === "OPTION") {
+                            el.disabled = true;
+                            el.textContent = el.textContent.replace("(Agotado hoy)", "").trim() + " (Agotado hoy)";
+                        } else if (el.tagName === "BUTTON") {
+                            el.disabled = true;
+                            el.classList.add("disabled");
+                        }
+                    });
+
+                    // 2) inputs (cantidad / observación) por ID
+                    const c = document.getElementById(`cantidad_${pid}`);
+                    const o = document.getElementById(`obs_${pid}`);
+                    if (c) c.disabled = true;
+                    if (o) o.disabled = true;
+
+                    // 3) cards contenedoras
+                    document.querySelectorAll(`.producto-item[data-producto-id="${pid}"], .card-producto[data-producto-id="${pid}"]`)
+                        .forEach(card => {
+                            card.classList.add("producto-agotado");
+
+                            // si hay botón dentro, lo bloquea también
+                            const btn = card.querySelector(".btn-agregar");
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.classList.add("disabled");
+                            }
+                        });
+                }
+
+                Swal.fire({
+                    icon: "warning",
+                    title: "Producto agotado",
+                    text: mensaje,
+                    confirmButtonText: "Entendido",
+                    confirmButtonColor: "#C14949",
+                    background: "#FFF7F0"
+                });
+
+                return;
+            }
+
+            /* ================= PEDIDO LISTO ================= */
+            if (tipo === "pedido_listo") {
+                const codigo = (data.codigo_pedido && data.codigo_pedido !== "")
+                    ? data.codigo_pedido
+                    : (data.pedido ? `#${data.pedido}` : "");
+
+                const destino = data.mesa
+                    ? `Mesa ${data.mesa}`
+                    : "Domicilio / Entregar al cliente";
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Pedido listo",
+                    html: (codigo ? `<b>Pedido ${codigo}</b><br>` : "") + destino,
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0"
+                });
+                return;
+            }
+
+            /* ================= MENSAJE DEL COCINERO ================= */
+            if (tipo === "mensaje") {
+                Swal.fire({
+                    icon: "info",
+                    title: "Mensaje de cocina",
+                    text: mensaje,
+                    confirmButtonText: "Aceptar",
+                    confirmButtonColor: "#3E7A3F",
+                    background: "#FFF7F0"
+                });
+                return;
+            }
+
+            /* ================= NOTIFICACIÓN GENÉRICA ================= */
+            Swal.fire({
+                icon: "info",
+                title: "Notificación",
+                text: mensaje,
+                confirmButtonText: "Aceptar",
+                confirmButtonColor: "#4F6D7A",
+                background: "#FFF7F0"
+            });
+        };
+    </script>
+
+
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js", { scope: "/" });
+            });
+        }
+    </script>
+
+</body>
+
+</html>
