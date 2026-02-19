@@ -185,6 +185,20 @@ h2 {
     padding: 4px 8px;
 }
 
+    .btn-regresar {
+        background: var(--cafe-profundo);
+        color: white;
+        border-radius: 10px;
+        padding: 8px 18px;
+        font-weight: bold;
+        border: none;
+    }
+
+    .btn-regresar:hover {
+        background: var(--cafe-oscuro);
+        color: white;
+    }
+
 
 </style>
 
@@ -192,8 +206,16 @@ h2 {
     <div class="content-card">
 
         <h2 class="text-center mb-4">
-            Historial de pedidos cobrados
+            Historial de pedidos a domicilio cobrados
         </h2>
+
+         <div class="d-flex justify-content-between align-items-center mb-3">
+            <a href="{% url 'cajero_reportes' %}" class="btn btn-regresar">
+                Regresar
+            </a>
+        </div>
+
+        <br><br>
 
         <!-- ================= FILTROS ================= -->
         <form method="get" class="row g-3 form-filtros mb-4 align-items-end">

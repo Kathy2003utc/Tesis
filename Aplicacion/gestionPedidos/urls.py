@@ -74,6 +74,10 @@ urlpatterns = [
     path('reportes/pagos/restaurante/excel/',views.exportar_cobros_restaurante_excel,name='exportar_cobros_restaurante_excel'),
     path('reportes/pagos/domicilio/excel/',views.exportar_cobros_domicilio_excel,name='exportar_cobros_domicilio_excel'),
 
+    path('reportes/pedidos-domicilio-cliente/',views.reporte_pedidos_domicilio_cliente,name='reporte_pedidos_domicilio_cliente'),
+    path('reportes/pedidos-cliente/pdf/',views.exportar_pedidos_cliente_pdf,name='exportar_pedidos_cliente_pdf'),
+    path('reportes/pedidos-cliente/excel/',views.exportar_pedidos_cliente_excel,name='exportar_pedidos_cliente_excel'),
+
     # Reporte Unificado
     path('reportes/unificado/', views.reporte_unificado, name='reporte_unificado'),
     path('reportes/unificado/pdf/',views.exportar_unificado_pdf,name='exportar_unificado_pdf'),
@@ -149,6 +153,8 @@ urlpatterns = [
     path('cajero/reporte/unificado/',views.cajero_reporte_unificado,name='cajero_reporte_unificado'),
     path('cajero/reporte/unificado/pdf/',views.cajero_exportar_unificado_pdf,name='cajero_exportar_unificado_pdf'),
     path('cajero/reporte/unificado/excel/',views.cajero_exportar_unificado_excel,name='cajero_exportar_unificado_excel'),
+
+    path('cajero/reportes/',views.cajero_reportes,name='cajero_reportes'),
 
     #Cajero - Perfil
     path('cajero/perfil/', views.perfil_cajero, name='perfil_cajero'),

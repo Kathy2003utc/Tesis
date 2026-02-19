@@ -334,33 +334,32 @@
       margin-top: 4px;
     }
 
-    .producto-agotado{
+    .producto-agotado {
       opacity: .55;
       filter: grayscale(100%);
     }
 
-    .producto-agotado .btn-agregar{
+    .producto-agotado .btn-agregar {
       cursor: not-allowed;
     }
 
-    .producto-agotado .btn-agregar:disabled{
+    .producto-agotado .btn-agregar:disabled {
       opacity: 1;
     }
 
     .form-label {
-        font-weight: bold;
-        color: var(--cafe-profundo);
-        font-size: 20px; 
-        margin-bottom: 6px;
+      font-weight: bold;
+      color: var(--cafe-profundo);
+      font-size: 20px;
+      margin-bottom: 6px;
     }
 
     label {
-        font-weight: bold;
-        color: var(--cafe-profundo);
-        font-size: 20px; 
-        margin-bottom: 6px;
+      font-weight: bold;
+      color: var(--cafe-profundo);
+      font-size: 20px;
+      margin-bottom: 6px;
     }
-
   </style>
 </head>
 
@@ -397,31 +396,12 @@
           </a>
         </li>
 
-        <!-- PEDIDOS CAJERO -->
-        <li>
-          <a href="{% url 'cajero_historial_pedidos' %}"
-            class="{% if request.resolver_match.url_name == 'cajero_historial_pedidos' %}active{% endif %}">
-              <i class="fas fa-clipboard-check"></i>
-              Historial Pedidos
-          </a>
-        </li>
-
-
         <!-- PEDIDOS CLIENTES DOMICILIO -->
         <li>
           <a href="{% url 'cajero_pedidos_clientes_domicilio' %}"
             class="{% if 'pedidos-clientes-domicilio' in request.path %}active{% endif %}">
             <i class="fas fa-motorcycle"></i> Pedidos Cliente
           </a>
-        </li>
-
-        <!-- PEDIDOS CLIENTE -->
-        <li>
-            <a href="{% url 'cajero_pedidos_historial_cliente' %}"
-              class="{% if request.resolver_match.url_name == 'cajero_pedidos_historial_cliente' %}active{% endif %}">
-                <i class="fas fa-user-clock"></i>
-                Historial Pedidos Cliente
-            </a>
         </li>
 
         <!-- COBROS RESTAURANTE -->
@@ -442,12 +422,12 @@
 
         <!-- REPORTES -->
         <li>
-          <a href="{% url 'cajero_reporte_unificado' %}"
-            class="{% if 'cajero/reporte' in request.path or 'cajero_reporte_unificado' in request.path %}active{% endif %}">
-              <i class="fas fa-chart-line"></i> Reportes
+          <a href="{% url 'cajero_reportes' %}"
+            class="{% if request.resolver_match.url_name == 'cajero_reportes' or request.resolver_match.url_name == 'cajero_reporte_unificado' or request.resolver_match.url_name == 'cajero_pedidos_historial_cliente' or request.resolver_match.url_name == 'cajero_historial_pedidos' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i> Reportes
           </a>
         </li>
-
+        
       </ul>
     </aside>
 
@@ -592,123 +572,177 @@
     });
   </script>
 
-<script>
-  const USER_ID = "{{ request.user.id }}";
-  const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+  <script>
+    const URL_PEDIDOS_CLIENTE = "{% url 'cajero_pedidos_clientes_domicilio' %}";
+  </script>
 
-  const socketNotif = new WebSocket(
-    ws_scheme + "://" + window.location.host + "/ws/notificaciones/" + USER_ID + "/"
-  );
 
-  socketNotif.onopen = function () {
-    console.log("WS notificaciones conectado | usuario:", USER_ID);
-  };
+  <script>
+    const USER_ID = "{{ request.user.id }}";
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 
-  socketNotif.onclose = function () {
-    console.log("WS notificaciones cerrado");
-  };
+    const socketNotif = new WebSocket(
+      ws_scheme + "://" + window.location.host + "/ws/notificaciones/" + USER_ID + "/"
+    );
 
-  socketNotif.onerror = function (e) {
-    console.log("WS notificaciones error:", e);
-  };
+    socketNotif.onopen = function () {
+      console.log("WS notificaciones conectado | usuario:", USER_ID);
+    };
 
-  socketNotif.onmessage = function (e) {
-    const data = JSON.parse(e.data);
+    socketNotif.onclose = function () {
+      console.log("WS notificaciones cerrado");
+    };
 
-    const tipo = data.tipo || "";
-    const mensaje = data.mensaje || "Tienes una nueva notificación";
+    socketNotif.onerror = function (e) {
+      console.log("WS notificaciones error:", e);
+    };
 
-    /* ================= PRODUCTO NO HAY ================= */
-    if (tipo === "producto_no_hay") {
+    socketNotif.onmessage = function (e) {
+      const data = JSON.parse(e.data);
 
-      // BLOQUEO EN TIEMPO REAL (sin recargar) - CAJERO
-      const pid = data.producto_id;
+      const tipo = data.tipo || "";
+      const mensaje = data.mensaje || "Tienes una nueva notificación";
 
-      if (pid) {
-        // 1) Botones Agregar
-        document.querySelectorAll(`button[data-producto-id="${pid}"]`).forEach(btn => {
-          btn.disabled = true;
-          btn.classList.add("disabled");
+      /* ================= PRODUCTO NO HAY ================= */
+      if (tipo === "producto_no_hay") {
+
+        // BLOQUEO EN TIEMPO REAL (sin recargar) - CAJERO
+        const pid = data.producto_id;
+
+        if (pid) {
+          // 1) Botones Agregar
+          document.querySelectorAll(`button[data-producto-id="${pid}"]`).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add("disabled");
+          });
+
+          // 2) Inputs (cantidad / observación)
+          const c = document.getElementById(`cantidad_${pid}`);
+          const o = document.getElementById(`obs_${pid}`);
+          if (c) c.disabled = true;
+          if (o) o.disabled = true;
+
+          // 3) Poner gris la card contenedora (si existe en esa pantalla)
+          document.querySelectorAll(`.card-producto[data-producto-id="${pid}"]`).forEach(card => {
+            card.classList.add("producto-agotado");
+
+            // (Opcional) agregar badge "Agotado hoy" si no está
+            const h5 = card.querySelector("h5");
+            if (h5 && !h5.querySelector(".badge")) {
+              const badge = document.createElement("span");
+              badge.className = "badge bg-secondary ms-2";
+              badge.textContent = "Agotado hoy";
+              h5.appendChild(badge);
+            }
+          });
+        }
+
+        Swal.fire({
+          icon: "warning",
+          title: "Producto agotado",
+          text: mensaje,
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#C14949",
+          background: "#FFF7F0"
         });
-
-        // 2) Inputs (cantidad / observación)
-        const c = document.getElementById(`cantidad_${pid}`);
-        const o = document.getElementById(`obs_${pid}`);
-        if (c) c.disabled = true;
-        if (o) o.disabled = true;
-
-        // 3) Poner gris la card contenedora (si existe en esa pantalla)
-        document.querySelectorAll(`.card-producto[data-producto-id="${pid}"]`).forEach(card => {
-          card.classList.add("producto-agotado");
-
-          // (Opcional) agregar badge "Agotado hoy" si no está
-          const h5 = card.querySelector("h5");
-          if (h5 && !h5.querySelector(".badge")) {
-            const badge = document.createElement("span");
-            badge.className = "badge bg-secondary ms-2";
-            badge.textContent = "Agotado hoy";
-            h5.appendChild(badge);
-          }
-        });
+        return;
       }
 
-      Swal.fire({
-        icon: "warning",
-        title: "Producto agotado",
-        text: mensaje,
-        confirmButtonText: "Entendido",
-        confirmButtonColor: "#C14949",
-        background: "#FFF7F0"
-      });
-      return;
-    }
 
+      /* ================= PEDIDO LISTO ================= */
+      if (tipo === "pedido_listo") {
+        const codigo = (data.codigo_pedido && data.codigo_pedido !== "")
+          ? data.codigo_pedido
+          : (data.pedido ? `#${data.pedido}` : "");
 
-    /* ================= PEDIDO LISTO ================= */
-    if (tipo === "pedido_listo") {
-      const codigo = (data.codigo_pedido && data.codigo_pedido !== "")
-        ? data.codigo_pedido
-        : (data.pedido ? `#${data.pedido}` : "");
+        const destino = data.mesa
+          ? `Mesa ${data.mesa}`
+          : "Domicilio / Entregar al cliente";
 
-      const destino = data.mesa
-        ? `Mesa ${data.mesa}`
-        : "Domicilio / Entregar al cliente";
+        Swal.fire({
+          icon: "success",
+          title: "Pedido listo",
+          html: (codigo ? `<b>Pedido ${codigo}</b><br>` : "") + destino,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0"
+        });
+        return;
+      }
 
-      Swal.fire({
-        icon: "success",
-        title: "Pedido listo",
-        html: (codigo ? `<b>Pedido ${codigo}</b><br>` : "") + destino,
-        confirmButtonText: "Aceptar",
-        confirmButtonColor: "#3E7A3F",
-        background: "#FFF7F0"
-      });
-      return;
-    }
+      /* ================= MENSAJE DEL COCINERO ================= */
+      if (tipo === "mensaje") {
+        Swal.fire({
+          icon: "info",
+          title: "Mensaje de cocina",
+          text: mensaje,
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0"
+        });
+        return;
+      }
 
-    /* ================= MENSAJE DEL COCINERO ================= */
-    if (tipo === "mensaje") {
+      /* ================= PEDIDO CLIENTE ================= */
+      if (tipo === "pedido_cliente") {
+
+        Swal.fire({
+          icon: "info",
+          title: "Nuevo pedido pendiente",
+          text: mensaje || "Tienes un nuevo pedido de cliente por revisar.",
+          confirmButtonText: "Ir a revisar",
+          confirmButtonColor: "#8A5A3C",
+          iconColor: "#8A5A3C",
+          background: "#FFF7F0"
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = "/cajero/pedidos-clientes-domicilio/";
+          }
+        });
+
+        return;
+      }
+
+      /* ================= NOTIFICACIÓN GENÉRICA ================= */
       Swal.fire({
         icon: "info",
-        title: "Mensaje de cocina",
+        title: "Notificación",
         text: mensaje,
         confirmButtonText: "Aceptar",
-        confirmButtonColor: "#3E7A3F",
-        background: "#FFF7F0"
+        confirmButtonColor: "#4F6D7A",
+        background: "#FFF7F0",
+        iconColor: "#8A5A3C",
       });
-      return;
-    }
+    };
 
-    /* ================= NOTIFICACIÓN GENÉRICA ================= */
-    Swal.fire({
-      icon: "info",
-      title: "Notificación",
-      text: mensaje,
-      confirmButtonText: "Aceptar",
-      confirmButtonColor: "#4F6D7A",
-      background: "#FFF7F0"
-    });
-  };
-</script>
+    const socketPedidos = new WebSocket(
+      ws_scheme + "://" + window.location.host + "/ws/pedidos-cajero/"
+    );
+
+    socketPedidos.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+
+      if (data.type === "nuevo_pedido") {
+
+        Swal.fire({
+          icon: "info",
+          title: "Nuevo pedido pendiente",
+          text: "Tienes un nuevo pedido de cliente por revisar.",
+          confirmButtonText: "Ir a revisar",
+          confirmButtonColor: "#4F6D7A",
+          iconColor: "#8A5A3C",
+          background: "#FFF7F0",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = URL_PEDIDOS_CLIENTE;
+          }
+        });
+
+      }
+    };
+
+
+  </script>
 
 
   <script>
@@ -718,35 +752,6 @@
       });
     }
   </script>
-
-
-<script>
-const userId = "{{ request.user.id }}";
-
-const notifSocket = new WebSocket(
-    'ws://' + window.location.host + '/ws/notificaciones/' + userId + '/'
-);
-
-notifSocket.onmessage = function(e) {
-
-    const data = JSON.parse(e.data);
-
-    if (data.tipo === "pedido_cliente") {
-
-        Swal.fire({
-            icon: 'info',
-            title: 'Nuevo pedido',
-            text: data.mensaje,
-            confirmButtonText: 'Ver pedidos'
-        }).then(() => {
-            window.location.href = "/cajero/pedidos-clientes-domicilio/";
-        });
-
-    }
-
-};
-</script>
-
 
 </body>
 

@@ -2,237 +2,235 @@
 {% block contenido %}
 
 <style>
-:root {
-    --cafe-oscuro: #8A5A3C;
-    --cafe-medio: #cd966c;
-    --cafe-claro: #D7B999;
-    --cafe-suave: #EEDDC6;
-    --cafe-crema: #F0E1CA;
+    :root {
+        --cafe-oscuro: #8A5A3C;
+        --cafe-medio: #cd966c;
+        --cafe-claro: #D7B999;
+        --cafe-suave: #EEDDC6;
+        --cafe-crema: #F0E1CA;
 
-    --verde: #3E7A3F;
-    --verde-profundo: #2E5F32;
+        --verde: #3E7A3F;
+        --verde-profundo: #2E5F32;
 
-    --blanco-calido: #F8F5F2;
-    --gris-suave: #E2DED8;
-    --texto-oscuro: #2B1A10;
+        --blanco-calido: #F8F5F2;
+        --gris-suave: #E2DED8;
+        --texto-oscuro: #2B1A10;
 
-    --rojo-alerta: #C14949;
-    --rojo-claro: #EA9A9A;
+        --rojo-alerta: #C14949;
+        --rojo-claro: #EA9A9A;
 
-    --azul-pizarra: #4F6D7A;
-}
-
-/* ===== FONDO (IGUAL) ===== */
-html, body {
-    height: 100%;
-    margin: 0;
-    overflow-x: hidden;
-    background: linear-gradient(
-        135deg,
-        var(--crema-suave),
-        var(--cafe-suave) 45%,
-        var(--blanco-calido)
-    );
-}
-
-/* ===== CONTENEDOR (IGUAL) ===== */
-.main-content-wrapper {
-    padding-left: 15px;
-    padding-right: 15px;
-}
-@media (min-width: 768px) {
-    .main-content-wrapper {
-        padding-left: 40px;
-        padding-right: 40px;
+        --azul-pizarra: #4F6D7A;
     }
-}
-@media (min-width: 1200px) {
-    .main-content-wrapper {
-        padding-left: 80px;
-        padding-right: 80px;
+
+    /* ===== FONDO (IGUAL) ===== */
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden;
+        background: linear-gradient(135deg,
+                var(--crema-suave),
+                var(--cafe-suave) 45%,
+                var(--blanco-calido));
     }
-}
 
-/* ===== CARD (IGUAL) ===== */
-.content-card {
-    background: var(--blanco-calido);
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 18px rgba(0,0,0,.1);
-    border: 1px solid var(--cafe-suave);
-}
+    /* ===== CONTENEDOR (IGUAL) ===== */
+    .main-content-wrapper {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
 
-/* ===== TÍTULO (IGUAL) ===== */
-h2 {
-    color: var(--cafe-oscuro);
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 25px;
-}
+    @media (min-width: 768px) {
+        .main-content-wrapper {
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+    }
 
-/* ===== TABLA (CLON EXACTO) ===== */
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    margin-top: 15px;
-}
+    @media (min-width: 1200px) {
+        .main-content-wrapper {
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+    }
 
-#tabla-pedidos {
-    min-width: 700px;
-}
+    /* ===== CARD (IGUAL) ===== */
+    .content-card {
+        background: var(--blanco-calido);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .1);
+        border: 1px solid var(--cafe-suave);
+    }
 
-#tabla-pedidos thead th {
-    background-color: var(--cafe-crema) !important;
-    color: var(--texto-oscuro) !important;
-    font-size: 15px;
-    font-weight: bold;
-    text-align: center;
-    vertical-align: middle;
-    border-bottom: 2px solid var(--cafe-medio);
-}
+    /* ===== TÍTULO (IGUAL) ===== */
+    h2 {
+        color: var(--cafe-oscuro);
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 25px;
+    }
 
-#tabla-pedidos tbody td {
-    text-align: center;
-    vertical-align: middle;
-}
+    /* ===== TABLA (CLON EXACTO) ===== */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 15px;
+    }
 
-#tabla-pedidos tbody tr:hover {
-    background-color: var(--gris-suave);
-}
+    #tabla-pedidos {
+        min-width: 700px;
+    }
 
-#tabla-pedidos td:last-child {
-    white-space: nowrap;
-}
+    #tabla-pedidos thead th {
+        background-color: var(--cafe-crema) !important;
+        color: var(--texto-oscuro) !important;
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 2px solid var(--cafe-medio);
+    }
 
-/* ===== BOTONES (IGUALES) ===== */
-.btn-success {
-    background-color: var(--verde-profundo) !important;
-    border-color: var(--verde-profundo) !important;
-    padding: 6px 12px;         
-    font-size: 0.875rem;        
-    border-radius: 8px;
-    font-weight: bold;
-}
+    #tabla-pedidos tbody td {
+        text-align: center;
+        vertical-align: middle;
+    }
 
-.btn-success:hover {
-    background-color: var(--verde) !important;
-}
+    #tabla-pedidos tbody tr:hover {
+        background-color: var(--gris-suave);
+    }
 
-.btn-danger {
-    background-color: var(--rojo-alerta) !important;
-    border-color: var(--rojo-alerta) !important;
-    font-weight: bold;
-    border-radius: 8px;
-}
+    #tabla-pedidos td:last-child {
+        white-space: nowrap;
+    }
 
-.btn-danger:hover {
-    background-color: var(--rojo-claro) !important;
-}
+    /* ===== BOTONES (IGUALES) ===== */
+    .btn-success {
+        background-color: var(--verde-profundo) !important;
+        border-color: var(--verde-profundo) !important;
+        padding: 6px 12px;
+        font-size: 0.875rem;
+        border-radius: 8px;
+        font-weight: bold;
+    }
 
-#mensaje-vacio {
-    text-align: center;
-    width: 100%;
-    padding: 20px 0;
-    font-size: 15px;
-}
+    .btn-success:hover {
+        background-color: var(--verde) !important;
+    }
 
+    .btn-danger {
+        background-color: var(--rojo-alerta) !important;
+        border-color: var(--rojo-alerta) !important;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+
+    .btn-danger:hover {
+        background-color: var(--rojo-claro) !important;
+    }
+
+    #mensaje-vacio {
+        text-align: center;
+        width: 100%;
+        padding: 20px 0;
+        font-size: 15px;
+    }
 </style>
 
 
 <div class="main-content-wrapper">
-  <div class="container mt-5">
-    <div class="content-card">
+    <div class="container mt-5">
+        <div class="content-card">
 
-      <h2>Pedidos de clientes a domicilio</h2>
+            <h2>Pedidos de clientes a domicilio</h2>
 
-      <div class="table-responsive">
-        <table class="table table-bordered table-striped table-hover align-middle" id="tabla-pedidos">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover align-middle" id="tabla-pedidos">
 
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Cliente</th>
-                    <th>Dirección</th>
-                    <th>Total</th>
-                    <th>Comprobante</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Dirección</th>
+                            <th>Total</th>
+                            <th>Comprobante</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
 
-            <tbody>
-                {% for pedido in pedidos %}
-                <tr id="pedido-{{ pedido.id }}">
-                    <td>{{ pedido.codigo_pedido }}</td>
-                    <td>{{ pedido.cliente.nombre }}</td>
-                    <td>{{ pedido.direccion_entrega }}</td>
-                    <td>$ {{ pedido.total }}</td>
-                    <td>
-                        {% with comp=pedido.comprobantes_cliente.first %}
-                            <a href="{{ comp.imagen.url }}" target="_blank">
-                                {{ comp.numero_comprobante }}
-                            </a>
-                        {% endwith %}
-                    </td>
-                    <td>
-                        <button class="btn btn-success btn-sm"
-                                onclick="aceptarPedido('{{ pedido.id }}')">
-                            Aceptar
-                        </button>
+                    <tbody>
+                        {% for pedido in pedidos %}
+                        <tr id="pedido-{{ pedido.id }}">
+                            <td>{{ pedido.codigo_pedido }}</td>
+                            <td>{{ pedido.cliente.nombre }}</td>
+                            <td>{{ pedido.direccion_entrega }}</td>
+                            <td>$ {{ pedido.total }}</td>
+                            <td>
+                                {% with comp=pedido.comprobantes_cliente.first %}
+                                <a href="{{ comp.imagen.url }}" target="_blank">
+                                    {{ comp.numero_comprobante }}
+                                </a>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                <button class="btn btn-success btn-sm" onclick="aceptarPedido('{{ pedido.id }}')">
+                                    Aceptar
+                                </button>
 
-                        <button class="btn btn-danger btn-sm"
-                                onclick="rechazarPedido('{{ pedido.id }}')">
-                            Rechazar
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
-                {% endfor %}
-            </tbody>
-        </table>
+                                <button class="btn btn-danger btn-sm" onclick="rechazarPedido('{{ pedido.id }}')">
+                                    Rechazar
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        {% endfor %}
+                    </tbody>
+                </table>
 
-        {% if not pedidos %}
-        <p class="text-muted mt-3" id="mensaje-vacio">
-            No hay pedidos de clientes pendientes.
-        </p>
-        {% endif %}
-      </div>
+                {% if not pedidos %}
+                <p class="text-muted mt-3" id="mensaje-vacio">
+                    No hay pedidos de clientes pendientes.
+                </p>
+                {% endif %}
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
-const socket = new WebSocket(
-    (window.location.protocol === "https:" ? "wss://" : "ws://")
-    + location.host + "/ws/pedidos-cajero/"
-);
+    const socket = new WebSocket(
+        (window.location.protocol === "https:" ? "wss://" : "ws://")
+        + location.host + "/ws/pedidos-cajero/"
+    );
 
-socket.onmessage = function(e) {
-    const data = JSON.parse(e.data);
+    socket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
 
-    if (data.type === "nuevo_pedido") {
-        const p = data.pedido;
+        if (data.type === "nuevo_pedido") {
+            const p = data.pedido;
 
-        const tbody = document.querySelector("#tabla-pedidos tbody");
-        if (!tbody) return;
+            const tbody = document.querySelector("#tabla-pedidos tbody");
+            if (!tbody) return;
 
-        // quitar mensaje vacío si existe
-        const msg = document.getElementById("mensaje-vacio");
-        if (msg) msg.remove();
+            // quitar mensaje vacío si existe
+            const msg = document.getElementById("mensaje-vacio");
+            if (msg) msg.remove();
 
-        // evitar duplicados
-        if (document.getElementById(`pedido-${p.id}`)) return;
+            // evitar duplicados
+            if (document.getElementById(`pedido-${p.id}`)) return;
 
-        // DEFINIR EL HTML DEL COMPROBANTE
-        const comprobanteHtml = p.comprobante_url
-            ? `<a href="${p.comprobante_url}" target="_blank">
+            // DEFINIR EL HTML DEL COMPROBANTE
+            const comprobanteHtml = p.comprobante_url
+                ? `<a href="${p.comprobante_url}" target="_blank">
                    ${p.comprobante_numero}
                </a>`
-            : "—";
+                : "—";
 
-        const row = document.createElement("tr");
-        row.id = `pedido-${p.id}`;
+            const row = document.createElement("tr");
+            row.id = `pedido-${p.id}`;
 
-        row.innerHTML = `
+            row.innerHTML = `
             <td>${p.codigo_pedido}</td>
             <td>${p.nombre_cliente}</td>
             <td>${p.direccion}</td>
@@ -252,44 +250,83 @@ socket.onmessage = function(e) {
         `;
 
 
-        tbody.appendChild(row);
-    }
-};
+            tbody.appendChild(row);
+        }
+    };
 </script>
 
 
 <script>
-function aceptarPedido(pedidoId) {
-    fetch(`/cajero/pedido-cliente/${pedidoId}/aceptar/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById(`pedido-${pedidoId}`).remove();
-        }
-    });
-}
+    function aceptarPedido(pedidoId) {
+        fetch(`/cajero/pedido-cliente/${pedidoId}/aceptar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`pedido-${pedidoId}`).remove();
+                }
+            });
+    }
 
-function rechazarPedido(pedidoId) {
-    if (!confirm("¿Seguro que deseas rechazar este pedido?")) return;
+    function rechazarPedido(pedidoId) {
 
-    fetch(`/cajero/pedido-cliente/${pedidoId}/rechazar/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById(`pedido-${pedidoId}`).remove();
-        }
-    });
-}
+        Swal.fire({
+            title: '¿Rechazar pedido?',
+            text: "Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: "#C14949",
+            cancelButtonColor: "#4F6D7A",
+            confirmButtonText: 'Rechazar',
+            cancelButtonText: 'Cancelar',
+            background: "#FFF7F0",
+            iconColor: "#D9A441",
+            reverseButtons: true
+        }).then((result) => {
+
+            if (result.isConfirmed) {
+
+                fetch(`/cajero/pedido-cliente/${pedidoId}/rechazar/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+
+                            // eliminar fila
+                            const fila = document.getElementById(`pedido-${pedidoId}`);
+                            if (fila) fila.remove();
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Pedido rechazado',
+                                text: 'El pedido fue rechazado correctamente.',
+                                timer: 1800,
+                                background: "#FFF7F0",
+                                iconColor: "#3E7A3F",
+                                showConfirmButton: false
+                            });
+
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'No se pudo rechazar el pedido.',
+                                background: "#FFF7F0",
+                            });
+                        }
+                    });
+            }
+        });
+    }
+
 </script>
 
 

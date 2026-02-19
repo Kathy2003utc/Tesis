@@ -1,10 +1,9 @@
-{% extends 'administrador/plantilla.html' %}
+{% extends 'cajero/plantilla.html' %}
 {% load static %}
 {% block contenido %}
 <br>
 
 <style>
-    /* ================= PALETA ================= */
     :root {
         --cafe-oscuro: #b4764f;
         --cafe-medio: #cd966c;
@@ -19,16 +18,10 @@
         --texto-oscuro: #2B1A10;
 
         --cafe-profundo: #8A5A3C;
-        --cafe-avellana: #C8A784;
         --crema-suave: #FAF4EC;
-
-        --info: #6A93B0;
-        --rojo-alerta: #C14949;
     }
 
-    /* ================= FONDO ================= */
-    html,
-    body {
+    html, body {
         background: linear-gradient(135deg,
                 var(--crema-suave),
                 var(--cafe-suave) 45%,
@@ -36,7 +29,6 @@
         overflow-x: hidden;
     }
 
-    /* ================= CONTENEDOR ================= */
     .main-content-wrapper {
         padding: 20px;
     }
@@ -47,18 +39,16 @@
         border-radius: 15px;
         border: 1px solid var(--cafe-suave);
         box-shadow: 0 8px 18px rgba(0, 0, 0, .1);
-        max-width: 1200px;
+        max-width: 1100px;
         margin: auto;
     }
 
-    /* ================= TITULOS ================= */
     h2 {
         color: var(--cafe-profundo);
         font-weight: bold;
         text-shadow: 1px 1px 2px #fff;
     }
 
-    /* ================= TARJETAS ================= */
     .reporte-card {
         border-radius: 16px;
         background: var(--blanco-calido);
@@ -86,7 +76,6 @@
         transform: scale(1.1);
     }
 
-    /* ================= BOTON ================= */
     .reporte-btn {
         border: 2px solid var(--verde-profundo);
         color: var(--verde-profundo);
@@ -105,72 +94,56 @@
 <div class="main-content-wrapper">
     <div class="content-card">
 
-        <h2 class="text-center mb-2">REPORTES</h2>
+        <h2 class="text-center mb-2">REPORTES - CAJERO</h2>
         <p class="text-center text-muted mb-5">
-            Accede a los distintos reportes del restaurante
+            Consulta los reportes disponibles para gestión de pedidos
         </p>
 
         <div class="row g-4 justify-content-center">
 
-            <!-- Reporte Pagos Restaurante -->
+            <!-- REPORTE GENERAL -->
             <div class="col-md-4">
                 <div class="card reporte-card">
                     <div class="card-body text-center">
-                        <i class="bi bi-cash-coin reporte-icon"></i>
-                        <h5 class="fw-bold">Pagos de Pedidos en el Restaurante</h5>
-                        <p class="text-muted">
-                            Reporte de pagos realizados en el local
-                        </p>
-                        <a href="{% url 'reporte_pagos_restaurante' %}" class="btn reporte-btn">
-                            Ver Reporte
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reporte Pagos Domicilio -->
-            <div class="col-md-4">
-                <div class="card reporte-card">
-                    <div class="card-body text-center">
-                        <i class="bi bi-truck reporte-icon"></i>
-                        <h5 class="fw-bold">Pagos de Pedidos a Domicilio</h5>
-                        <p class="text-muted">
-                            Reporte de cobros por pedidos a domicilio
-                        </p>
-                        <a href="{% url 'reporte_pagos_domicilio' %}" class="btn reporte-btn">
-                            Ver Reporte
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reporte Pedidos Cliente Domicilio -->
-            <div class="col-md-4">
-                <div class="card reporte-card">
-                    <div class="card-body text-center">
-                        <i class="bi bi-person-lines-fill reporte-icon"></i>
-                        <h5 class="fw-bold">Pedidos Cliente a Domicilio</h5>
-                        <p class="text-muted">
-                            Reporte de pedidos realizados por clientes y gestionados por cajero
-                        </p>
-                        <a href="{% url 'reporte_pedidos_domicilio_cliente' %}" class="btn reporte-btn">
-                            Ver Reporte
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reporte Unificado Pedidos + Cobros -->
-            <div class="col-md-4">
-                <div class="card reporte-card">
-                    <div class="card-body text-center">
-                        <i class="bi bi-clipboard-data reporte-icon"></i>
+                        <i class="fas fa-chart-line reporte-icon"></i>
                         <h5 class="fw-bold">Reporte General</h5>
                         <p class="text-muted">
-                            Pedidos y cobros del restaurante y domicilio
+                            Pedidos y cobros gestionados
                         </p>
-                        <a href="{% url 'reporte_unificado' %}" class="btn reporte-btn">
+                        <a href="{% url 'cajero_reporte_unificado' %}" class="btn reporte-btn">
                             Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIAL PEDIDOS CLIENTE -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-user-clock reporte-icon"></i>
+                        <h5 class="fw-bold">Historial Pedidos Cliente</h5>
+                        <p class="text-muted">
+                            Pedidos realizados por clientes
+                        </p>
+                        <a href="{% url 'cajero_pedidos_historial_cliente' %}" class="btn reporte-btn">
+                            Ver Historial
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIAL PEDIDOS CAJERO -->
+            <div class="col-md-4">
+                <div class="card reporte-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clipboard-check reporte-icon"></i>
+                        <h5 class="fw-bold">Historial Pedidos</h5>
+                        <p class="text-muted">
+                            Pedidos gestionados por el cajero
+                        </p>
+                        <a href="{% url 'cajero_historial_pedidos' %}" class="btn reporte-btn">
+                            Ver Historial
                         </a>
                     </div>
                 </div>

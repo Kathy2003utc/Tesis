@@ -323,29 +323,29 @@ footer{
 
   <ul class="menu"><li><a href="{% url 'dashboard_admin' %}" class="{% if '/administrador/dashboard/' in request.path %}active{% endif %}">
       <i class="fas fa-home"></i> Inicio</a></li>
-
-    <li><a href="{% url 'listar_trabajadores' %}" class="{% if '/trabajadores/' in request.path %}active{% endif %}">
-      <i class="fas fa-users"></i> Trabajadores</a></li>
     
-    <li>
-    <a href="{% url 'admin_listar_clientes' %}"
-      class="{% if '/admin/clientes/' in request.path %}active{% endif %}">
-      <i class="fas fa-user-friends"></i>
-      Clientes
-    </a>
-  </li>
-
     <li>
       <a href="{% url 'lista_horarios' %}" class="{% if '/horarios/' in request.path %}active{% endif %}">
         <i class="fas fa-clock"></i> Horarios
       </a>
     </li>
 
+    <li><a href="{% url 'listar_trabajadores' %}" class="{% if '/trabajadores/' in request.path %}active{% endif %}">
+      <i class="fas fa-users"></i> Trabajadores</a></li>
+
     <li><a href="{% url 'listar_mesas' %}" class="{% if '/mesas/' in request.path %}active{% endif %}">
       <i class="fas fa-table"></i> Mesas</a></li>
 
     <li><a href="{% url 'listar_menu' %}" class="{% if '/menu/' in request.path %}active{% endif %}">
       <i class="fas fa-utensils"></i> Menú</a></li>
+    
+    <li>
+      <a href="{% url 'admin_listar_clientes' %}"
+        class="{% if '/admin/clientes/' in request.path %}active{% endif %}">
+        <i class="fas fa-user-friends"></i>
+        Clientes
+      </a>
+    </li>
 
     <li><a href="{% url 'reportes_general' %}" class="{% if '/reportes/' in request.path %}active{% endif %}">
       <i class="fas fa-chart-line"></i> Reportes</a></li>

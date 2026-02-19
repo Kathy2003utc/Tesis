@@ -2994,7 +2994,7 @@ def cajero_rechazar_pedido_cliente(request, pedido_id):
     pedido.estado = 'rechazado'
     pedido.enviado_cocina = False
     pedido.cajero = request.user
-    pedido.save(update_fields=['estado', 'enviado_cocina'])
+    pedido.save(update_fields=['estado', 'enviado_cocina', 'cajero'])
 
     channel_layer = get_channel_layer()
 
@@ -4630,7 +4630,7 @@ def reporte_unificado(request):
     )
 
 @login_required
-@rol_requerido('admin', 'cajero')
+@rol_requerido('admin')
 def exportar_unificado_pdf(request):
 
     pagos = Pago.objects.filter(
@@ -4778,7 +4778,7 @@ def exportar_unificado_pdf(request):
     return response
 
 @login_required
-@rol_requerido('admin', 'cajero')
+@rol_requerido('admin')
 def exportar_unificado_excel(request):
 
     pagos = Pago.objects.filter(
@@ -5229,6 +5229,225 @@ def cajero_exportar_unificado_excel(request):
     wb.save(response)
     return response
 
+#---------------------------------
+# REPORTE PEDIDOS CLIENTE
+#---------------------------------
+@login_required(login_url='login')
+@rol_requerido('admin')
+def reporte_pedidos_domicilio_cliente(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cliente__isnull=False
+    ).select_related(
+        'cliente',
+        'cajero'
+    ).prefetch_related(
+        'comprobantes_cliente',
+        'pagos__comprobante_set'
+    )
+
+    # ==============================
+    # FILTROS
+    # ==============================
+
+    codigo = request.GET.get('codigo', '').strip()
+    estado = request.GET.get('estado', '').strip()
+    fecha_inicio = request.GET.get('fecha_inicio', '').strip()
+    fecha_fin = request.GET.get('fecha_fin', '').strip()
+    cajero = request.GET.get('cajero', '').strip()
+
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if estado:
+        pedidos = pedidos.filter(estado=estado)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=parse_date(fecha_inicio))
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=parse_date(fecha_fin))
+
+    if cajero:
+        pedidos = pedidos.filter(cajero_id=cajero)
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
+    cajeros = Usuario.objects.filter(rol='cajero')
+
+    return render(
+        request,
+        'administrador/reportes/reporte_pedidos_domicilio_cliente.html',
+        {
+            'pedidos': pedidos,
+            'codigo': codigo,
+            'estado': estado,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'cajero_seleccionado': cajero,
+            'cajeros': cajeros,
+            'total_general': total_general 
+        }
+    )
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def exportar_pedidos_cliente_pdf(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cliente__isnull=False
+    ).select_related('cliente', 'cajero')
+
+    # ===== FILTROS =====
+    if request.GET.get('codigo'):
+        pedidos = pedidos.filter(codigo_pedido__icontains=request.GET['codigo'])
+
+    if request.GET.get('estado'):
+        pedidos = pedidos.filter(estado=request.GET['estado'])
+
+    if request.GET.get('fecha_inicio'):
+        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['fecha_inicio'])
+
+    if request.GET.get('fecha_fin'):
+        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fecha_fin'])
+
+    if request.GET.get('cajero'):
+        pedidos = pedidos.filter(cajero_id=request.GET['cajero'])
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_pedidos_cliente.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    elementos = []
+
+    elementos.append(Table(
+        [["REPORTE PEDIDOS DOMICILIO CLIENTE"]],
+        colWidths=[480],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#cd966c")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+        ]
+    ))
+
+    elementos.append(Spacer(1, 10))
+
+    data = [[
+        "Código", "Cajero", "Cliente",
+        "Total", "Estado", "Fecha"
+    ]]
+
+    for p in pedidos:
+        cajero = f"{p.cajero.nombre}" if p.cajero else "No asignado"
+
+        data.append([
+            p.codigo_pedido,
+            cajero,
+            f"{p.cliente.nombre}",
+            f"$ {p.total:.2f}",
+            p.get_estado_display(),
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[70, 80, 80, 60, 80, 90])
+
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (0,1), (-1,-1), 'CENTER'),
+    ]))
+
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 10))
+
+    elementos.append(Table(
+        [["TOTAL GENERAL", f"$ {total_general:.2f}"]],
+        colWidths=[350, 130],
+        style=[
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#3E7A3F")),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
+            ('FONT', (0,0), (-1,-1), 'Helvetica-Bold'),
+        ]
+    ))
+
+    doc.build(elementos)
+    return response
+
+
+@login_required(login_url='login')
+@rol_requerido('admin')
+def exportar_pedidos_cliente_excel(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cliente__isnull=False
+    ).select_related('cliente', 'cajero')
+
+    # ===== FILTROS =====
+    if request.GET.get('codigo'):
+        pedidos = pedidos.filter(codigo_pedido__icontains=request.GET['codigo'])
+
+    if request.GET.get('estado'):
+        pedidos = pedidos.filter(estado=request.GET['estado'])
+
+    if request.GET.get('fecha_inicio'):
+        pedidos = pedidos.filter(fecha_hora__date__gte=request.GET['fecha_inicio'])
+
+    if request.GET.get('fecha_fin'):
+        pedidos = pedidos.filter(fecha_hora__date__lte=request.GET['fecha_fin'])
+
+    if request.GET.get('cajero'):
+        pedidos = pedidos.filter(cajero_id=request.GET['cajero'])
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Cliente"
+
+    headers = ["Código", "Cajero", "Cliente", "Total", "Estado", "Fecha"]
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        ws.cell(row=1, column=col).font = Font(bold=True)
+
+    for p in pedidos:
+        cajero = p.cajero.nombre if p.cajero else "No asignado"
+
+        ws.append([
+            p.codigo_pedido,
+            cajero,
+            p.cliente.nombre,
+            float(p.total),
+            p.get_estado_display(),
+            p.fecha_hora.replace(tzinfo=None)
+        ])
+
+    ws.append([])
+    ws.append(["", "", "TOTAL GENERAL", float(total_general)])
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="reporte_pedidos_cliente.xlsx"'
+
+    wb.save(response)
+    return response
+
+
 @login_required(login_url='login')
 @rol_requerido('cajero')
 @never_cache
@@ -5464,6 +5683,7 @@ def cliente_crear_pedido(request):
         pedido = Pedido.objects.create(
             cliente=request.user,
             tipo_pedido='domicilio',
+            nombre_cliente=f"{request.user.nombre or ''} {request.user.apellido or ''}".strip(),
             contacto_cliente=telefono,
             direccion_entrega=direccion,
             estado='en_creacion'
@@ -6101,3 +6321,8 @@ def cliente_confirmar_reactivacion(request, uidb64, token):
         "Tu cuenta ha sido reactivada correctamente. Ya puedes iniciar sesión."
     )
     return redirect('login')
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def cajero_reportes(request):
+    return render(request, 'cajero/reporte/reportes.html')

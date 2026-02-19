@@ -4,28 +4,21 @@
 <br>
 
 <style>
-    /* ================= PALETA ================= */
     :root {
         --cafe-oscuro: #b4764f;
         --cafe-medio: #cd966c;
         --cafe-claro: #D7B999;
         --cafe-suave: #EEDDC6;
-
         --verde: #3E7A3F;
         --verde-profundo: #2E5F32;
-
         --blanco-calido: #F8F5F2;
         --gris-suave: #E2DED8;
         --texto-oscuro: #2B1A10;
-
         --cafe-profundo: #8A5A3C;
-        --cafe-avellana: #C8A784;
         --crema-suave: #FAF4EC;
     }
 
-    /* ================= FONDO ================= */
-    html,
-    body {
+    html, body {
         background: linear-gradient(135deg,
                 var(--crema-suave),
                 var(--cafe-suave) 45%,
@@ -33,7 +26,6 @@
         overflow-x: hidden;
     }
 
-    /* ================= CONTENEDOR ================= */
     .main-content-wrapper {
         padding: 20px;
     }
@@ -44,18 +36,16 @@
         border-radius: 15px;
         border: 1px solid var(--cafe-suave);
         box-shadow: 0 8px 18px rgba(0, 0, 0, .1);
-        max-width: 1300px;
+        max-width: 1200px;
         margin: auto;
     }
 
-    /* ================= TITULO ================= */
     h2 {
         color: var(--cafe-profundo);
         font-weight: bold;
         text-shadow: 1px 1px 2px #fff;
     }
 
-    /* ================= FORM FILTROS ================= */
     .form-filtros {
         background: var(--blanco-calido);
         border: 1px solid var(--gris-suave);
@@ -63,7 +53,6 @@
         padding: 20px;
     }
 
-    /* ================= BOTONES ================= */
     .btn-filtrar {
         background: var(--verde-profundo);
         color: white;
@@ -76,7 +65,6 @@
         background: var(--verde);
     }
 
-    /* ================= TABLA ================= */
     .table {
         background: white;
         border-radius: 12px;
@@ -92,7 +80,6 @@
         background: #f6efe7;
     }
 
-    /* ================= TOTAL ================= */
     .total-box {
         background: var(--blanco-calido);
         border-left: 6px solid var(--verde-profundo);
@@ -121,7 +108,7 @@
     <div class="content-card">
 
         <h2 class="text-center mb-4">
-            Reporte Unificado - Restaurante y Domicilio
+            Reporte de Pedidos - Cliente Domicilio
         </h2>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -135,61 +122,68 @@
         <!-- ================= FILTROS ================= -->
         <form method="GET" class="row g-3 form-filtros mb-4">
 
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="fw-semibold">Código</label>
+                <input type="text" name="codigo" class="form-control"
+                       value="{{ request.GET.codigo }}">
+            </div>
+
+            <div class="col-md-2">
                 <label class="fw-semibold">Fecha inicio</label>
-                <input type="date" name="inicio" class="form-control" value="{{ request.GET.inicio }}">
+                <input type="date" name="fecha_inicio" class="form-control"
+                       value="{{ request.GET.fecha_inicio }}">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="fw-semibold">Fecha fin</label>
-                <input type="date" name="fin" class="form-control" value="{{ request.GET.fin }}">
+                <input type="date" name="fecha_fin" class="form-control"
+                       value="{{ request.GET.fecha_fin }}">
             </div>
 
             <div class="col-md-3">
-                <label class="fw-semibold">Tipo de pedido</label>
-                <select name="tipo" class="form-select">
-                    <option value="todos">Todos</option>
-
-                    <option value="restaurante" {% if request.GET.tipo == "restaurante" %}selected{% endif %}>
-                        Restaurante
-                    </option>
-
-                    <option value="domicilio" {% if request.GET.tipo == "domicilio" %}selected{% endif %}>
-                        Domicilio
-                    </option>
+                <label class="fw-semibold">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    {% for value,label in pedidos.model.ESTADOS %}
+                        <option value="{{ value }}"
+                            {% if request.GET.estado == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
-            <!-- NUEVO: FILTRO MÉTODO DE PAGO -->
             <div class="col-md-3">
-                <label class="fw-semibold">Método de pago</label>
-                <select name="metodo" class="form-select">
-                    <option value="todos">Todos</option>
-                    <option value="efectivo" {% if request.GET.metodo == "efectivo" %}selected{% endif %}>
-                        Efectivo
-                    </option>
-                    <option value="transferencia" {% if request.GET.metodo == "transferencia" %}selected{% endif %}>
-                        Transferencia
-                    </option>
+                <label class="fw-semibold">Cajero</label>
+                <select name="cajero" class="form-select">
+                    <option value="">Todos</option>
+                    {% for c in cajeros %}
+                        <option value="{{ c.id }}"
+                            {% if request.GET.cajero == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.nombre }} {{ c.apellido }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="col-12 text-end">
-                <button class="btn btn-filtrar">
-                    <i class="fas fa-filter"></i> Filtrar
+                <button class="btn btn-filtrar mt-2">
+                    Filtrar
                 </button>
             </div>
         </form>
 
         <!-- ================= EXPORTAR ================= -->
-        <a href="{% url 'exportar_unificado_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-danger">
-            <i class="fas fa-file-pdf"></i> Exportar PDF
+        <a href="{% url 'exportar_pedidos_cliente_pdf' %}?{{ request.GET.urlencode }}"
+           class="btn btn-danger">
+            Exportar PDF
         </a>
 
         <br><br>
 
-        <a href="{% url 'exportar_unificado_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success">
-            <i class="fas fa-file-excel"></i> Exportar Excel
+        <a href="{% url 'exportar_pedidos_cliente_excel' %}?{{ request.GET.urlencode }}"
+           class="btn btn-success">
+            Exportar Excel
         </a>
 
         <br><br>
@@ -197,60 +191,68 @@
         <!-- ================= TOTAL ================= -->
         <div class="d-flex justify-content-end mb-3">
             <div class="total-box">
-                Total recaudado: ${{ total_recaudado|floatformat:2 }}
+                Total general: ${{ total_general }}
             </div>
         </div>
-
 
         <!-- ================= TABLA ================= -->
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle">
                 <thead class="text-center">
                     <tr>
-                        <th>Código pedido</th>
-                        <th>Tipo</th>
-                        <th>Cliente / Mesa</th>
-                        <th>Responsable</th>
-                        <th>Estado</th>
+                        <th>Código</th>
+                        <th>Cajero</th>
+                        <th>Cliente</th>
                         <th>Total</th>
-                        <th>Método</th>
+                        <th>Estado</th>
+                        <th>Comprobante Cliente</th>
+                        <th>Comprobante Sistema</th>
                         <th>Fecha</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for p in pagos %}
+                    {% for pedido in pedidos %}
                     <tr>
-                        <td class="text-center">{{ p.pedido.codigo_pedido }}</td>
-                        <td class="text-center">{{ p.pedido.tipo_pedido|title }}</td>
+                        <td class="text-center">{{ pedido.codigo_pedido }}</td>
+                        <td>{{ pedido.cajero.nombre|default:"—" }}</td>
+                        <td>{{ pedido.cliente.nombre }} {{ pedido.cliente.apellido }}</td>
+                        <td class="text-success fw-bold">${{ pedido.total }}</td>
+                        <td>{{ pedido.get_estado_display }}</td>
 
-                        <td>
-                            {% if p.pedido.tipo_pedido == 'domicilio' %}
-                            {{ p.pedido.nombre_cliente }}
-                            {% else %}
-                            Mesa {{ p.pedido.mesa.numero }}
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if p.pedido.tipo_pedido == 'domicilio' %}
-                            {{ p.pedido.cajero.nombre }}
-                            {% else %}
-                            {{ p.pedido.mesero.nombre }}
-                            {% endif %}
-                        </td>
-
-                        <td class="text-center">{{ p.pedido.estado }}</td>
-                        <td class="text-success fw-bold">${{ p.total }}</td>
-                        <td class="text-center">{{ p.metodo_pago }}</td>
                         <td class="text-center">
-                            {{ p.fecha_hora|date:"d/m/Y H:i" }}
+                            {% with pedido.comprobantes_cliente.first as comp %}
+                                {% if comp %}
+                                    <a href="{{ comp.imagen.url }}" target="_blank"
+                                       class="btn btn-sm btn-primary">
+                                        Ver
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% endwith %}
                         </td>
+
+                        <td class="text-center">
+                            {% with pedido.pagos.first as pago %}
+                                {% if pago and pago.comprobante_set.first %}
+                                    <a href="{{ pago.comprobante_set.first.archivo_pdf.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-danger">
+                                        PDF
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <td>{{ pedido.fecha_hora|date:"d/m/Y H:i" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
                         <td colspan="8" class="text-center text-muted py-3">
-                            No existen registros
+                            No hay pedidos registrados
                         </td>
                     </tr>
                     {% endfor %}
