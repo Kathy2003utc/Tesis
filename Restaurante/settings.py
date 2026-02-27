@@ -179,3 +179,5 @@ EMAIL_HOST_PASSWORD = 'coyd qkza lfpd vemz'  # contraseña de aplicación
 
 DEFAULT_FROM_EMAIL = 'Café Restaurante Carlos Gerardo <morales.carlosgerardo80@gmail.com>'
 
+VAPID_PUBLIC_KEY = "BF_67kLvzxvcUJ1wd34yf6p9Ph2d-T8SQGGECEGB7587RE_d1mS-0JPYmKvTVtsQAG82RMyvk9dmwvx_hmPoYUc"
+VAPID_PRIVATE_KEY = "YzcIQctSux-4LvgfkDT7oRSPiwAyrGgEtgYGnT9PwLU"

@@ -1,5 +1,6 @@
 import json
 import re
+from .utils.push import enviar_push
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -9,7 +10,7 @@ from .decorators import rol_requerido
 from django.db.models import Prefetch
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password
-from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje, Pago, Comprobante, Horario, ComprobanteCliente
+from .models import Usuario, Mesa, Pedido, DetallePedido, Producto, Notificacion, Mensaje, Pago, Comprobante, Horario, ComprobanteCliente, PushSubscription
 from django.contrib.auth.hashers import make_password
 from django.http import JsonResponse
 from django.template.loader import render_to_string
@@ -60,6 +61,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
+import json
+from django.views.decorators.csrf import csrf_exempt
 
 # ----------------------------
 # Login (pantalla)
@@ -375,7 +378,10 @@ def dashboard_mesero(request):
     if request.user.rol != 'mesero':
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('login')
-    return render(request, 'mesero/dashboard.html')
+
+    return render(request, 'mesero/dashboard.html', {
+        "VAPID_PUBLIC_KEY": settings.VAPID_PUBLIC_KEY
+    })
 
 @login_required(login_url='login')
 def dashboard_cocinero(request):
@@ -389,14 +395,20 @@ def dashboard_cajero(request):
     if request.user.rol != 'cajero':
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('login')
-    return render(request, 'cajero/dashboard.html')
+
+    return render(request, 'cajero/dashboard.html', {
+        "VAPID_PUBLIC_KEY": settings.VAPID_PUBLIC_KEY
+    })
 
 @login_required(login_url='login')
 def dashboard_cliente(request):
     if request.user.rol != 'cliente':
         messages.error(request, "No tienes permisos para acceder a esta página.")
         return redirect('login')
-    return render(request, 'cliente/dashboard.html')
+
+    return render(request, 'cliente/dashboard.html', {
+        "VAPID_PUBLIC_KEY": settings.VAPID_PUBLIC_KEY
+    })
 
 # ----------------------------
 # Admin-Perfil
@@ -2055,6 +2067,20 @@ def marcar_pedido_listo(request, pedido_id):
                 "fecha": localtime(notif.fecha_hora).strftime("%d/%m/%Y %H:%M"),
             }
         )
+
+        if destinatario.rol == "mesero":
+            url_destino = reverse("listar_pedidos")
+        elif destinatario.rol == "cajero":
+            url_destino = reverse("cajero_listar_pedidos")
+        else:
+            url_destino = "/"
+
+        enviar_push(
+            destinatario,
+            "Pedido listo",
+            f"El pedido {pedido.codigo_pedido} está listo.",
+            url_destino
+        )
     except Exception:
         pass
 
@@ -2297,6 +2323,22 @@ def avisar_no_hay_producto(request):
                     "mesa": None,
                 }
             )
+
+            if u.rol == "mesero":
+                url_destino = reverse("dashboard_mesero")  # /pedidos/
+            elif u.rol == "cajero":
+                url_destino = reverse("dashboard_cajero")
+            else:
+                url_destino = "/"
+
+            enviar_push(
+                u,
+                "Producto agotado",
+                f'{producto.nombre} está agotado hoy.',
+                url_destino
+            )
+
+
         except Exception:
             pass
 
@@ -2851,8 +2893,7 @@ def cajero_pedidos_clientes_domicilio(request):
         detalles__isnull=False,
         comprobantes_cliente__estado='pendiente'
     ).filter(
-        Q(estado='pendiente_caja', cajero__isnull=True) |
-        Q(estado='aceptado', cajero=request.user)
+        Q(estado='pendiente_caja', cajero__isnull=True) 
     ).distinct().order_by('id')
     
 
@@ -2871,9 +2912,14 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
-        estado='pendiente_caja',
         tipo_pedido='domicilio'
     )
+
+    if pedido.estado != 'pendiente_caja':
+        return JsonResponse({
+            "success": False,
+            "message": "Este pedido ya fue procesado."
+        })
 
     # ================================
     # 1) ACEPTAR PEDIDO
@@ -2967,6 +3013,13 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
         }
     )
 
+    enviar_push(
+        pedido.cliente,
+        "Pedido aceptado",
+        f"Tu pedido #{pedido.codigo_pedido} fue aceptado.",
+        reverse("cliente_listar_pedidos")
+    )
+
     # ================================
     # 5) ENVIAR A COCINA
     # ================================
@@ -2982,9 +3035,14 @@ def cajero_rechazar_pedido_cliente(request, pedido_id):
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
-        estado='pendiente_caja',
         tipo_pedido='domicilio'
     )
+
+    if pedido.estado != 'pendiente_caja':
+        return JsonResponse({
+            "success": False,
+            "message": "Este pedido ya fue procesado."
+        })
 
     comprobante = pedido.comprobantes_cliente.filter(estado='pendiente').first()
     if comprobante:
@@ -2998,16 +3056,31 @@ def cajero_rechazar_pedido_cliente(request, pedido_id):
 
     channel_layer = get_channel_layer()
 
-    # SOLO estado (sin popup)
-    if pedido.cliente:
-        async_to_sync(channel_layer.group_send)(
-            f"estado_pedidos_cliente_{pedido.cliente.id}",
-            {
-                "type": "actualizar_estado",
-                "pedido": pedido.id,
-                "estado": "rechazado"
-            }
-        )
+    # WS actualizar estado cliente
+    async_to_sync(channel_layer.group_send)(
+        f"estado_pedidos_cliente_{pedido.cliente.id}",
+        {
+            "type": "actualizar_estado",
+            "pedido": pedido.id,
+            "estado": "rechazado"
+        }
+    )
+
+    # Notificación DB
+    notif = Notificacion.objects.create(
+        pedido=pedido,
+        usuario_destino=pedido.cliente,
+        tipo="pedido_rechazado",
+        mensaje=f"Tu pedido #{pedido.codigo_pedido} fue rechazado."
+    )
+
+    # PUSH REAL
+    enviar_push(
+        pedido.cliente,
+        "Pedido rechazado",
+        f"Tu pedido #{pedido.codigo_pedido} fue rechazado.",
+        reverse("cliente_listar_pedidos")
+    )
 
     return JsonResponse({'success': True})
 
@@ -6065,6 +6138,13 @@ def cliente_pago_pedido(request, pedido_id):
                 mensaje=f'Nuevo comprobante de pago del cliente {request.user.nombre}'
             )
 
+            enviar_push(
+                cajero,
+                "Nuevo pedido pendiente",
+                f"Nuevo comprobante del cliente {request.user.nombre}",
+                "/cajero/pedidos-clientes-domicilio/"
+            )
+
         messages.success(request, "Comprobante enviado correctamente.")
         return redirect('cliente_listar_pedidos')
 
@@ -6122,6 +6202,13 @@ def cliente_enviar_pedido(request, pedido_id):
                 "id": notif.id,
                 "fecha": str(notif.fecha)
             }
+        )
+
+        enviar_push(
+            cajero,
+            "Nuevo pedido",
+            f"Nuevo pedido #{pedido.codigo_pedido}",
+            "/cajero/pedidos-clientes-domicilio/"
         )
 
     return JsonResponse({"success": True})
@@ -6326,3 +6413,23 @@ def cliente_confirmar_reactivacion(request, uidb64, token):
 @rol_requerido('cajero')
 def cajero_reportes(request):
     return render(request, 'cajero/reporte/reportes.html')
+
+#-----------------
+#PUSH
+#-----------------
+
+@csrf_exempt
+@login_required
+def guardar_suscripcion(request):
+    data = json.loads(request.body)
+
+    PushSubscription.objects.update_or_create(
+        endpoint=data["endpoint"],
+        defaults={
+            "usuario": request.user,
+            "p256dh": data["keys"]["p256dh"],
+            "auth": data["keys"]["auth"],
+        }
+    )
+
+    return JsonResponse({"ok": True})

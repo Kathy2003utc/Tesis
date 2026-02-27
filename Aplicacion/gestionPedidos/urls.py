@@ -191,7 +191,8 @@ urlpatterns = [
     path('cliente/reactivar/',views.cliente_reactivar_cuenta,name='cliente_reactivar_cuenta'),
     path('cliente/reactivar/<uidb64>/<token>/',views.cliente_confirmar_reactivacion,name='cliente_confirmar_reactivacion'),
 
-
+    #push
+    path("guardar-suscripcion/", views.guardar_suscripcion),
 
 
     

@@ -449,3 +449,11 @@ class ComprobanteCliente(models.Model):
 
     def __str__(self):
         return f"Comprobante Cliente {self.numero_comprobante} - Pedido {self.pedido.codigo_pedido}"
+
+
+class PushSubscription(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    endpoint = models.TextField(unique=True)
+    p256dh = models.TextField()
+    auth = models.TextField()
+    creado = models.DateTimeField(auto_now_add=True)

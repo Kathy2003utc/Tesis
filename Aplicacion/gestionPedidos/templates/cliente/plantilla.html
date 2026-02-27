@@ -450,9 +450,17 @@
                 <strong>Panel del Cliente</strong>
 
                 <div class="d-flex align-items-center gap-3">
+
+                    <button id="btnPush"
+                            class="btn btn-sm btn-outline-success"
+                            style="display:none;">
+                        Activar Notificaciones
+                    </button>
+
                     <a href="{% url 'cliente_ver_perfil' %}" class="text-dark">
                         <i class="bi bi-person-circle fs-4"></i>
                     </a>
+
                     <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger btn-logout">
                         Cerrar Sesión
                     </a>
@@ -684,6 +692,104 @@
                 navigator.serviceWorker.register("/sw.js", { scope: "/" });
             });
         }
+    </script>
+
+    <script>
+        function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+        }
+
+        function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+            }
+        }
+        return cookieValue;
+        }
+
+        document.addEventListener("DOMContentLoaded", async function() {
+
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.log("Push no soportado");
+                return;
+            }
+
+            const btnPush = document.getElementById("btnPush");
+            const registration = await navigator.serviceWorker.ready;
+
+            let subscription = await registration.pushManager.getSubscription();
+
+            // Si NO hay suscripción → mostrar botón
+            if (!subscription) {
+                btnPush.style.display = "inline-block";
+            }
+
+            btnPush.addEventListener("click", async function() {
+
+                try {
+
+                    const permission = await Notification.requestPermission();
+                    if (permission !== "granted") {
+                        alert("Permiso denegado");
+                        return;
+                    }
+
+                    subscription = await registration.pushManager.getSubscription();
+
+                    // Si ya existe suscripción, NO volver a crear
+                    if (!subscription) {
+                        subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array("{{ VAPID_PUBLIC_KEY }}")
+                        });
+                    }
+
+                    await fetch("/guardar-suscripcion/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCookie("csrftoken")
+                        },
+                        body: JSON.stringify(subscription)
+                    });
+
+                    btnPush.style.display = "none";
+                    
+                    Swal.fire({
+                        icon: "success",
+                        title: "Notificaciones activadas",
+                        text: "Ahora recibirás avisos en tiempo real.",
+                        confirmButtonText: "Perfecto",
+                        confirmButtonColor: "#3E7A3F",
+                        background: "#FFF7F0"
+                    });
+
+                } catch (error) {
+                    console.error("Error al activar push:", error);
+                    alert("Error activando notificaciones. Revisa consola.");
+                }
+
+            });
+
+        });
     </script>
 
 </body>
