@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 import dj_database_url
+import cloudinary
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -66,6 +67,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Aplicacion.gestionPedidos',
     "channels",
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -154,14 +157,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'gestionPedidos.Usuario'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'Restaurante', 'media')
+#MEDIA_ROOT = os.path.join(BASE_DIR, 'Restaurante', 'media')
 
 ASGI_APPLICATION = "Restaurante.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Desarrollo sin Redis
-    }
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("REDIS_URL")],
+        },
+    },
 }
 
 # ================================
@@ -174,10 +180,21 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = 'morales.carlosgerardo80@gmail.com'
-EMAIL_HOST_PASSWORD = 'coyd qkza lfpd vemz'  # contraseña de aplicación
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = 'Café Restaurante Carlos Gerardo <morales.carlosgerardo80@gmail.com>'
 
-VAPID_PUBLIC_KEY = "BF_67kLvzxvcUJ1wd34yf6p9Ph2d-T8SQGGECEGB7587RE_d1mS-0JPYmKvTVtsQAG82RMyvk9dmwvx_hmPoYUc"
-VAPID_PRIVATE_KEY = "YzcIQctSux-4LvgfkDT7oRSPiwAyrGgEtgYGnT9PwLU"
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+
+
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
