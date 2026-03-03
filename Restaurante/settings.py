@@ -24,15 +24,20 @@ DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv(
     "ALLOWED_HOSTS",
-    ".onrender.com,localhost,127.0.0.1"
+    "restaurantepcg.com,www.restaurantepcg.com,.onrender.com"
 ).split(",") if h.strip()]
 
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv(
     "CSRF_TRUSTED_ORIGINS",
-    "https://*.onrender.com"
+    "https://restaurantepcg.com,https://www.restaurantepcg.com,https://*.onrender.com"
 ).split(",") if o.strip()]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -161,14 +166,24 @@ MEDIA_URL = '/media/'
 
 ASGI_APPLICATION = "Restaurante.asgi.application"
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL")],
+REDIS_URL = os.environ.get("REDIS_URL")
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [REDIS_URL],
+            },
         },
-    },
-}
+    }
+else:
+    # Para desarrollo local sin Redis
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 # ================================
 # CONFIGURACIÓN DE CORREO REAL (GMAIL)
