@@ -5,7 +5,7 @@ import os
 def crear_admin(apps, schema_editor):
     Usuario = apps.get_model('gestionPedidos', 'Usuario')
 
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@restaurante.com")
+    admin_email = os.getenv("ADMIN_EMAIL", "morales.carlosgerardo80@gmail.com")
     admin_password = os.getenv("ADMIN_PASSWORD")
 
     if not admin_password:
