@@ -519,9 +519,13 @@ def editar_perfil_admin(request):
 @login_required(login_url='login')
 @rol_requerido('admin')
 def listar_trabajadores(request):
-    trabajadores = Usuario.objects.exclude(rol__in=['cliente', 'admin'])
-    return render(request, 'administrador/trabajadores/trabajadores.html', {'trabajadores': trabajadores})
+    trabajadores = Usuario.objects.exclude(
+        rol__in=['cliente', 'admin']
+    ).order_by('id')
 
+    return render(request, 'administrador/trabajadores/trabajadores.html', {
+        'trabajadores': trabajadores
+    })
 
 @login_required(login_url='login')
 @rol_requerido('admin')
@@ -829,7 +833,7 @@ DIAS_VALIDOS = [
 # Listar horarios
 # ----------------------------
 def lista_horarios(request):
-    horarios = Horario.objects.all()
+    horarios = Horario.objects.all().order_by('id')
     return render(request, 'administrador/horario/horario.html', {'horarios': horarios})
 
 # ----------------------------
@@ -1157,7 +1161,7 @@ def eliminar_mesa(request, mesa_id):
 @login_required(login_url='login')
 @rol_requerido('admin')
 def listar_menu(request):
-    productos = Producto.objects.all().order_by('nombre')
+    productos = Producto.objects.all().order_by('id')
     tipo = request.GET.get("tipo")
     if tipo:
         productos = productos.filter(tipo=tipo)

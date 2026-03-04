@@ -250,7 +250,7 @@ label {
                         <option value="" disabled>Seleccione un horario</option>
                         {% for h in horarios %}
                         <option value="{{ h.id }}" {% if trabajador.horario.id == h.id %}selected{% endif %}>
-                            {{ h.nombre }} ({{ h.hora_inicio }} - {{ h.hora_fin }})
+                            Días: {{ h.dias }} | ({{ h.hora_inicio }} - {{ h.hora_fin }})
                         </option>
                         {% endfor %}
                     </select>

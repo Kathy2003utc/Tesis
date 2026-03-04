@@ -237,7 +237,10 @@ label {
                     <select name="horario" class="form-select" required>
                         <option value="" selected disabled>Seleccione un horario</option>
                         {% for h in horarios %}
-                        <option value="{{ h.id }}">{{ h.nombre }} ({{ h.hora_inicio }} - {{ h.hora_fin }})</option>
+                        <option value="{{ h.id }}">
+                            Días: {{ h.dias }} |
+                            ({{ h.hora_inicio }} - {{ h.hora_fin }})
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
