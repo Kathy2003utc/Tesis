@@ -173,7 +173,9 @@ if REDIS_URL:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [REDIS_URL],
+                "hosts": [{
+                    "address": REDIS_URL,
+                }],
             },
         },
     }
