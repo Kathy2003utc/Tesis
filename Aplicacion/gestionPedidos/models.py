@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models.signals import post_migrate
 from django.dispatch import receiver
 from decimal import Decimal
+from cloudinary.models import CloudinaryField
 
 # ----------------------------
 # Horario de Trabajo
@@ -377,8 +378,9 @@ class Comprobante(models.Model):
     direccion_cliente = models.CharField(max_length=255, blank=True, null=True)
     correo_cliente = models.EmailField(blank=True, null=True)
 
-    archivo_pdf = models.FileField(
-        upload_to='comprobantes/',
+    archivo_pdf = CloudinaryField(
+        resource_type="raw",
+        folder="comprobantes",
         blank=True,
         null=True
     )
