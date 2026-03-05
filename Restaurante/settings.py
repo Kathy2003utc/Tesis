@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "channels",
     'cloudinary',
     'cloudinary_storage',
+    'django.contrib.sites',
 ]
 
 MIDDLEWARE = [
@@ -224,3 +225,5 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET"),
     secure=True
 )
+
+SITE_ID = 1
