@@ -63,6 +63,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 import json
 from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
+
 
 # ----------------------------
 # Login (pantalla)
@@ -3694,11 +3696,9 @@ def generar_comprobante_pdf(comprobante):
     # ================================
     # GUARDAR EN MEDIA (FileField)
     # ================================
-    comprobante.archivo_pdf.save(
-        nombre_archivo,
-        ContentFile(pdf_bytes),
-        save=True
-    )
+
+    comprobante.archivo_pdf = ContentFile(pdf_bytes, name=nombre_archivo)
+    comprobante.save()
 
 #-----------------------------
 # Reportes
