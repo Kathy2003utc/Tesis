@@ -63,8 +63,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 import json
 from django.views.decorators.csrf import csrf_exempt
+import cloudinary.uploader
 from django.core.files.base import ContentFile
-
 
 # ----------------------------
 # Login (pantalla)
@@ -3654,7 +3654,6 @@ def generar_comprobante_pdf(request, comprobante):
     # ================================
     requiere_datos = pago.total >= Decimal("50.00")
 
-    # USAR LO YA GUARDADO EN EL COMPROBANTE
     nombre_impreso = (comprobante.nombre_cliente or "").strip()
     direccion_impresa = (comprobante.direccion_cliente or "").strip()
 
@@ -3667,7 +3666,6 @@ def generar_comprobante_pdf(request, comprobante):
         nombre_impreso = "Consumidor final"
         direccion_impresa = ""
 
-    # Persistir datos finales (seguridad)
     comprobante.nombre_cliente = nombre_impreso
     comprobante.direccion_cliente = direccion_impresa
     comprobante.save(update_fields=["nombre_cliente", "direccion_cliente"])
@@ -3698,7 +3696,7 @@ def generar_comprobante_pdf(request, comprobante):
     })
 
     # ================================
-    # GENERAR PDF (WEASYPRINT)
+    # GENERAR PDF
     # ================================
     pdf_bytes = HTML(
         string=html_string,
@@ -3708,14 +3706,16 @@ def generar_comprobante_pdf(request, comprobante):
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
 
     # ================================
-    # Subir a Cloudinary correctamente
-    archivo = ContentFile(pdf_bytes)
-    archivo.name = nombre_archivo
+    # SUBIR A CLOUDINARY
+    # ================================
+    resultado = cloudinary.uploader.upload(
+        pdf_bytes,
+        resource_type="raw",
+        folder="comprobantes",
+        public_id=comprobante.numero_comprobante
+    )
 
-    if comprobante.archivo_pdf:
-        comprobante.archivo_pdf.delete(save=False)
-
-    comprobante.archivo_pdf = archivo
+    comprobante.archivo_pdf = resultado["public_id"]
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
