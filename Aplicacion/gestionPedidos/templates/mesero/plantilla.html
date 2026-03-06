@@ -721,23 +721,31 @@
               "Content-Type": "application/json",
               "X-CSRFToken": getCookie("csrftoken")
             },
-            body: JSON.stringify(subscription)
+            body: JSON.stringify(subscription.toJSON())
           });
 
           btnPush.style.display = "none";
 
           Swal.fire({
-            icon: "success",
-            title: "Notificaciones activadas",
-            text: "Ahora recibirás avisos en tiempo real.",
-            confirmButtonText: "Perfecto",
-            confirmButtonColor: "#3E7A3F",
-            background: "#FFF7F0"
-          });
+          icon: "success",
+          title: "Notificaciones activadas",
+          text: "Ahora recibirás avisos en tiempo real",
+          confirmButtonText: "Aceptar",
+          confirmButtonColor: "#3E7A3F",
+          background: "#FFF7F0"
+        });
 
         } catch (error) {
-          console.error("Error al activar push:", error);
-          Swal.fire("Error activando notificaciones", "", "error");
+
+          console.error("Error activando push:", error);
+
+          Swal.fire({
+            icon: "error",
+            title: "Error activando notificaciones",
+            text: "No se pudo activar el servicio de notificaciones",
+            confirmButtonText: "Aceptar"
+          });
+
         }
 
       });
