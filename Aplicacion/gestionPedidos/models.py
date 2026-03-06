@@ -371,7 +371,11 @@ class Pago(models.Model):
 # Comprobante
 # ----------------------------
 class Comprobante(models.Model):
-    pago = models.ForeignKey(Pago, on_delete=models.CASCADE)
+    pago = models.ForeignKey(
+        Pago,
+        on_delete=models.CASCADE,
+        related_name="comprobante"
+    )
     numero_comprobante = models.CharField(max_length=50, unique=True)
     fecha_hora = models.DateTimeField(auto_now_add=True)
     nombre_cliente = models.CharField(max_length=100, blank=True, null=True)

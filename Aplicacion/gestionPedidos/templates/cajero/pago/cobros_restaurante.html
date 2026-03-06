@@ -350,7 +350,7 @@
                             </td>
                             <td class="text-center">
                                 {% if p.pago_confirmado %}
-                                    {% with comps=p.pago_confirmado.comprobante_set.all %}
+                                    {% with c=p.pago_confirmado.comprobante.first %}
                                         {% if comps %}
                                             {% with c=comps.0 %}
                                                 {% if c.archivo_pdf %}

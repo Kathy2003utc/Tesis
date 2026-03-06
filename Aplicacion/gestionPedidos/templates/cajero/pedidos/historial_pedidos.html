@@ -321,15 +321,25 @@ h2 {
                         </td>
 
                         <td class="text-center">
-                            {% if pedido.comprobante and pedido.comprobante.archivo_pdf %}
-                                <a href="{{ pedido.comprobante.archivo_pdf.url }}"
-                                target="_blank"
-                                class="btn btn-pdf btn-sm">
-                                    <i class="fas fa-file-pdf"></i> PDF
-                                </a>
-                            {% else %}
-                                <span class="text-muted">No disponible</span>
-                            {% endif %}
+                        {% if pedido.pago_confirmado %}
+                            {% with comp=pedido.pago_confirmado.comprobante.first %}
+                                {% if comp %}
+                                    {% if comp.archivo_pdf %}
+                                        <a href="{{ comp.archivo_pdf.url }}"
+                                        target="_blank"
+                                        class="btn btn-pdf btn-sm">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No disponible</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No disponible</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">No disponible</span>
+                        {% endif %}
                         </td>
 
                         <td class="text-center">
