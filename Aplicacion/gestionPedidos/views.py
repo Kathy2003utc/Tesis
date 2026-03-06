@@ -3187,7 +3187,7 @@ def cajero_restaurante_cobros(request):
             pagos__estado_pago='confirmado',
             pagos__fecha_hora__date=hoy
         )
-        .prefetch_related('pagos__comprobante_set')  # para acceder a los PDFs
+        .prefetch_related('pagos__comprobante') # para acceder a los PDFs
         .distinct()
         .order_by('id')
     )
@@ -3442,7 +3442,7 @@ def cajero_domicilio_cobros(request):
             pagos__estado_pago='confirmado',
             pagos__fecha_hora__date=hoy
         )
-        .prefetch_related('pagos__comprobante_set')
+        .prefetch_related('pagos__comprobante')
         .distinct()
         .order_by('id')
     )
@@ -5539,7 +5539,7 @@ def tabla_pedidos_pagados_domicilio(request):
             pagos__estado_pago='confirmado',
             pagos__fecha_hora__date=hoy
         )
-        .prefetch_related('pagos__comprobante_set')
+        .prefetch_related('pagos__comprobante')
         .distinct()
         .order_by('id')
     )
