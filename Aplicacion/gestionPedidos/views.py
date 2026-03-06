@@ -3565,17 +3565,26 @@ def cajero_domicilio_pagar(request, pedido_id):
         })
 
 
-    # Generar PDF y guardarlo en archivo_pdf
-    generar_comprobante_pdf(comprobante)
+    # ================================
+    # GENERAR PDF
+    # ================================
+    comprobante_url = ""
 
-    # URL del PDF (YA existe porque ya se generó)
-    if comprobante.archivo_pdf:
-        comprobante_url = comprobante.archivo_pdf.url
-    else:
+    try:
+        generar_comprobante_pdf(comprobante)
+        comprobante.refresh_from_db()
+
+        if comprobante.archivo_pdf:
+            comprobante_url = comprobante.archivo_pdf.url
+        else:
+            comprobante_url = ""
+
+    except Exception as e:
+        print("ERROR generando PDF comprobante:", e)
         comprobante_url = ""
 
     # ================================
-    # WEBSOCKET → NOTIFICAR TABLA PAGADOS (CON PDF)
+    # WEBSOCKET → NOTIFICAR TABLA PAGADOS
     # ================================
     channel_layer = get_channel_layer()
 
@@ -3589,7 +3598,7 @@ def cajero_domicilio_pagar(request, pedido_id):
             "total": float(total),
             "fecha": fecha_local.strftime("%d/%m/%Y %H:%M"),
             "estado_pago": "confirmado",
-            "comprobante_url": comprobante_url,  
+            "comprobante_url": comprobante_url,
         }
     )
 
@@ -3694,12 +3703,15 @@ def generar_comprobante_pdf(comprobante):
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
 
     # ================================
-    # GUARDAR EN MEDIA (FileField)
-    # ================================
+    # Subir a Cloudinary correctamente
+    comprobante.archivo_pdf.save(
+        nombre_archivo,
+        ContentFile(pdf_bytes),
+        save=False
+    )
 
-    comprobante.archivo_pdf = ContentFile(pdf_bytes, name=nombre_archivo)
-    comprobante.save()
-
+    # Guardar el modelo después
+    comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
 #-----------------------------
