@@ -2971,7 +2971,7 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
             })
 
 
-    generar_comprobante_pdf(comprobante)
+    generar_comprobante_pdf(request, comprobante)
     comprobante.refresh_from_db()
 
     comprobante_url = ""
@@ -3341,7 +3341,7 @@ def cajero_restaurante_pagar(request, pedido_id):
     # Generar PDF (fuera del atomic por si tarda)
     comprobante_url = ""
     try:
-        generar_comprobante_pdf(comprobante)
+        generar_comprobante_pdf(request, comprobante)
         comprobante.refresh_from_db()
         if comprobante.archivo_pdf:
             comprobante_url = comprobante.archivo_pdf.url
@@ -3571,7 +3571,7 @@ def cajero_domicilio_pagar(request, pedido_id):
     comprobante_url = ""
 
     try:
-        generar_comprobante_pdf(comprobante)
+        generar_comprobante_pdf(request, comprobante)
         comprobante.refresh_from_db()
 
         if comprobante.archivo_pdf:
@@ -3580,7 +3580,9 @@ def cajero_domicilio_pagar(request, pedido_id):
             comprobante_url = ""
 
     except Exception as e:
-        print("ERROR generando PDF comprobante:", e)
+        import traceback
+        print("ERROR generando PDF comprobante:")
+        traceback.print_exc()
         comprobante_url = ""
 
     # ================================
@@ -3642,7 +3644,7 @@ def ver_comprobante(request, comp_id):
         "direccion_impresa": direccion_impresa,
     })
 
-def generar_comprobante_pdf(comprobante):
+def generar_comprobante_pdf(request, comprobante):
     pago = comprobante.pago
     pedido = pago.pedido
     detalles = pedido.detalles.all()
@@ -3698,7 +3700,10 @@ def generar_comprobante_pdf(comprobante):
     # ================================
     # GENERAR PDF (WEASYPRINT)
     # ================================
-    pdf_bytes = HTML(string=html_string).write_pdf()
+    pdf_bytes = HTML(
+        string=html_string,
+        base_url=request.build_absolute_uri("/")
+    ).write_pdf()
 
     nombre_archivo = f"{comprobante.numero_comprobante}.pdf"
 
