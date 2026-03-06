@@ -3709,13 +3709,13 @@ def generar_comprobante_pdf(request, comprobante):
 
     # ================================
     # Subir a Cloudinary correctamente
-    comprobante.archivo_pdf.save(
-        nombre_archivo,
-        ContentFile(pdf_bytes),
-        save=False
-    )
+    archivo = ContentFile(pdf_bytes)
+    archivo.name = nombre_archivo
 
-    # Guardar el modelo después
+    if comprobante.archivo_pdf:
+        comprobante.archivo_pdf.delete(save=False)
+
+    comprobante.archivo_pdf = archivo
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
