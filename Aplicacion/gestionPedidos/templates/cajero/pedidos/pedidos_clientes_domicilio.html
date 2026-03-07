@@ -234,7 +234,7 @@
             <td>${p.codigo_pedido}</td>
             <td>${p.nombre_cliente}</td>
             <td>${p.direccion}</td>
-            <td>$${p.total}</td>
+            <td>$${Number(p.total).toFixed(2)}</td>
             <td>${comprobanteHtml}</td>
             <td>
                 <button class="btn btn-success btn-sm"

@@ -291,7 +291,7 @@
                             <td data-label="Código">{{ pedido.codigo_pedido }}</td>
                             <td data-label="Dirección">{{ pedido.direccion_entrega }}</td>
 
-                            <td data-label="Estado">
+                            <td data-label="Estado" data-estado>
                                 {% if pedido.estado == 'en_creacion' %}
                                     <span class="badge badge-creacion">En creación</span>
                                 {% elif pedido.estado == 'pendiente_caja' %}
@@ -311,7 +311,7 @@
 
                             <td data-label="Total">${{ pedido.total }}</td>
 
-                            <td data-label="Comprobante">
+                           <td data-label="Comprobante" data-comprobante>
                                 {% if pedido.estado == 'rechazado' %}
                                     <span class="badge bg-danger">Rechazado</span>
                                 {% else %}
@@ -446,7 +446,7 @@ socketEstado.onmessage = function(e) {
     /* =====================
        1) ACTUALIZAR ESTADO
        ===================== */
-    const celdaEstado = fila.querySelector("td:nth-child(3)");
+    const celdaEstado = fila.querySelector("[data-estado]");
     if (celdaEstado) {
         let badge = "";
         switch (estado) {
@@ -476,7 +476,7 @@ socketEstado.onmessage = function(e) {
        2) ACTUALIZAR COMPROBANTE
        ========================== */
     if (comprobanteUrl) {
-        const celdaComp = fila.querySelector("td:nth-child(5)");
+        const celdaComp = fila.querySelector("[data-comprobante]");
         if (celdaComp) {
             celdaComp.innerHTML = `
                 <a href="${comprobanteUrl}"
@@ -492,7 +492,7 @@ socketEstado.onmessage = function(e) {
        3) SI ES RECHAZADO
        ====================== */
     if (estado === "rechazado") {
-        const celdaComp = fila.querySelector("td:nth-child(5)");
+        const celdaComp = fila.querySelector("[data-comprobante]");
         if (celdaComp) {
             celdaComp.innerHTML = `<span class="badge bg-danger">Rechazado</span>`;
         }

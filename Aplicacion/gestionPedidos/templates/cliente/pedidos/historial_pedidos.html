@@ -228,13 +228,19 @@ h2 {
 
                         <td class="text-center">
                             {% if pedido.estado == 'listo' %}
-                                {% with comp=pedido.comprobantes_cliente.first %}
-                                    {% if comp and comp.archivo_pdf %}
-                                        <a href="{{ comp.archivo_pdf.url }}"
-                                        target="_blank"
-                                        class="btn btn-danger btn-sm">
-                                            <i class="fas fa-file-pdf"></i> PDF
-                                        </a>
+                                {% with pago=pedido.pagos.first %}
+                                    {% if pago %}
+                                        {% with comp=pago.comprobante.first %}
+                                            {% if comp and comp.archivo_pdf %}
+                                                <a href="{{ comp.archivo_pdf.url }}"
+                                                target="_blank"
+                                                class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                </a>
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        {% endwith %}
                                     {% else %}
                                         —
                                     {% endif %}
