@@ -203,19 +203,15 @@ h2 {
                         <td class="text-success fw-bold">${{ pedido.total }}</td>
 
                         <td class="text-center">
-                            {% if pedido.pago_confirmado %}
-                                {% with comp=pedido.pago_confirmado.comprobante.first %}
-                                    {% if comp %}
-                                        <a href="{{ comp.archivo_pdf.url }}" target="_blank">
-                                            {{ comp.numero_comprobante }}
-                                        </a>
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                {% endwith %}
-                            {% else %}
-                                —
-                            {% endif %}
+                            {% with comp=pedido.comprobantes_cliente.first %}
+                                {% if comp and comp.imagen %}
+                                    <a href="{{ comp.imagen.url }}" target="_blank">
+                                        {{ comp.numero_comprobante }}
+                                    </a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
                         </td>
 
                         <td class="text-center">

@@ -209,14 +209,16 @@ h2 {
                             {% if pedido.estado == 'listo' %}
                                 {% with pago=pedido.pagos.first %}
                                     {% if pago %}
-                                        {% with comp=pago.comprobante_set.first %}
-                                            {% if comp and comp.archivo_pdf %}
-                                                <a href="{{ comp.archivo_pdf.url }}"
-                                                   target="_blank"
-                                                   class="btn btn-pdf btn-sm">
-                                                    <i class="fas fa-file-pdf"></i> PDF
+                                        {% with comp=pedido.comprobantes_cliente.first %}
+                                            {% if comp and comp.imagen %}
+                                                <a href="{{ comp.imagen.url }}"
+                                                target="_blank"
+                                                class="btn btn-info btn-sm">
+                                                    <i class="fas fa-image"></i> Ver
                                                 </a>
-                                            {% else %} — {% endif %}
+                                            {% else %}
+                                                —
+                                            {% endif %}
                                         {% endwith %}
                                     {% else %} — {% endif %}
                                 {% endwith %}

@@ -65,6 +65,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 import cloudinary.uploader
 from django.core.files.base import ContentFile
+from django.utils.dateparse import parse_date
 
 # ----------------------------
 # Login (pantalla)
@@ -6247,7 +6248,7 @@ def cliente_historial_pedidos(request):
         tipo_pedido='domicilio',
         estado__in=['listo', 'rechazado']
     ).prefetch_related(
-        'pagos__comprobante_set'
+        'comprobantes_cliente'
     )
 
     if codigo:
