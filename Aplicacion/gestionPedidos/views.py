@@ -2976,10 +2976,7 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
     comprobante_url = ""
 
     if comprobante.archivo_pdf:
-        comprobante_url, _ = cloudinary.utils.cloudinary_url(
-            comprobante.archivo_pdf,
-            resource_type="raw"
-        )
+        comprobante_url = comprobante.archivo_pdf.url
 
     # ================================
     #  DEFINIR UNA SOLA VEZ
