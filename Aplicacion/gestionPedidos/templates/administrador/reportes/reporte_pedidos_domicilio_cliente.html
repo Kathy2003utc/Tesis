@@ -235,17 +235,21 @@
 
                         <td class="text-center">
                             {% with pedido.pagos.first as pago %}
-                                {% with pago.comprobante.first as comp %}
-                                    {% if comp and comp.archivo_pdf %}
-                                        <a href="{{ comp.archivo_pdf.url }}"
-                                        target="_blank"
-                                        class="btn btn-sm btn-danger">
-                                            PDF
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                {% endwith %}
+                                {% if pago %}
+                                    {% with pago.comprobante_set.first as comp %}
+                                        {% if comp and comp.archivo_pdf %}
+                                            <a href="{{ comp.archivo_pdf.url }}"
+                                            target="_blank"
+                                            class="btn btn-sm btn-danger">
+                                                PDF
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
                             {% endwith %}
                         </td>
 

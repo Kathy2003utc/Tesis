@@ -5335,7 +5335,7 @@ def reporte_pedidos_domicilio_cliente(request):
         'cajero'
     ).prefetch_related(
         'comprobantes_cliente',
-        'pagos__comprobante_set'
+        'pagos__comprobante'
     )
 
     # ==============================
