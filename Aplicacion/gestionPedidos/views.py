@@ -2956,7 +2956,6 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
         try:
             comprobante = Comprobante.objects.create(
                 pago=pago,
-                pedido=pedido,
                 numero_comprobante=numero,
                 nombre_cliente=nombre_comp,
                 direccion_cliente=direccion_comp,
