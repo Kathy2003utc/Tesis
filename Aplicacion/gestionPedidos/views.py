@@ -5750,6 +5750,8 @@ def cliente_listar_pedidos(request):
         tipo_pedido='domicilio',
         cliente=request.user,
         fecha_hora__date=hoy
+    ).prefetch_related(
+        'pagos__comprobante'
     ).order_by('id')
 
     return render(request, 'cliente/pedidos/listar_pedidos.html', {
