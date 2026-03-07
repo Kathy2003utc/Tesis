@@ -2971,11 +2971,15 @@ def cajero_aceptar_pedido_cliente(request, pedido_id):
     generar_comprobante_pdf(request, comprobante)
     comprobante.refresh_from_db()
 
+    import cloudinary.utils
+
     comprobante_url = ""
+
     if comprobante.archivo_pdf:
-        comprobante_url = comprobante.archivo_pdf.url
-    else:
-        comprobante_url = ""
+        comprobante_url, _ = cloudinary.utils.cloudinary_url(
+            comprobante.archivo_pdf,
+            resource_type="raw"
+        )
 
     # ================================
     #  DEFINIR UNA SOLA VEZ
@@ -3455,7 +3459,6 @@ def cajero_domicilio_cobros(request):
         "pedidos_cobrar": pedidos_cobrar,
         "pedidos_pagados": pedidos_pagados
     })
-
 
 @login_required(login_url='login')
 @rol_requerido('cajero')

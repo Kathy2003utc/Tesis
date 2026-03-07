@@ -316,15 +316,17 @@
                                     <span class="badge bg-danger">Rechazado</span>
                                 {% else %}
                                     {% with pago=pedido.pagos.first %}
-                                        {% if pago and pago.comprobante_set.first %}
-                                            <a href="{{ pago.comprobante_set.first.archivo_pdf.url }}"
-                                            target="_blank"
-                                            class="btn btn-success btn-sm">
+                                        {% with comp=pago.comprobante_set.first %}
+                                            {% if comp and comp.archivo_pdf %}
+                                                <a href="{{ comp.archivo_pdf.url }}"
+                                                target="_blank"
+                                                class="btn btn-success btn-sm">
                                                 Descargar
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">Pendiente</span>
-                                        {% endif %}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Pendiente</span>
+                                            {% endif %}
+                                        {% endwith %}
                                     {% endwith %}
                                 {% endif %}
                             </td>
