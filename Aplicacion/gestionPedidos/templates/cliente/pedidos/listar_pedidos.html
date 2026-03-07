@@ -315,22 +315,19 @@
                                 {% if pedido.estado == 'rechazado' %}
                                     <span class="badge bg-danger">Rechazado</span>
                                 {% else %}
-                                    {% with pago=pedido.pagos.first %}
-                                        {% with comp=pago.comprobante_set.first %}
-                                            {% if comp and comp.archivo_pdf %}
-                                                <a href="{{ comp.archivo_pdf.url }}"
-                                                target="_blank"
-                                                class="btn btn-success btn-sm">
+                                    {% with comp=pedido.comprobantes_cliente.first %}
+                                        {% if comp and comp.archivo_pdf %}
+                                            <a href="{{ comp.archivo_pdf.url }}"
+                                            target="_blank"
+                                            class="btn btn-success btn-sm">
                                                 Descargar
-                                                </a>
-                                            {% else %}
-                                                <span class="text-muted">Pendiente</span>
-                                            {% endif %}
-                                        {% endwith %}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Pendiente</span>
+                                        {% endif %}
                                     {% endwith %}
                                 {% endif %}
                             </td>
-
 
                             <td data-label="Acciones">
                                 <a href="{% url 'cliente_ver_pedido' pedido.id %}" class="btn btn-info btn-sm">
