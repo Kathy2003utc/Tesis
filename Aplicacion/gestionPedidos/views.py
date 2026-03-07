@@ -2835,12 +2835,11 @@ def cajero_historial_pedidos(request):
             estado='finalizado',
             pagos__estado_pago='confirmado'
         )
-        .select_related()
         .prefetch_related(
             Prefetch(
                 'pagos',
                 queryset=Pago.objects.filter(estado_pago='confirmado')
-                .prefetch_related('comprobante_set')
+                .prefetch_related('comprobante')
             )
         )
         .distinct()
@@ -2862,15 +2861,12 @@ def cajero_historial_pedidos(request):
     if metodo:
         pedidos = pedidos.filter(pagos__metodo_pago=metodo)
 
-    # Pago y comprobante (1 por pedido)
+    # Pago y comprobante
     for p in pedidos:
-        p.pago_confirmado = (
-            p.pagos.filter(estado_pago='confirmado').order_by('id').first()
-        )
+        p.pago_confirmado = p.pagos.first()
+
         if p.pago_confirmado:
-            p.comprobante = (
-                p.pago_confirmado.comprobante_set.first()
-            )
+            p.comprobante = p.pago_confirmado.comprobante.first()
         else:
             p.comprobante = None
 
@@ -6091,6 +6087,9 @@ def cliente_pago_pedido(request, pedido_id):
         imagen = request.FILES.get('imagen')
         numero = request.POST.get('numero_comprobante')
 
+        print("FILES:", request.FILES)
+        print("IMAGEN:", imagen)
+
         if not imagen or not numero:
             messages.error(request, "Todos los campos son obligatorios.")
             return redirect(request.path)
@@ -6130,7 +6129,7 @@ def cliente_pago_pedido(request, pedido_id):
 
         channel_layer = get_channel_layer()
 
-        comp = pedido.comprobantes_cliente.first()
+        comp = ComprobanteCliente.objects.filter(pedido=pedido).first()
 
         async_to_sync(channel_layer.group_send)(
             "pedidos_cajero",
@@ -6143,7 +6142,7 @@ def cliente_pago_pedido(request, pedido_id):
                     "direccion": pedido.direccion_entrega,
                     "total": float(pedido.total),
                     "comprobante_numero": comp.numero_comprobante,
-                    "comprobante_url": comp.imagen.url if comp.imagen else ""
+                    "comprobante_url": comp.imagen.url if comp and comp.imagen else ""
                 }
             }
         )

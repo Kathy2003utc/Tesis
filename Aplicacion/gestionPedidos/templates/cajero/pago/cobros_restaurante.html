@@ -349,23 +349,10 @@
                                 <span class="badge bg-success">confirmado</span>
                             </td>
                             <td class="text-center">
-                                {% if p.pago_confirmado %}
-                                    {% with c=p.pago_confirmado.comprobante.first %}
-                                        {% if comps %}
-                                            {% with c=comps.0 %}
-                                                {% if c.archivo_pdf %}
-                                                    <a href="{{ c.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-danger">
-                                                        Ver PDF
-                                                    </a>
-
-                                                {% else %}
-                                                    <span class="text-muted">No disponible</span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        {% else %}
-                                            <span class="text-muted">No disponible</span>
-                                        {% endif %}
-                                    {% endwith %}
+                                {% if p.comprobante and p.comprobante.archivo_pdf %}
+                                    <a href="{{ p.comprobante.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-danger">
+                                        Ver PDF
+                                    </a>
                                 {% else %}
                                     <span class="text-muted">No disponible</span>
                                 {% endif %}
