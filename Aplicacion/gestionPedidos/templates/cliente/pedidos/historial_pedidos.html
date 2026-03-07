@@ -180,6 +180,7 @@ h2 {
                         <th>Estado</th>
                         <th>Fecha</th>
                         <th>Comprobante</th>
+                        <th>PDF</th> 
                         <th>Acción</th>
                     </tr>
                 </thead>
@@ -226,6 +227,24 @@ h2 {
                         </td>
 
                         <td class="text-center">
+                            {% if pedido.estado == 'listo' %}
+                                {% with comp=pedido.comprobantes_cliente.first %}
+                                    {% if comp and comp.archivo_pdf %}
+                                        <a href="{{ comp.archivo_pdf.url }}"
+                                        target="_blank"
+                                        class="btn btn-danger btn-sm">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
                             <a href="{% url 'cliente_ver_pedido' pedido.id %}"
                                class="btn btn-info btn-sm">
                                 <i class="fas fa-eye"></i> Ver
@@ -234,7 +253,7 @@ h2 {
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-3">
+                        <td colspan="7" class="text-center text-muted py-3">
                             No se encontraron pedidos.
                         </td>
                     </tr>
