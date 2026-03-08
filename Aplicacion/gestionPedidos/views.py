@@ -1854,7 +1854,7 @@ def mesero_historial_pedidos(request):
             Prefetch(
                 "pagos",
                 queryset=Pago.objects.filter(estado_pago="confirmado")
-                .prefetch_related("comprobante_set")
+                .prefetch_related("comprobante")
             )
         )
         .distinct()
@@ -1880,7 +1880,7 @@ def mesero_historial_pedidos(request):
             p.pagos.filter(estado_pago="confirmado").order_by("id").first()
         )
         p.comprobante = (
-            p.pago_confirmado.comprobante_set.first()
+            p.pago_confirmado.comprobante.first()
             if p.pago_confirmado else None
         )
 
