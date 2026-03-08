@@ -194,7 +194,29 @@ urlpatterns = [
     #push
     path("guardar-suscripcion/", views.guardar_suscripcion),
 
+    path(
+        'cajero/exportar-historial-excel/',
+        views.exportar_historial_cliente_excel,
+        name='exportar_historial_cliente_excel'
+    ),
 
+    path(
+        'cajero/exportar-historial-pdf/',
+        views.exportar_historial_cliente_pdf,
+        name='exportar_historial_cliente_pdf'
+    ),
+
+    path(
+        'cajero/exportar-cobrados-excel/',
+        views.exportar_historial_cobrados_excel,
+        name='exportar_historial_cobrados_excel'
+    ),
+
+    path(
+        'cajero/exportar-cobrados-pdf/',
+        views.exportar_historial_cobrados_pdf,
+        name='exportar_historial_cobrados_pdf'
+    ),
     
 
 ]

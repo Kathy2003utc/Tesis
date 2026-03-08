@@ -2881,6 +2881,160 @@ def cajero_historial_pedidos(request):
         }
     })
 
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def exportar_historial_cobrados_excel(request):
+
+    codigo = request.GET.get("codigo", "").strip()
+    fecha_inicio = request.GET.get("fecha_inicio", "")
+    fecha_fin = request.GET.get("fecha_fin", "")
+    metodo = request.GET.get("metodo", "")
+
+    pedidos = (
+        Pedido.objects
+        .filter(
+            tipo_pedido='domicilio',
+            cajero=request.user,
+            cliente__isnull=True,
+            estado='finalizado',
+            pagos__estado_pago='confirmado'
+        )
+        .prefetch_related(
+            Prefetch(
+                'pagos',
+                queryset=Pago.objects.filter(estado_pago='confirmado')
+            )
+        )
+        .distinct()
+        .order_by('-fecha_hora')
+    )
+
+    # FILTROS
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo:
+        pedidos = pedidos.filter(pagos__metodo_pago=metodo)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Cobrados"
+
+    headers = ["Código", "Cliente", "Total", "Método", "Fecha"]
+    ws.append(headers)
+
+    for p in pedidos:
+        pago = p.pagos.first()
+        metodo_pago = pago.metodo_pago.capitalize() if pago else ""
+
+        ws.append([
+            p.codigo_pedido,
+            p.nombre_cliente,
+            float(p.total),
+            metodo_pago,
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="pedidos_cobrados.xlsx"'
+
+    wb.save(response)
+
+    return response
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def exportar_historial_cobrados_pdf(request):
+
+    codigo = request.GET.get("codigo", "").strip()
+    fecha_inicio = request.GET.get("fecha_inicio", "")
+    fecha_fin = request.GET.get("fecha_fin", "")
+    metodo = request.GET.get("metodo", "")
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user,
+        cliente__isnull=True,
+        estado='finalizado',
+        pagos__estado_pago='confirmado'
+    ).prefetch_related('pagos').distinct().order_by('-fecha_hora')
+
+    # FILTROS
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    if metodo:
+        pedidos = pedidos.filter(pagos__metodo_pago=metodo)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pedidos_cobrados.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    elementos.append(Paragraph(
+        "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO",
+        ParagraphStyle(name='Titulo', alignment=1, fontSize=14)
+    ))
+
+    elementos.append(Spacer(1,10))
+
+    elementos.append(Paragraph(
+        f"Reporte generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+        ParagraphStyle(name='Fecha', alignment=1)
+    ))
+
+    elementos.append(Spacer(1,15))
+
+    data = [["Código", "Cliente", "Total", "Método", "Fecha"]]
+
+    for p in pedidos:
+        pago = p.pagos.first()
+        metodo_pago = pago.metodo_pago.capitalize() if pago else ""
+
+        data.append([
+            p.codigo_pedido,
+            p.nombre_cliente,
+            f"$ {p.total:.2f}",
+            metodo_pago,
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[80,120,70,90,110])
+
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+    ]))
+
+    elementos.append(tabla)
+
+    doc.build(elementos)
+
+    return response
+
+
 #-------------------------------
 #  CAJERO - PEDIDOS CLIENTE
 # ------------------------------
@@ -3152,6 +3306,145 @@ def cajero_pedidos_historial_cliente(request):
         }
     )
 
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def exportar_historial_cliente_excel(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user
+    ).select_related('cliente')
+
+    # ===== FILTROS =====
+    estado = request.GET.get('estado')
+    if estado in ['listo', 'rechazado']:
+        pedidos = pedidos.filter(estado=estado)
+    else:
+        pedidos = pedidos.filter(estado__in=['listo', 'rechazado'])
+
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    codigo = request.GET.get('codigo')
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pedidos Cliente"
+
+    headers = ["Código", "Cliente", "Dirección", "Total", "Estado", "Fecha"]
+    ws.append(headers)
+
+    for p in pedidos:
+        ws.append([
+            p.codigo_pedido,
+            p.cliente.nombre if p.cliente else "",
+            p.direccion_entrega,
+            float(p.total),
+            p.estado.capitalize(),
+            p.fecha_hora.strftime('%d/%m/%Y %H:%M')
+        ])
+
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = 22
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="historial_clientes.xlsx"'
+
+    wb.save(response)
+
+    return response
+
+@login_required(login_url='login')
+@rol_requerido('cajero')
+def exportar_historial_cliente_pdf(request):
+
+    pedidos = Pedido.objects.filter(
+        tipo_pedido='domicilio',
+        cajero=request.user
+    ).select_related('cliente')
+
+    # ===== FILTROS =====
+    estado = request.GET.get('estado')
+    if estado in ['listo', 'rechazado']:
+        pedidos = pedidos.filter(estado=estado)
+    else:
+        pedidos = pedidos.filter(estado__in=['listo', 'rechazado'])
+
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    if fecha_inicio:
+        pedidos = pedidos.filter(fecha_hora__date__gte=fecha_inicio)
+
+    if fecha_fin:
+        pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
+
+    codigo = request.GET.get('codigo')
+    if codigo:
+        pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
+
+    pedidos = pedidos.order_by('-fecha_hora')
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="historial_clientes.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+
+    elementos = []
+
+    elementos.append(Paragraph(
+        "CAFÉ RESTAURANTE PRODUCTOS CARLOS GERARDO",
+        ParagraphStyle(name='Titulo', alignment=1, fontSize=14, leading=16)
+    ))
+
+    elementos.append(Spacer(1,10))
+
+    elementos.append(Paragraph(
+        f"Reporte generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+        ParagraphStyle(name='Fecha', alignment=1)
+    ))
+
+    elementos.append(Spacer(1,15))
+
+    data = [["Código", "Cliente", "Dirección", "Total", "Estado", "Fecha"]]
+
+    for p in pedidos:
+        data.append([
+            p.codigo_pedido,
+            p.cliente.nombre if p.cliente else "",
+            p.direccion_entrega,
+            f"$ {p.total:.2f}",
+            p.estado.capitalize(),
+            p.fecha_hora.strftime("%d/%m/%Y %H:%M")
+        ])
+
+    tabla = Table(data, colWidths=[80,100,120,60,70,90])
+
+    tabla.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#b4764f")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONT', (0,0), (-1,0), 'Helvetica-Bold'),
+    ]))
+
+    elementos.append(tabla)
+
+    doc.build(elementos)
+
+    return response
 #-------------------------------
 # CAJERO - COBROS
 #-------------------------------

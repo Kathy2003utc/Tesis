@@ -178,7 +178,19 @@ h2 {
 
         </form>
 
+        <div class="d-flex gap-2">
 
+            <a href="{% url 'exportar_historial_cliente_excel' %}?codigo={{codigo}}&estado={{estado}}&fecha_inicio={{fecha_inicio}}&fecha_fin={{fecha_fin}}"
+            class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Exportar Excel
+            </a>
+
+            <a href="{% url 'exportar_historial_cliente_pdf' %}?codigo={{codigo}}&estado={{estado}}&fecha_inicio={{fecha_inicio}}&fecha_fin={{fecha_fin}}"
+            class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+
+        </div>
         <!-- ================= TABLA ================= -->
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle">
