@@ -106,6 +106,15 @@ h2 {
         background: var(--cafe-oscuro);
         color: white;
     }
+
+.total-box {
+    background: var(--blanco-calido);
+    border-left: 6px solid var(--verde-profundo);
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
 </style>
 
 <div class="main-content-wrapper">
@@ -194,8 +203,14 @@ h2 {
 
         </div>
 
-        <br>
-        
+        <br><br>
+
+        <div class="d-flex justify-content-end mb-3">
+            <div class="total-box">
+                Total recaudado: ${{ total_recaudado|floatformat:2 }}
+            </div>
+        </div>
+
         <!-- ================= TABLA ================= -->
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle">

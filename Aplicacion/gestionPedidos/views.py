@@ -2862,6 +2862,9 @@ def cajero_historial_pedidos(request):
     if metodo:
         pedidos = pedidos.filter(pagos__metodo_pago=metodo)
 
+    # 🔹 TOTAL RECAUDADO
+    total_recaudado = pedidos.aggregate(total=Sum('total'))['total'] or 0
+
     # Pago y comprobante
     for p in pedidos:
         p.pago_confirmado = p.pagos.first()
@@ -2871,15 +2874,20 @@ def cajero_historial_pedidos(request):
         else:
             p.comprobante = None
 
-    return render(request, 'cajero/pedidos/historial_pedidos.html', {
-        'pedidos': pedidos,
-        'filtros': {
-            'codigo': codigo,
-            'fecha_inicio': fecha_inicio,
-            'fecha_fin': fecha_fin,
-            'metodo': metodo,
+    return render(
+        request,
+        'cajero/pedidos/historial_pedidos.html',
+        {
+            'pedidos': pedidos,
+            'total_recaudado': total_recaudado,
+            'filtros': {
+                'codigo': codigo,
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin,
+                'metodo': metodo,
+            }
         }
-    })
+    )
 
 @login_required(login_url='login')
 @rol_requerido('cajero')
@@ -3270,14 +3278,12 @@ def cajero_pedidos_historial_cliente(request):
         cajero=request.user
     )
 
-    # ===== FILTRO POR ESTADO =====
     estado = request.GET.get('estado')
     if estado in ['listo', 'rechazado']:
         pedidos = pedidos.filter(estado=estado)
     else:
         pedidos = pedidos.filter(estado__in=['listo', 'rechazado'])
 
-    # ===== FILTRO POR FECHA =====
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
@@ -3287,12 +3293,14 @@ def cajero_pedidos_historial_cliente(request):
     if fecha_fin:
         pedidos = pedidos.filter(fecha_hora__date__lte=fecha_fin)
 
-    # ===== BUSCADOR POR CÓDIGO =====
     codigo = request.GET.get('codigo')
     if codigo:
         pedidos = pedidos.filter(codigo_pedido__icontains=codigo)
 
     pedidos = pedidos.order_by('-fecha_hora')
+
+    # TOTAL RECAUDADO
+    total_recaudado = pedidos.aggregate(total=Sum('total'))['total'] or 0
 
     return render(
         request,
@@ -3302,7 +3310,8 @@ def cajero_pedidos_historial_cliente(request):
             'fecha_inicio': fecha_inicio,
             'fecha_fin': fecha_fin,
             'codigo': codigo,
-            'estado': estado
+            'estado': estado,
+            'total_recaudado': total_recaudado
         }
     )
 
