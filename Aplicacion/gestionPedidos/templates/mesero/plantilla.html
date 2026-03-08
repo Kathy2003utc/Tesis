@@ -708,7 +708,7 @@ document.addEventListener("DOMContentLoaded", async function() {
           "Content-Type": "application/json",
           "X-CSRFToken": "{{ csrf_token }}"
         },
-        body: JSON.stringify(subscription.toJSON())
+        body: JSON.stringify(subscription)
       });
 
       if (!response.ok) throw new Error("No se pudo guardar la suscripción");
