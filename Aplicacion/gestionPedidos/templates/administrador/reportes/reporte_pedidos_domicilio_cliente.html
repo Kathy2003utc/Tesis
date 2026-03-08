@@ -236,7 +236,7 @@
                         <td class="text-center">
                             {% with pedido.pagos.first as pago %}
                                 {% if pago %}
-                                    {% with pago.comprobante_set.first as comp %}
+                                    {% with pago.comprobante.first as comp %}
                                         {% if comp and comp.archivo_pdf %}
                                             <a href="{{ comp.archivo_pdf.url }}"
                                             target="_blank"
