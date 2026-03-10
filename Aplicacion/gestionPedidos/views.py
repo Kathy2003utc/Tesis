@@ -4011,7 +4011,7 @@ def generar_comprobante_pdf(request, comprobante):
         pdf_bytes,
         resource_type="raw",
         folder="comprobantes",
-        public_id=comprobante.numero_comprobante
+        public_id=f"{comprobante.numero_comprobante}.pdf"
     )
 
     comprobante.archivo_pdf = resultado["public_id"]
