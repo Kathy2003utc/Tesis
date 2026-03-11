@@ -237,6 +237,7 @@ label {
                 <label>Número de comprobante</label>
                 <input type="text"
                        name="numero_comprobante"
+                       id="numero_comprobante"
                        class="form-control"
                        required>
             </div>
@@ -313,6 +314,12 @@ function cancelarPedido(id) {
         });
     });
 }
+</script>
+
+<script>
+document.getElementById("numero_comprobante").addEventListener("input", function () {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
 </script>
 
 {% endblock %}
