@@ -4025,6 +4025,8 @@ def generar_comprobante_pdf(request, comprobante):
 
     url = resultado["secure_url"]
     url = url.replace("/image/upload/", "/raw/upload/")
+    url = url + ".pdf"
+
     comprobante.archivo_pdf = url
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
