@@ -4015,39 +4015,16 @@ def generar_comprobante_pdf(request, comprobante):
     pdf_file.name = f"{comprobante.numero_comprobante}.pdf"
 
     resultado = cloudinary.uploader.upload(
-        pdf_file,
-        resource_type="image",
-        folder="comprobantes",
-        public_id=comprobante.numero_comprobante,
-        overwrite=True,
-        format="pdf"
-    )
+    pdf_file,
+    resource_type="raw",
+    folder="comprobantes",
+    public_id=comprobante.numero_comprobante,
+    overwrite=True
+)
 
-    url = resultado["secure_url"]
-    url = url.replace("/image/upload/", "/raw/upload/")
-    url = url + ".pdf"
-
-    comprobante.archivo_pdf = url
+    comprobante.archivo_pdf = resultado["public_id"]
     comprobante.save(update_fields=["archivo_pdf"])
 
-import requests
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-
-@login_required(login_url='login')
-def descargar_comprobante(request, comp_id):
-    comprobante = get_object_or_404(Comprobante, id=comp_id)
-
-    url_pdf = comprobante.archivo_pdf
-
-    response = requests.get(url_pdf)
-
-    if response.status_code == 200:
-        resp = HttpResponse(response.content, content_type='application/pdf')
-        resp['Content-Disposition'] = f'attachment; filename="{comprobante.numero_comprobante}.pdf"'
-        return resp
-
-    return HttpResponse("No se pudo descargar el comprobante", status=404)
 #-----------------------------
 # Reportes
 #-----------------------------

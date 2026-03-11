@@ -320,7 +320,9 @@
                                         {% if pago %}
                                             {% with comp=pago.comprobante.first %}
                                                 {% if comp and comp.archivo_pdf %}
-                                                    <a href="{% url 'descargar_comprobante' comp.id %}" class="btn btn-success btn-sm">
+                                                   <a href="https://res.cloudinary.com/{{ CLOUDINARY_CLOUD_NAME }}/raw/upload/{{ comp.archivo_pdf }}"
+                                                    target="_blank"
+                                                    class="btn btn-success btn-sm">
                                                         Descargar
                                                     </a>
                                                 {% else %}
