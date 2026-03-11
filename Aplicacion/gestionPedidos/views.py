@@ -4020,6 +4020,7 @@ def generar_comprobante_pdf(request, comprobante):
         folder="comprobantes",
         public_id=comprobante.numero_comprobante,
         overwrite=True
+        format="pdf"
     )
 
     url = resultado["secure_url"]
