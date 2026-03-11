@@ -4023,7 +4023,7 @@ def generar_comprobante_pdf(request, comprobante):
     )
 
     # Guardar SOLO el public_id
-    comprobante.archivo_pdf = resultado["secure_url"]
+    comprobante.archivo_pdf = resultado["secure_url"] + ".pdf"
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
