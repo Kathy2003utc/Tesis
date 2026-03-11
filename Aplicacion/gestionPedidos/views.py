@@ -4007,15 +4007,19 @@ def generar_comprobante_pdf(request, comprobante):
     # ================================
     # SUBIR A CLOUDINARY
     # ================================
+    import io
+
+    pdf_file = io.BytesIO(pdf_bytes)
+    pdf_file.name = f"{comprobante.numero_comprobante}.pdf"
+
     resultado = cloudinary.uploader.upload(
-        pdf_bytes,
+        pdf_file,
         resource_type="raw",
         folder="comprobantes",
         public_id=comprobante.numero_comprobante,
-        format="pdf"
     )
 
-    comprobante.archivo_pdf = resultado["public_id"]
+    comprobante.archivo_pdf = resultado["secure_url"]
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
