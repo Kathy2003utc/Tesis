@@ -320,7 +320,7 @@
                                         {% if pago %}
                                             {% with comp=pago.comprobante.first %}
                                                 {% if comp and comp.archivo_pdf %}
-                                                    <a href="{{ comp.archivo_pdf.url }}"
+                                                    <a href="{{ comp.archivo_pdf}}"
                                                         target="_blank"
                                                         class="btn btn-success btn-sm">
                                                             Descargar
