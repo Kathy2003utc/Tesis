@@ -4019,7 +4019,7 @@ def generar_comprobante_pdf(request, comprobante):
         resource_type="image",
         folder="comprobantes",
         public_id=comprobante.numero_comprobante,
-        overwrite=True
+        overwrite=True,
         format="pdf"
     )
 
