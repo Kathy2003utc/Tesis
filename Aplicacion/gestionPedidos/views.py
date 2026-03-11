@@ -4011,10 +4011,11 @@ def generar_comprobante_pdf(request, comprobante):
         pdf_bytes,
         resource_type="raw",
         folder="comprobantes",
-        public_id=f"{comprobante.numero_comprobante}.pdf"
+        public_id=comprobante.numero_comprobante,
+        format="pdf"
     )
 
-    comprobante.archivo_pdf = resultado["secure_url"]
+    comprobante.archivo_pdf = resultado["public_id"]
     comprobante.save(update_fields=["archivo_pdf"])
 #-----------------------------
 # Reportes
