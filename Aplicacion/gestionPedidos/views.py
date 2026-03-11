@@ -1276,7 +1276,7 @@ def editar_menu(request, producto_id):
         # Validar precio
         try:
             precio_float = float(precio)
-            if precio < 0.50 or precio > 15.99:
+            if precio_float < 0.50 or precio_float > 15.99:
                 raise ValueError
         except ValueError:
             messages.error(request, "El precio debe ser un número válido entre 0.50 y 15.99.")
@@ -1302,7 +1302,7 @@ def editar_menu(request, producto_id):
 
         producto.nombre = nombre
         producto.descripcion = descripcion
-        producto.precio = precio
+        producto.precio = precio_float
         producto.tipo = tipo
         producto.save()
 
