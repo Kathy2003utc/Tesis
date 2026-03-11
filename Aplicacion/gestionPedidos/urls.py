@@ -217,6 +217,8 @@ urlpatterns = [
         views.exportar_historial_cobrados_pdf,
         name='exportar_historial_cobrados_pdf'
     ),
+
+    path('descargar-comprobante/<int:comp_id>/', views.descargar_comprobante, name='descargar_comprobante')
     
 
 ]
