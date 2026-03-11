@@ -4016,7 +4016,7 @@ def generar_comprobante_pdf(request, comprobante):
 
     resultado = cloudinary.uploader.upload(
         pdf_file,
-        resource_type="raw",
+        resource_type="image",
         folder="comprobantes",
         public_id=comprobante.numero_comprobante,
         overwrite=True
