@@ -6474,8 +6474,8 @@ def cliente_pago_pedido(request, pedido_id):
             enviar_push(
                 cajero,
                 "Nuevo pedido pendiente",
-                f"Nuevo comprobante del cliente {request.user.nombre}",
-                "/cajero/pedidos-clientes-domicilio/"
+                f"Nuevo pedido de {request.user.nombre}",
+                "https://restaurantepcg.com/pedidos-clientes-domicilio/"
             )
 
         messages.success(request, "Comprobante enviado correctamente.")
@@ -6541,7 +6541,7 @@ def cliente_enviar_pedido(request, pedido_id):
             cajero,
             "Nuevo pedido",
             f"Nuevo pedido #{pedido.codigo_pedido}",
-            "/cajero/pedidos-clientes-domicilio/"
+            "/cajero/pedidos/historial/"
         )
 
     return JsonResponse({"success": True})
